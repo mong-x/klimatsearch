@@ -72,13 +72,13 @@ Cite **Boverket Klimatdatabas** in any UI or paper that shows these numbers.
 
 5. Score `testdata/golden-queries.json` (hit@1 / sibling inversions). Do **not** use the Fake embedder for that table.
 
-Protocol: [ADR-0010](adr/0010-f2llm-query-prefix.md), [research note](research/2026-09-17-boverket-embedding-optimization.md).
+Documents use labeled bilingual `EmbeddingText` (no Instruct prefix). Queries use `Instruct:…\nQuery:`. Do not score quality with the Fake embedder.
 
 ---
 
 ## 2. Paid traffic (Unkey + MPP)
 
-**Why you:** dashboard accounts, Stripe, Tempo recipient. Local/kind **AllowAll** when Unkey and MPP secrets are unset (ADR-0008).
+**Why you:** dashboard accounts, Stripe, Tempo recipient. Local/kind **AllowAll** when Unkey and MPP secrets are unset.
 
 **Developer lane (REST / SaaS)**
 
@@ -149,7 +149,7 @@ Stripe metered billing is configured in the Unkey dashboard, not in this repo. S
 
 **The moment Unkey or MPP secret is set, the Guard is fail-closed.** `/healthz` stays public. Paid: `/api/*`, `/mcp`, `/admin/*`.
 
-**Content-change webhook** — optional. Set `KLIMAT_WEBHOOK_URL` (and `KLIMAT_WEBHOOK_SECRET` to HMAC the body). klimatsearch POSTs `catalog.changed` only when ingest upserts a Resource whose ContentHash changed ([ADR-0011](adr/0011-webhook-on-content-change.md)). Boverket has no inbound hook; this is klimatsearch notifying your tools.
+**Content-change webhook** — optional. Set `KLIMAT_WEBHOOK_URL` (and `KLIMAT_WEBHOOK_SECRET` to HMAC the body). klimatsearch POSTs `catalog.changed` only when ingest upserts a Resource whose ContentHash changed. Boverket has no inbound hook; this is klimatsearch notifying your tools.
 
 Optional: `KLIMAT_ADMIN_TOKEN` as header `X-Admin-Token` on `POST /admin/ingest/file`.
 

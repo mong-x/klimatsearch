@@ -1,3 +1,0 @@
-# Pluggable Embedder, default F2LLM-v2-80M
-
-Retrieval quality should be able to grow from a deterministic fake Embedder (tests/CI) to a local ONNX model without changing SearchEngine. The production default is `codefuse-ai/F2LLM-v2-80M` (hidden size 320). Weights are not in git; `scripts/download-models.sh` fetches them and notes ONNX export. The binary uses `onnx` when `{models}/{embedding-model}/model.onnx` exists, otherwise `fake`. An explicit `--embedder` / `KLIMAT_EMBEDDER` flag always wins. Dimension is stored in SQLite `meta.embedding_dim` so a later 160M model is a migration plus re-embed, not a silent vector mismatch.

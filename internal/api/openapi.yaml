@@ -18,7 +18,7 @@ info:
     the Guard allows all traffic (local / kind).
 
     Outbound: when ingest upserts a changed Resource, klimatsearch POSTs `catalog.changed`
-    to `KLIMAT_WEBHOOK_URL` (see ADR-0011). That is not an inbound path on this API.
+    to `KLIMAT_WEBHOOK_URL`. That is not an inbound path on this API.
   license:
     name: Apache-2.0
     url: https://www.apache.org/licenses/LICENSE-2.0.html

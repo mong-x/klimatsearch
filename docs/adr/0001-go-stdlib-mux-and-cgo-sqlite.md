@@ -1,3 +1,0 @@
-# Stdlib ServeMux and CGO SQLite
-
-Klimatsearch already needs CGO for ONNX Runtime, so there is no benefit to a pure-Go SQLite port. We use `net/http.ServeMux` with Go 1.22 method and path-value matching, `github.com/mattn/go-sqlite3`, and `github.com/asg017/sqlite-vec-go-bindings/cgo` with `sqlite_vec.Auto()` before `sql.Open`. Chi/Gin/Echo and `modernc.org/sqlite` were rejected: extra router surface is unjustified at this size, and modernc cannot load the CGO sqlite-vec extension the PRD requires. mattn/go-sqlite3 leaves FTS5 off unless compiled with `-tags fts5`; Makefile, Dockerfile, and CI pass that tag.

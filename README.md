@@ -84,7 +84,7 @@ make build
 
 - **Go 1.27** and **CGO** (`CGO_ENABLED=1`)
 - **gcc** (Linux: `libsqlite3-dev`)
-- Build tag **`fts5`** — mattn/go-sqlite3 compiles FTS5 only with that tag. `make test` / `make build` pass it. Bare `go test ./...` fails with `no such module: fts5` ([ADR-0001](docs/adr/0001-go-stdlib-mux-and-cgo-sqlite.md)).
+- Build tag **`fts5`** — mattn/go-sqlite3 compiles FTS5 only with that tag. `make test` / `make build` pass it. Bare `go test ./...` fails with `no such module: fts5`.
 
 Optional for production embeddings: [ONNX Runtime](https://onnxruntime.ai) (`brew install onnxruntime` or `ONNXRUNTIME_LIB`), Hugging Face tokenizer C library (`./scripts/fetch-libtokenizers.sh`), and F2LLM-v2-80M weights (`make models`).
 
@@ -131,7 +131,7 @@ Point Claude / Cursor / Codex at the streamable endpoint. Paid MCP routes go thr
 
 ## Search
 
-Hybrid retrieval ([ADR-0006](docs/adr/0006-rrf-k60-hybrid-hits.md)):
+Hybrid retrieval:
 
 1. **FTS5** BM25 always runs on names, descriptions, applicability, synonyms.
 2. **sqlite-vec** KNN runs when the store has vectors and `vector=true`.
@@ -142,7 +142,7 @@ Vector off → FTS only. A stored `meta.embedding_dim` mismatch disables vector 
 
 ## Catalogs and ingest
 
-Identity is `(catalog_id, resource_id)` ([ADR-0007](docs/adr/0007-catalog-identity.md)). sqlite-vec document id is `{catalog_id}:{resource_id}`.
+Identity is `(catalog_id, resource_id)`. sqlite-vec document id is `{catalog_id}:{resource_id}`.
 
 On start (default) and every `--ingest-interval` (default `168h`):
 
@@ -154,11 +154,11 @@ Optional `BOVERKET_SUBSCRIPTION_KEY` as `Ocp-Apim-Subscription-Key`. Live v2 JSO
 
 File-only Catalogs (Denmark BR25) use `POST /admin/ingest/file?catalog=br25`. Mapping returns not-implemented until a sample workbook exists ([LAUNCH.md](docs/LAUNCH.md) §3).
 
-Changed rows are detected with a canonical **ContentHash** of names, descriptions, applicability, synonyms, A1A3, Declared unit, Conversions, Category, Category Code, and DatasetVersion — not Resource ID or Catalog ID — and re-embedded. If any row was upserted, klimatsearch POSTs `catalog.changed` to `KLIMAT_WEBHOOK_URL` (optional HMAC). Unchanged ingest does not fire ([ADR-0011](docs/adr/0011-webhook-on-content-change.md)).
+Changed rows are detected with a canonical **ContentHash** of names, descriptions, applicability, synonyms, A1A3, Declared unit, Conversions, Category, Category Code, and DatasetVersion — not Resource ID or Catalog ID — and re-embedded. If any row was upserted, klimatsearch POSTs `catalog.changed` to `KLIMAT_WEBHOOK_URL` (optional HMAC). Unchanged ingest does not fire.
 
 ## Guard
 
-Paid routes (`/api/*`, `/mcp`, `/admin/*`) go through one Guard ([ADR-0008](docs/adr/0008-dual-lane-guard.md)). `GET /healthz` is public.
+Paid routes (`/api/*`, `/mcp`, `/admin/*`) go through one Guard. `GET /healthz` is public.
 
 1. `Authorization: Payment …` → [mpp-go](https://github.com/tempoxyz/mpp-go) Tempo charge. Missing credential → **HTTP 402** + `WWW-Authenticate: Payment`.
 2. Else `Authorization: Bearer …` → Unkey `Keys.VerifyKey` (`github.com/unkeyed/sdks/api/go/v2`). Invalid → 401.
@@ -191,7 +191,7 @@ KLIMAT_EMBEDDER=onnx KLIMAT_LISTEN=:8081 ./bin/klimatsearch
 
 `auto` uses ONNX if `models/<embedding-model>/model.onnx` exists, otherwise fake. `--embedder` / `KLIMAT_EMBEDDER` always wins. CI uses Fake and does not need ONNX Runtime.
 
-F2LLM-v2 is **asymmetric**: documents get a labeled bilingual `EmbeddingText` with no Instruct prefix; queries use `Instruct:…\nQuery:` ([ADR-0010](docs/adr/0010-f2llm-query-prefix.md)). Fake hashes the raw Query so tests stay model-free.
+F2LLM-v2 is **asymmetric**: documents get a labeled bilingual `EmbeddingText` with no Instruct prefix; queries use `Instruct:…\nQuery:`. Fake hashes the raw Query so tests stay model-free.
 
 To swap models, point `--models` / `--embedding-model` at a new directory. Re-embed after a dimension change.
 
@@ -227,11 +227,9 @@ Full index: **[docs/README.md](docs/README.md)**.
 
 | Doc | What's in it |
 | --- | --- |
-| [docs/LAUNCH.md](docs/LAUNCH.md) | ONNX, Unkey, MPP, BR25, production k8s — human-only steps |
-| [docs/prd.md](docs/prd.md) | Product spec |
+| [docs/LAUNCH.md](docs/LAUNCH.md) | ONNX, Unkey, MPP, webhook, BR25, production k8s — human-only steps |
+| [Swagger UI](https://mong-x.github.io/klimatsearch/swagger/) | REST OpenAPI |
 | [CONTEXT.md](CONTEXT.md) | Glossary |
-| [docs/adr/](docs/adr/) | Architecture Decision Records |
-| [site/](site/) | GitHub Pages source |
 
 ## License
 
