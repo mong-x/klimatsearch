@@ -21,6 +21,12 @@ jobs:
         run: kubectl apply -k deploy/k8s
       - name: Wait for rollout
         run: kubectl rollout status deployment/klimatsearch --timeout=180s
+      - name: Dump pod diagnostics
+        if: failure()
+        run: |
+          kubectl get pods -o wide
+          kubectl describe deployment/klimatsearch
+          kubectl logs -l app=klimatsearch --all-containers --tail=200 || true
       - name: Probe HTTP
         run: |
           set -euo pipefail

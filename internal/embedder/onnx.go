@@ -33,6 +33,13 @@ func NewONNX(modelPath string, tok Tokenizer, dim int) (*ONNX, error) {
 
 func (o *ONNX) Dim() int { return o.dim }
 
+// QueryPrefix is the F2LLM-v2 Instruct wrapper. Documents must not use it.
+const QueryPrefix = "Instruct: Given a search query, retrieve the matching generic construction product or energy carrier from Boverket Klimatdatabas.\nQuery: "
+
+func (o *ONNX) EmbedQuery(query string) ([]float32, error) {
+	return o.Embed(QueryPrefix + query)
+}
+
 func (o *ONNX) Embed(text string) ([]float32, error) {
 	if err := o.init(); err != nil {
 		return nil, err

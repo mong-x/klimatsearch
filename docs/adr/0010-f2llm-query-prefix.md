@@ -1,0 +1,3 @@
+# F2LLM query prefix, unlabeled documents
+
+F2LLM-v2 is trained for asymmetric retrieval: Queries get `Instruct: …\nQuery:`, documents get none, then last-token/EOS pooling and L2. The ONNX Embedder implements `EmbedQuery`; Fake does not, so tests still hash the raw Query against `EmbeddingText()`. Document text is labeled bilingual names/category/unit plus descriptions and Applicability, with the product name repeated at the end so near-duplicate families (22 Fabriksbetong grades) still reach EOS. A1A3 numbers stay out of the vector. See `docs/research/2026-09-17-boverket-embedding-optimization.md`.

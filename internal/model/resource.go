@@ -62,18 +62,46 @@ func (r Resource) DocID() string {
 	return DocID(r.CatalogID, r.ResourceID)
 }
 
-// EmbeddingText is the SV+EN document stored as a vector.
-// Names, category, descriptions, and applicability; not A1A3.
+// EmbeddingText is the labeled bilingual document stored as a vector.
+// Names are repeated at the end so last-token/EOS pooling sees sibling modifiers.
+// No A1A3 numbers, no instruction prefix.
 func (r Resource) EmbeddingText() string {
-	parts := []string{r.NameSV, r.NameEN, r.Category, r.DescriptionSV, r.DescriptionEN, r.ApplicabilitySV, r.ApplicabilityEN}
-	out := make([]string, 0, len(parts))
-	for _, p := range parts {
-		p = strings.TrimSpace(p)
-		if p != "" {
-			out = append(out, p)
+	var b strings.Builder
+	write := func(s string) {
+		s = strings.TrimSpace(s)
+		if s == "" {
+			return
 		}
+		if b.Len() > 0 {
+			b.WriteByte('\n')
+		}
+		b.WriteString(s)
 	}
-	return strings.Join(out, " ")
+	if v := strings.TrimSpace(r.NameSV); v != "" {
+		write("name_sv: " + v)
+	}
+	if v := strings.TrimSpace(r.NameEN); v != "" {
+		write("name_en: " + v)
+	}
+	if v := strings.TrimSpace(r.Category); v != "" {
+		write("category: " + v)
+	}
+	if v := strings.TrimSpace(r.Unit); v != "" {
+		write("unit: " + v)
+	}
+	write(r.DescriptionSV)
+	write(r.DescriptionEN)
+	write(r.ApplicabilitySV)
+	write(r.ApplicabilityEN)
+	switch {
+	case strings.TrimSpace(r.NameSV) != "" && strings.TrimSpace(r.NameEN) != "":
+		write(strings.TrimSpace(r.NameSV) + " / " + strings.TrimSpace(r.NameEN))
+	case strings.TrimSpace(r.NameSV) != "":
+		write(r.NameSV)
+	default:
+		write(r.NameEN)
+	}
+	return b.String()
 }
 
 // ContentHash is the SHA-256 hex digest of the Resource's canonical content.

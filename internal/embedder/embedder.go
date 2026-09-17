@@ -8,6 +8,11 @@ import (
 	"github.com/mong-x/klimatsearch/internal/search"
 )
 
+var (
+	_ search.Embedder      = Fake{}
+	_ search.QueryEmbedder = (*ONNX)(nil)
+)
+
 // New builds an Embedder. kind is auto|fake|onnx.
 // auto uses onnx when model.onnx exists, otherwise fake.
 func New(kind, modelsDir, modelName string) (search.Embedder, error) {

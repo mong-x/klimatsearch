@@ -3,7 +3,16 @@ package embedder
 import (
 	"math"
 	"testing"
+
+	"github.com/mong-x/klimatsearch/internal/search"
 )
+
+func TestFakeIsNotQueryEmbedder(t *testing.T) {
+	var e search.Embedder = Fake{}
+	if _, ok := e.(search.QueryEmbedder); ok {
+		t.Fatal("Fake must hash the raw Query so tests match EmbeddingText")
+	}
+}
 
 func TestFakeDeterministic(t *testing.T) {
 	var f Fake

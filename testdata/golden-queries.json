@@ -1,0 +1,13 @@
+{
+  "catalog": "boverket",
+  "notes": "Run against a real F2LLM-v2-80M Embedder, not Fake. Expected IDs are 02.07.000 ResourceIds.",
+  "queries": [
+    {"q": "glasull lösull vägg", "lang": "sv", "expect_id": "6000000003", "near_miss": ["6000000004", "6000000005"]},
+    {"q": "glass wool attic", "lang": "en", "expect_id": "6000000005", "near_miss": ["6000000003", "6000000004"]},
+    {"q": "spånskiva", "lang": "sv", "expect_id": "6000000000"},
+    {"q": "particle board", "lang": "en", "expect_id": "6000000000"},
+    {"q": "sawn timber 16% moisture", "lang": "en", "expect_id": "6000000007"},
+    {"q": "återanvänd byggprodukt", "lang": "sv", "expect_id": "6000000174"},
+    {"q": "reused building product", "lang": "en", "expect_id": "6000000174"}
+  ]
+}

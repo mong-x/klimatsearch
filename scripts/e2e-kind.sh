@@ -33,7 +33,12 @@ fi
 docker build -t klimatsearch:e2e .
 kind load docker-image klimatsearch:e2e --name "$CLUSTER"
 kubectl apply -k deploy/k8s
-kubectl rollout status deployment/klimatsearch --timeout=180s
+if ! kubectl rollout status deployment/klimatsearch --timeout=180s; then
+  kubectl get pods -o wide
+  kubectl describe deployment/klimatsearch
+  kubectl logs -l app=klimatsearch --all-containers --tail=200 || true
+  exit 1
+fi
 
 kubectl port-forward svc/klimatsearch 18080:8080 >/tmp/klimatsearch-pf.log 2>&1 &
 PF=$!

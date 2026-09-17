@@ -97,7 +97,7 @@ func (e *Engine) Search(ctx context.Context, query string, useVector bool, useRe
 		} else if e.embedder == nil {
 			e.log.Warn("skipping vector search", "reason", "no embedder")
 		} else {
-			emb, err := e.embedder.Embed(query)
+			emb, err := embedQuery(e.embedder, query)
 			if err != nil {
 				return nil, fmt.Errorf("embed query: %w", err)
 			}
@@ -189,4 +189,11 @@ func rrf(fts, knn []model.Ranked, lang string, limit int) []Hit {
 		out = out[:limit]
 	}
 	return out
+}
+
+func embedQuery(e Embedder, query string) ([]float32, error) {
+	if qe, ok := e.(QueryEmbedder); ok {
+		return qe.EmbedQuery(query)
+	}
+	return e.Embed(query)
 }

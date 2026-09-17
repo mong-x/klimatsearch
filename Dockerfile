@@ -18,6 +18,7 @@ WORKDIR /app
 ENV KLIMAT_EMBEDDER=fake
 ENV KLIMAT_LISTEN=:8080
 EXPOSE 8080
+ENTRYPOINT ["klimatsearch"]
 # production: klimatsearch
-# e2e / local demo:
-CMD ["klimatsearch", "--embedder=fake", "--demo-fixture", "--ingest-on-start"]
+# e2e / local demo (K8s args replace CMD, not ENTRYPOINT):
+CMD ["--embedder=fake", "--demo-fixture", "--ingest-on-start"]

@@ -37,9 +37,15 @@ func HitFrom(r model.Resource, lang, source string, score float64) Hit {
 	}
 }
 
-// Embedder turns text into a fixed-dimension vector.
+// Embedder turns document text into a fixed-dimension vector.
 type Embedder interface {
 	Embed(text string) ([]float32, error)
+}
+
+// QueryEmbedder embeds a Query. F2LLM applies an Instruct prefix on Queries only.
+// Fake embedders omit this method so tests hash the raw Query.
+type QueryEmbedder interface {
+	EmbedQuery(query string) ([]float32, error)
 }
 
 // Reranker reorders Hits after retrieval.

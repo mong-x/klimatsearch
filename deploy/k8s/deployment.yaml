@@ -18,6 +18,7 @@ spec:
         - name: klimatsearch
           image: klimatsearch:e2e
           imagePullPolicy: Never
+          command: ["klimatsearch"]
           args:
             - --embedder=fake
             - --demo-fixture

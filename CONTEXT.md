@@ -53,7 +53,7 @@ The Klimatdatabas publication a Resource was ingested from (for example 02.07.00
 _Avoid_: version (bare), schema version
 
 **ContentHash**:
-The identity of a Resource's names, descriptions, A1A3, Declared unit, Conversion, Category, and DatasetVersion, used to detect whether the Resource changed. Resource ID is identity, not content.
+The identity of a Resource's names, descriptions, Applicability, Synonyms, A1A3, Declared unit, Conversion, Category, and DatasetVersion, used to detect whether the Resource changed. Resource ID and Catalog ID are identity, not content.
 _Avoid_: checksum, etag, fingerprint, SHA-256
 
 **Query**:

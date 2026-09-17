@@ -189,8 +189,17 @@ func TestEmbeddingTextOmitsA1A3(t *testing.T) {
 	r.Category = "Byggskivor"
 	r.ApplicabilitySV = "inomhus"
 	text := r.EmbeddingText()
-	if !strings.Contains(text, "Betong") || !strings.Contains(text, "Byggskivor") || !strings.Contains(text, "inomhus") {
+	if !strings.Contains(text, "name_sv: Betong") || !strings.Contains(text, "name_en: Concrete") {
+		t.Fatalf("labeled names missing: %q", text)
+	}
+	if !strings.Contains(text, "category: Byggskivor") || !strings.Contains(text, "inomhus") {
 		t.Fatalf("embedding text=%q", text)
+	}
+	if !strings.HasSuffix(strings.TrimSpace(text), "Betong / Concrete") {
+		t.Fatalf("names should repeat at end for EOS pooling: %q", text)
+	}
+	if strings.Contains(text, "Instruct:") {
+		t.Fatal("documents must not carry the query instruction prefix")
 	}
 	if strings.Contains(text, "0.12") {
 		t.Fatal("A1A3 must not appear in embedding text")
