@@ -50,7 +50,14 @@ for i in $(seq 1 30); do
 done
 
 curl -sf http://127.0.0.1:18080/healthz | grep -q ok
-BODY=$(curl -sf "http://127.0.0.1:18080/api/resources?lang=sv")
+BODY=""
+for i in $(seq 1 30); do
+  BODY=$(curl -sf "http://127.0.0.1:18080/api/resources?lang=sv" || true)
+  if echo "$BODY" | python3 -c 'import json,sys; d=json.load(sys.stdin); raise SystemExit(0 if len(d.get("resources") or [])>=1 else 1)'; then
+    break
+  fi
+  sleep 1
+done
 python3 - "$BODY" <<'PY'
 import json, sys
 d = json.loads(sys.argv[1])

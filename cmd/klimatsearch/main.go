@@ -67,7 +67,15 @@ func main() {
 	} else {
 		fetcher = ingest.NewHTTPFetcher(cfg)
 	}
-	go ingest.Loop(ctx, runner, fetcher, cfg.IngestOnStart, cfg.IngestInterval)
+	if cfg.IngestOnStart {
+		if _, err := runner.Run(ctx, fetcher); err != nil {
+			log.Error("ingest on start failed", "err", err)
+			if cfg.DemoFixture {
+				os.Exit(1)
+			}
+		}
+	}
+	go ingest.Loop(ctx, runner, fetcher, false, cfg.IngestInterval)
 
 	srv := &http.Server{
 		Addr:              cfg.Listen,

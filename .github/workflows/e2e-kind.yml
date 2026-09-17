@@ -11,10 +11,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: helm/kind-action@v1
+        with:
+          cluster_name: klimatsearch-e2e
       - name: Build image
         run: docker build -t klimatsearch:e2e .
       - name: Load image
-        run: kind load docker-image klimatsearch:e2e
+        run: kind load docker-image klimatsearch:e2e --name klimatsearch-e2e
       - name: Apply
         run: kubectl apply -k deploy/k8s
       - name: Wait for rollout
@@ -32,7 +34,14 @@ jobs:
             sleep 1
           done
           curl -sf http://127.0.0.1:8080/healthz | grep -q ok
-          BODY=$(curl -sf "http://127.0.0.1:8080/api/resources?lang=sv")
+          BODY=""
+          for i in $(seq 1 30); do
+            BODY=$(curl -sf "http://127.0.0.1:8080/api/resources?lang=sv" || true)
+            if echo "$BODY" | python3 -c 'import json,sys; d=json.load(sys.stdin); raise SystemExit(0 if len(d.get("resources") or [])>=1 else 1)'; then
+              break
+            fi
+            sleep 1
+          done
           echo "$BODY" | python3 -c 'import json,sys; d=json.load(sys.stdin); assert len(d["resources"])>=1, d'
           curl -sf "http://127.0.0.1:8080/api/search?q=betong&vector=false&lang=sv" >/dev/null
           curl -sf "http://127.0.0.1:8080/api/search?q=betong&vector=true&lang=sv" >/dev/null
