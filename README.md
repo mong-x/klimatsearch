@@ -50,19 +50,22 @@ To swap models, point `--models` / `--embedding-model` at a new directory. Store
 | GET | `/api/search?q=&vector=true\|false&rerank=true\|false&lang=sv\|en` |
 | GET | `/api/resources?lang=` |
 | GET | `/api/resources/{id}?lang=` |
+| GET | `/api/resources/compare?a={id}&b={id}&unit=` |
 
-JSON includes `"source": "Boverket Klimatdatabas"`.
+`vector` and `rerank` default to false. Compare `unit` is optional. JSON includes `"source": "Boverket Klimatdatabas"`. Hits include `match_source`: `fts`, `vector`, `both`, or `rerank`.
+
+Hybrid search fuses FTS5 BM25 and sqlite-vec KNN with Reciprocal Rank Fusion (`k=60`, equal weights). Vector off → FTS only.
 
 ## MCP
 
 - Streamable HTTP: `POST/GET /mcp`
 - Legacy SSE: `GET /mcp/sse`, messages `POST /mcp/messages?sessionid=` (also accepted on `/mcp/sse`)
 
-Tools: `search_climate_data`, `get_resource_details`, `compare_materials`.
+Tools: `search_climate_data`, `get_resource_details`, `compare_resources` (`id_a`, `id_b`, optional `unit`).
 
 ## Ingest
 
-On start (default) and every `--ingest-interval` (default `168h`): probe `BOVERKET_API_BASE` JSON, then fall back to the public Excel files. Optional `BOVERKET_SUBSCRIPTION_KEY`. Changed rows are detected with a canonical ContentHash and re-embedded.
+On start (default) and every `--ingest-interval` (default `168h`): probe `BOVERKET_API_BASE` JSON, then fall back to the public Excel files on HTTP error, parse error, or an empty resources list (A1A3 of 0 is still usable JSON). Optional `BOVERKET_SUBSCRIPTION_KEY`. Changed rows are detected with a canonical ContentHash of names, descriptions, A1A3, Declared unit, Conversions, Category, and DatasetVersion (not Resource ID) and re-embedded.
 
 ## Docker / kind
 

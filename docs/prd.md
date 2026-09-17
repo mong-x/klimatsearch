@@ -32,7 +32,7 @@ Live API 404 must not fail boot. Tests never hit the network.
 
 ## Search
 
-Hybrid SearchEngine: FTS5 BM25 on the requested language columns, optional sqlite-vec cosine KNN (320-d default, F2LLM-v2-80M), optional Reranker. Embedding dim is stored in `meta`; mismatch disables vector search and logs clearly.
+Hybrid SearchEngine: FTS5 BM25 on the requested language columns, optional sqlite-vec cosine KNN (320-d default, F2LLM-v2-80M) fused with RRF k=60, optional Reranker. Embedding dim is stored in `meta`; mismatch disables vector search and logs clearly.
 
 ## HTTP
 
@@ -42,6 +42,7 @@ Hybrid SearchEngine: FTS5 BM25 on the requested language columns, optional sqlit
 | GET | `/api/search?q=&vector=&rerank=&lang=` | lang default `sv`; empty q or unknown lang → 400 |
 | GET | `/api/resources?lang=` | list |
 | GET | `/api/resources/{id}?lang=` | 404 if missing |
+| GET | `/api/resources/compare?a=&b=&unit=` | unit optional; 404 if a Resource ID is missing; 400 if explicit unit cannot apply |
 
 JSON includes `source: "Boverket Klimatdatabas"`.
 
@@ -49,7 +50,7 @@ JSON includes `source: "Boverket Klimatdatabas"`.
 
 1. `search_climate_data` — query, optional lang. Vector + rerank when those backends are enabled; if reranker is `none`, vector only.
 2. `get_resource_details` — id
-3. `compare_materials` — id_a, id_b — A1–A3 and conversions
+3. `compare_resources` — id_a, id_b, optional unit — A1–A3 in a shared unit using Conversion
 
 ## Non-goals (v1)
 
