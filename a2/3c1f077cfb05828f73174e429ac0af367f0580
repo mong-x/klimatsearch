@@ -1,0 +1,32 @@
+testdata/fixtures/resources.json
+  s_7b1d254e7dc4d6::t_94be65f6c10984 1-65
+internal/ingest/ingest.go
+  s_7b1d254e7dc4d6::t_ede1f77ddc550a 1-153
+internal/ingest/excel.go
+  s_7b1d254e7dc4d6::t_220a7176a4d04a 1-221
+internal/ingest/http.go
+  s_7b1d254e7dc4d6::t_d7ddc8caa60bfd 1-152
+internal/ingest/json.go
+  s_7b1d254e7dc4d6::t_2289025717aa59 1-156
+internal/ingest/ingest_test.go
+  s_7b1d254e7dc4d6::t_10d35622bfa558 1-166
+  s_7b1d254e7dc4d6::t_46a82c0c1abe33 167-169
+scripts/gen-fixture-xlsx.go
+  s_7b1d254e7dc4d6::t_b66b2d89226934 1-41
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "a23c1f077cfb05828f73174e429ac0af367f0580",
+  "prompts": {},
+  "sessions": {
+    "s_7b1d254e7dc4d6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "01a0af5a-c16b-7bd0-879e-eec39da655a8",
+        "model": "unknown"
+      },
+      "human_author": "mjnong <marcusnagy@icloud.com>"
+    }
+  }
+}
