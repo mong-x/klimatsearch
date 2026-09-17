@@ -1,0 +1,25 @@
+site/swagger/index.html
+  s_546f0a9ec1bffd::t_72906f250d20f7 1-75
+internal/api/swagger.html
+  s_546f0a9ec1bffd::t_3c62fe9e3b6942 1-38
+internal/api/spec.go
+  s_546f0a9ec1bffd::t_0925957e9b8073 1-25
+internal/api/openapi.yaml
+  s_546f0a9ec1bffd::t_16f31ebb2d75f2 1-503
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "658141b3964a2658c3d4209f7742185e5908be4c",
+  "prompts": {},
+  "sessions": {
+    "s_546f0a9ec1bffd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "01a0af4f-5c78-7b63-b802-9a718213d37a",
+        "model": "unknown"
+      },
+      "human_author": "mjnong <marcusnagy@icloud.com>"
+    }
+  }
+}
