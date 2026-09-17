@@ -54,11 +54,11 @@ func New(eng search.SearchEngine, st *store.Store, source string, useVector, use
 func (s *Server) register() {
 	mcpsdk.AddTool(s.MCP, &mcpsdk.Tool{
 		Name:        ToolSearch,
-		Description: "Search Boverket Klimatdatabas generic construction resources by name or description",
+		Description: "Search Klimatdatabas. Each hit is the full Resource (names, descriptions, applicability, conversions, A1A3, category) plus score, match_source, and a details path for get_resource_details",
 	}, s.searchTool)
 	mcpsdk.AddTool(s.MCP, &mcpsdk.Tool{
 		Name:        ToolGet,
-		Description: "Get one Klimatdatabas resource by Resource ID",
+		Description: "Get one Klimatdatabas Resource by Resource ID or catalog:id (the hit.details path without /api/resources/)",
 	}, s.getTool)
 	mcpsdk.AddTool(s.MCP, &mcpsdk.Tool{
 		Name:        ToolCompare,
@@ -86,10 +86,10 @@ type searchIn struct {
 }
 
 type searchOut struct {
-	Source  string       `json:"source"`
-	Query   string       `json:"query"`
-	Lang    string       `json:"lang"`
-	Results []search.Hit `json:"results"`
+	Source  string           `json:"source"`
+	Query   string           `json:"query"`
+	Lang    string           `json:"lang"`
+	Results []map[string]any `json:"results"`
 }
 
 func (s *Server) searchTool(ctx context.Context, _ *mcpsdk.CallToolRequest, in searchIn) (*mcpsdk.CallToolResult, searchOut, error) {
@@ -101,10 +101,11 @@ func (s *Server) searchTool(ctx context.Context, _ *mcpsdk.CallToolRequest, in s
 	if err != nil {
 		return nil, searchOut{}, err
 	}
-	if hits == nil {
-		hits = []search.Hit{}
+	results := make([]map[string]any, 0, len(hits))
+	for _, hit := range hits {
+		results = append(results, hit.View(s.source))
 	}
-	out := searchOut{Source: s.source, Query: in.Query, Lang: lang, Results: hits}
+	out := searchOut{Source: s.source, Query: in.Query, Lang: lang, Results: results}
 	return textResult(out), out, nil
 }
 

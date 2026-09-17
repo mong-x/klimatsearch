@@ -70,6 +70,9 @@ nav .btn:hover { text-decoration: none; opacity: 0.92; }
   border-bottom: 1px solid var(--border-subtle); padding: 10px 14px;
   font-family: var(--font-mono); font-size: 13px; color: var(--text-secondary);
 }
+.hero-tabs { margin: 0; }
+.hero-tabs button { font-family: var(--font-mono); font-size: 12px; padding: 4px 10px; }
+pre[hidden] { display: none; }
 .chrome .lang { margin-left: auto; color: var(--text-tertiary); font-size: 12px; }
 .copy {
   background: none; border: 0; color: var(--text-tertiary); cursor: pointer;

@@ -45,25 +45,41 @@
         <button class="copy" type="button" data-copy="git clone https://github.com/mong-x/klimatsearch.git && cd klimatsearch && make run" aria-label="Copy install command">copy</button>
       </div>
     </div>
-    <div class="frame" aria-label="Example search">
+    <div class="frame" aria-label="Example search then details">
       <div class="frame-inner">
         <div class="chrome">
-          <span>GET /api/search</span>
+          <div class="tabs hero-tabs" role="tablist">
+            <button type="button" role="tab" aria-selected="true" data-hero="search">Search</button>
+            <button type="button" role="tab" aria-selected="false" data-hero="details">Details</button>
+          </div>
           <span class="lang">http</span>
           <button class="copy" type="button" data-copy="curl -sS 'http://127.0.0.1:8080/api/search?q=spånskiva&amp;lang=sv'" aria-label="Copy curl">copy</button>
         </div>
-        <pre><span class="ln">1</span><span class="c">$</span> curl -sS <span class="s">'http://127.0.0.1:8080/api/search?q=spånskiva&amp;lang=sv'</span>
+        <pre class="hero-panel" id="hero-search"><span class="ln">1</span><span class="c">$</span> curl -sS <span class="s">'…/api/search?q=spånskiva&amp;lang=sv'</span>
 <span class="ln">2</span>{
 <span class="ln">3</span>  <span class="s">"source"</span>: <span class="s">"Boverket Klimatdatabas"</span>,
-<span class="ln">4</span>  <span class="s">"catalog"</span>: <span class="s">"boverket"</span>,
-<span class="ln">5</span>  <span class="s">"hits"</span>: [{
-<span class="ln">6</span>    <span class="s">"id"</span>: <span class="s">"boverket:6000000000"</span>,
+<span class="ln">4</span>  <span class="s">"results"</span>: [{
+<span class="ln">5</span>    <span class="s">"id"</span>: <span class="s">"6000000000"</span>,
+<span class="ln">6</span>    <span class="s">"catalog"</span>: <span class="s">"boverket"</span>,
 <span class="ln">7</span>    <span class="s">"name_sv"</span>: <span class="s">"Spånskiva"</span>,
-<span class="ln">8</span>    <span class="s">"name_en"</span>: <span class="s">"Particle board"</span>,
-<span class="ln">9</span>    <span class="s">"a1a3"</span>: <span class="n">0.39</span>,
-<span class="ln">10</span>    <span class="s">"unit"</span>: <span class="s">"kg"</span>,
-<span class="ln">11</span>    <span class="s">"match_source"</span>: <span class="s">"fts"</span>
+<span class="ln">8</span>    <span class="s">"a1a3"</span>: <span class="n">0.39</span>,
+<span class="ln">9</span>    <span class="s">"conversions"</span>: { <span class="s">"kg/m³"</span>: <span class="n">700</span> },
+<span class="ln">10</span>    <span class="s">"match_source"</span>: <span class="s">"fts"</span>,
+<span class="ln">11</span>    <span class="s">"details"</span>: <span class="s">"/api/resources/boverket:6000000000"</span>
 <span class="ln">12</span>  }]
+<span class="ln">13</span>}</pre>
+        <pre class="hero-panel" id="hero-details" hidden><span class="ln">1</span><span class="c">$</span> curl -sS <span class="s">'…/api/resources/boverket:6000000000'</span>
+<span class="ln">2</span>{
+<span class="ln">3</span>  <span class="s">"id"</span>: <span class="s">"6000000000"</span>,
+<span class="ln">4</span>  <span class="s">"catalog"</span>: <span class="s">"boverket"</span>,
+<span class="ln">5</span>  <span class="s">"name_sv"</span>: <span class="s">"Spånskiva"</span>,
+<span class="ln">6</span>  <span class="s">"name_en"</span>: <span class="s">"Particle board"</span>,
+<span class="ln">7</span>  <span class="s">"applicability_sv"</span>: <span class="s">"Byggskivor inomhus"</span>,
+<span class="ln">8</span>  <span class="s">"a1a3"</span>: <span class="n">0.39</span>,
+<span class="ln">9</span>  <span class="s">"unit"</span>: <span class="s">"kg"</span>,
+<span class="ln">10</span>  <span class="s">"conversions"</span>: { <span class="s">"kg/m³"</span>: <span class="n">700</span> },
+<span class="ln">11</span>  <span class="s">"category"</span>: <span class="s">"Byggskivor"</span>,
+<span class="ln">12</span>  <span class="s">"source"</span>: <span class="s">"Boverket Klimatdatabas"</span>
 <span class="ln">13</span>}</pre>
       </div>
     </div>
@@ -182,7 +198,7 @@
         } catch (_) {}
       });
     });
-    const tabs = document.querySelectorAll('[role="tab"]');
+    const tabs = document.querySelectorAll('[data-tab]');
     tabs.forEach((tab) => {
       tab.addEventListener("click", () => {
         const id = tab.getAttribute("data-tab");
@@ -190,6 +206,22 @@
         document.querySelectorAll(".panel").forEach((p) => {
           p.classList.toggle("active", p.id === "tab-" + id);
         });
+      });
+    });
+    const heroTabs = document.querySelectorAll("[data-hero]");
+    heroTabs.forEach((tab) => {
+      tab.addEventListener("click", () => {
+        const id = tab.getAttribute("data-hero");
+        heroTabs.forEach((t) => t.setAttribute("aria-selected", t === tab ? "true" : "false"));
+        document.querySelectorAll(".hero-panel").forEach((p) => {
+          p.hidden = p.id !== "hero-" + id;
+        });
+        const copy = tab.closest(".chrome").querySelector(".copy");
+        if (id === "details") {
+          copy.setAttribute("data-copy", "curl -sS 'http://127.0.0.1:8080/api/resources/boverket:6000000000'");
+        } else {
+          copy.setAttribute("data-copy", "curl -sS 'http://127.0.0.1:8080/api/search?q=spånskiva&lang=sv'");
+        }
       });
     });
   </script>

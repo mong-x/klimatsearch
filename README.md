@@ -102,7 +102,7 @@ Optional for production embeddings: [ONNX Runtime](https://onnxruntime.ai) (`bre
 
 Resource `{id}` may be prefixed (`boverket:6000000000`) or a bare Resource ID when only one Catalog matches (**409** if ambiguous).
 
-JSON includes Attribution `"source": "Boverket Klimatdatabas"` and `"catalog"` (Catalog ID). Hits include `match_source`: `fts`, `vector`, `both`, or `rerank`. Do not confuse that field with the citation `source`.
+JSON includes Attribution `"source": "Boverket Klimatdatabas"` and `"catalog"` (Catalog ID). Each **search hit is the full Resource** (names, descriptions, applicability, synonyms, conversions, A1A3, category, version) plus `score`, `match_source` (`fts` \| `vector` \| `both` \| `rerank`), and `details` (`/api/resources/{catalog}:{id}`). Follow `details` (or MCP `get_resource_details`) for the same row by GET. Do not confuse `match_source` with the citation `source`.
 
 Admin file ingest is multipart field `file`, Guard-protected. Optional `KLIMAT_ADMIN_TOKEN` as `X-Admin-Token`. Unknown Catalog → 400.
 
@@ -119,8 +119,8 @@ curl -sS 'http://127.0.0.1:8081/api/resources/compare?a=6000000000&b=6000000001&
 
 | Tool | Arguments |
 | --- | --- |
-| `search_climate_data` | query, optional `lang`, optional `databases` array |
-| `get_resource_details` | Resource ID (prefixed or bare) |
+| `search_climate_data` | query, optional `lang`, optional `databases` array. Hits are full Resources plus `details` |
+| `get_resource_details` | Resource ID (prefixed or bare); same as `GET {hit.details}` |
 | `compare_resources` | `id_a`, `id_b`, optional `unit` |
 
 Point Claude / Cursor / Codex at the streamable endpoint. Paid MCP routes go through the same Guard as REST.

@@ -79,19 +79,7 @@ func (h *Handler) search(w http.ResponseWriter, r *http.Request) {
 	}
 	results := make([]map[string]any, 0, len(hits))
 	for _, hit := range hits {
-		results = append(results, map[string]any{
-			"id":             hit.ID,
-			"catalog":        hit.CatalogID,
-			"name_sv":        hit.NameSV,
-			"name_en":        hit.NameEN,
-			"description_sv": hit.DescriptionSV,
-			"description_en": hit.DescriptionEN,
-			"a1a3":           hit.A1A3,
-			"unit":           hit.Unit,
-			"lang":           hit.Lang,
-			"score":          hit.Score,
-			"match_source":   hit.Source,
-		})
+		results = append(results, hit.View(h.Source))
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
 		"source":  h.Source,

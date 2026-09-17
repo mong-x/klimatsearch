@@ -6,35 +6,85 @@ import (
 	"github.com/mong-x/klimatsearch/internal/model"
 )
 
-// Hit is one Resource returned for a Query.
+// Hit is one Resource returned for a Query, including the stored row.
 type Hit struct {
-	ID            string
-	CatalogID     string
-	NameSV        string
-	NameEN        string
-	DescriptionSV string
-	DescriptionEN string
-	A1A3          float64
-	Unit          string
-	Lang          string
-	Score         float64
-	Source        string // "fts" | "vector" | "both" | "rerank"
+	ID              string
+	CatalogID       string
+	NameSV          string
+	NameEN          string
+	DescriptionSV   string
+	DescriptionEN   string
+	ApplicabilitySV string
+	ApplicabilityEN string
+	Synonyms        string
+	A1A3            float64
+	Unit            string
+	Conversions     map[string]float64
+	Category        string
+	Version         string
+	Lang            string
+	Score           float64
+	Source          string // "fts" | "vector" | "both" | "rerank"
+	Details         string // GET path for this Resource
 }
 
 func HitFrom(r model.Resource, lang, source string, score float64) Hit {
-	return Hit{
-		ID:            r.ResourceID,
-		CatalogID:     r.CatalogID,
-		NameSV:        r.NameSV,
-		NameEN:        r.NameEN,
-		DescriptionSV: r.DescriptionSV,
-		DescriptionEN: r.DescriptionEN,
-		A1A3:          r.A1A3,
-		Unit:          r.Unit,
-		Lang:          lang,
-		Score:         score,
-		Source:        source,
+	conv := r.Conversions
+	if conv == nil {
+		conv = map[string]float64{}
+	} else {
+		cp := make(map[string]float64, len(conv))
+		for k, v := range conv {
+			cp[k] = v
+		}
+		conv = cp
 	}
+	return Hit{
+		ID:              r.ResourceID,
+		CatalogID:       r.CatalogID,
+		NameSV:          r.NameSV,
+		NameEN:          r.NameEN,
+		DescriptionSV:   r.DescriptionSV,
+		DescriptionEN:   r.DescriptionEN,
+		ApplicabilitySV: r.ApplicabilitySV,
+		ApplicabilityEN: r.ApplicabilityEN,
+		Synonyms:        r.Synonyms,
+		A1A3:            r.A1A3,
+		Unit:            r.Unit,
+		Conversions:     conv,
+		Category:        r.Category,
+		Version:         r.Version,
+		Lang:            lang,
+		Score:           score,
+		Source:          source,
+		Details:         "/api/resources/" + r.DocID(),
+	}
+}
+
+// View is the search-hit JSON: full Resource plus score, match_source, details.
+func (h Hit) View(attribution string) map[string]any {
+	r := model.Resource{
+		CatalogID:       h.CatalogID,
+		ResourceID:      h.ID,
+		NameSV:          h.NameSV,
+		NameEN:          h.NameEN,
+		DescriptionSV:   h.DescriptionSV,
+		DescriptionEN:   h.DescriptionEN,
+		ApplicabilitySV: h.ApplicabilitySV,
+		ApplicabilityEN: h.ApplicabilityEN,
+		Synonyms:        h.Synonyms,
+		A1A3:            h.A1A3,
+		Unit:            h.Unit,
+		Conversions:     h.Conversions,
+		Category:        h.Category,
+		Version:         h.Version,
+	}
+	m := r.View(attribution)
+	m["lang"] = h.Lang
+	m["score"] = h.Score
+	m["match_source"] = h.Source
+	m["details"] = h.Details
+	return m
 }
 
 // Embedder turns document text into a fixed-dimension vector.

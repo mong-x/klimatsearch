@@ -31,8 +31,20 @@ func TestHTTP(t *testing.T) {
 	t.Cleanup(func() { _ = st.Close() })
 	var fake embedder.Fake
 	st.ConfigureVector(fake.Dim())
-	a := model.Resource{ResourceID: "6000000991", NameSV: "Betong", NameEN: "Concrete", A1A3: 0.12, Unit: "kg", Version: "t"}
-	b := model.Resource{ResourceID: "6000000992", NameSV: "Konstruktionsstål", NameEN: "Structural steel", A1A3: 1.55, Unit: "kg", Version: "t"}
+	a := model.Resource{
+		CatalogID:       model.CatalogBoverket,
+		ResourceID:      "6000000991",
+		NameSV:          "Betong",
+		NameEN:          "Concrete",
+		DescriptionSV:   "Generisk betong",
+		ApplicabilitySV: "Stomme",
+		A1A3:            0.12,
+		Unit:            "kg",
+		Conversions:     map[string]float64{"kg/m³": 2400},
+		Category:        "Betong",
+		Version:         "t",
+	}
+	b := model.Resource{CatalogID: model.CatalogBoverket, ResourceID: "6000000992", NameSV: "Konstruktionsstål", NameEN: "Structural steel", A1A3: 1.55, Unit: "kg", Version: "t"}
 	for _, r := range []model.Resource{a, b} {
 		h, _ := r.ContentHash()
 		r.Hash = h
@@ -105,6 +117,52 @@ func TestHTTP(t *testing.T) {
 		}
 		if len(body.Results) == 0 {
 			t.Fatal("expected hits")
+		}
+	})
+	t.Run("search hit includes full resource and details", func(t *testing.T) {
+		resp := get(t, srv.URL+"/api/search?q=Betong")
+		defer resp.Body.Close()
+		if resp.StatusCode != 200 {
+			t.Fatal(resp.Status)
+		}
+		var body struct {
+			Results []map[string]any `json:"results"`
+		}
+		if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+			t.Fatal(err)
+		}
+		if len(body.Results) == 0 {
+			t.Fatal("expected hits")
+		}
+		hit := body.Results[0]
+		if hit["id"] != "6000000991" {
+			t.Fatalf("id=%v", hit["id"])
+		}
+		if hit["category"] != "Betong" {
+			t.Fatalf("category=%v", hit["category"])
+		}
+		if hit["applicability_sv"] != "Stomme" {
+			t.Fatalf("applicability_sv=%v", hit["applicability_sv"])
+		}
+		conv, _ := hit["conversions"].(map[string]any)
+		if conv["kg/m³"] != 2400.0 {
+			t.Fatalf("conversions=%v", hit["conversions"])
+		}
+		details, _ := hit["details"].(string)
+		if details != "/api/resources/boverket:6000000991" {
+			t.Fatalf("details=%q", details)
+		}
+		g := get(t, srv.URL+details)
+		defer g.Body.Close()
+		if g.StatusCode != 200 {
+			t.Fatalf("GET %s want 200 got %d", details, g.StatusCode)
+		}
+		var got map[string]any
+		if err := json.NewDecoder(g.Body).Decode(&got); err != nil {
+			t.Fatal(err)
+		}
+		if got["id"] != "6000000991" || got["category"] != "Betong" {
+			t.Fatalf("details body=%v", got)
 		}
 	})
 	t.Run("list and get", func(t *testing.T) {
