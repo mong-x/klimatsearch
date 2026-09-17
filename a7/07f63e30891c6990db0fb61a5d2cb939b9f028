@@ -1,0 +1,36 @@
+internal/api/hosted_test.go
+  s_546f0a9ec1bffd::t_ddaf243470cfbe 1-48
+internal/guard/new.go
+  s_546f0a9ec1bffd::t_ab7a3e3965849e 1-19
+internal/guard/wrap_hosted.go
+  s_546f0a9ec1bffd::t_065f8295bd2217 1-88
+internal/guard/hosted_test.go
+  s_546f0a9ec1bffd::t_6c3126d0fd773a 1-148
+internal/guard/guard_test.go
+  s_546f0a9ec1bffd::t_c5cd6ffd61ce74 21-24,26-28,32-33,43,54
+  s_546f0a9ec1bffd::t_a58b06f9efac02 55
+internal/config/hosted_none.go
+  s_546f0a9ec1bffd::t_ec8b13bc16b910 1-10
+internal/config/hosted.go
+  s_546f0a9ec1bffd::t_9f9f5120c59668 1-24
+internal/guard/new_hosted.go
+  s_546f0a9ec1bffd::t_49ef38a65b611c 1-32
+internal/guard/wrap.go
+  s_546f0a9ec1bffd::t_ec9c70adf576a7 1-10
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "a707f63e30891c6990db0fb61a5d2cb939b9f028",
+  "prompts": {},
+  "sessions": {
+    "s_546f0a9ec1bffd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "01a0af4f-5c78-7b63-b802-9a718213d37a",
+        "model": "unknown"
+      },
+      "human_author": "mjnong <marcusnagy@icloud.com>"
+    }
+  }
+}
