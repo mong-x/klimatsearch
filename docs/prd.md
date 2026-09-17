@@ -39,9 +39,10 @@ Hybrid SearchEngine: FTS5 BM25 on the requested language columns, optional sqlit
 | Method | Path | Notes |
 | --- | --- | --- |
 | GET | `/healthz` | `{"status":"ok"}` |
-| GET | `/api/search?q=&vector=&rerank=&lang=&databases=` | lang default `sv`; `databases` is Catalog IDs (`boverket,br25`); empty q or unknown lang → 400. Each hit is the full Resource plus `score`, `match_source`, and `details` (`/api/resources/{catalog}:{id}`) |
+| GET | `/api/search?q=&vector=&rerank=&lang=&databases=` | lang default `sv`; `databases` is Catalog IDs (`boverket,br25`); empty q or unknown lang → 400. Each hit is the full Resource plus `score`, `match_source`, `details` (`/api/resources/{catalog}:{id}`), and `origin` (Boverket product sheet) when known |
 | GET | `/api/resources?lang=&databases=` | list |
-| GET | `/api/resources/{id}?lang=` | 404 if missing; `{id}` may be prefixed `boverket:6000000000` or bare Resource ID when only one Catalog matches |
+| GET | `/api/resources/{id}?lang=` | 404 if missing; `{id}` may be prefixed `boverket:6000000000` or bare Resource ID when only one Catalog matches. JSON includes `origin` for Boverket sheets |
+| GET | `/api/resources/{id}/origin` | 302 to the Catalog's official page (`klimatdatabasen.boverket.se/detaljer/{code}/{id}`); 404 if that Catalog has no public sheet |
 | GET | `/api/resources/compare?a=&b=&unit=` | unit optional; 404 if a Resource ID is missing; 400 if explicit unit cannot apply |
 | POST | `/admin/ingest/file?catalog=` | multipart file for file-only Catalogs (BR25); Guard + admin |
 

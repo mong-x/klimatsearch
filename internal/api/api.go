@@ -36,6 +36,7 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/search", h.search)
 	mux.HandleFunc("GET /api/resources", h.list)
 	mux.HandleFunc("GET /api/resources/compare", h.compare)
+	mux.HandleFunc("GET /api/resources/{id}/origin", h.origin)
 	mux.HandleFunc("GET /api/resources/{id}", h.get)
 	mux.HandleFunc("POST /admin/ingest/file", h.ingestFile)
 }
@@ -138,6 +139,34 @@ func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
 	}
 	body := it.View(h.Source)
 	writeJSON(w, http.StatusOK, body)
+}
+
+func (h *Handler) origin(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if id == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "id is required"})
+		return
+	}
+	it, err := h.Store.Get(r.Context(), id)
+	if errors.Is(err, store.ErrNotFound) {
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "not found"})
+		return
+	}
+	if errors.Is(err, store.ErrAmbiguous) {
+		writeJSON(w, http.StatusConflict, map[string]string{"error": err.Error()})
+		return
+	}
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+	loc := it.Origin()
+	if loc == "" {
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "no origin URL for this catalog"})
+		return
+	}
+	w.Header().Set("Location", loc)
+	w.WriteHeader(http.StatusFound)
 }
 
 func (h *Handler) compare(w http.ResponseWriter, r *http.Request) {

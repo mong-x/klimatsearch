@@ -21,11 +21,13 @@ type Hit struct {
 	Unit            string
 	Conversions     map[string]float64
 	Category        string
+	CategoryCode    string
 	Version         string
 	Lang            string
 	Score           float64
 	Source          string // "fts" | "vector" | "both" | "rerank"
 	Details         string // GET path for this Resource
+	Origin          string // Catalog's own page, if known
 }
 
 func HitFrom(r model.Resource, lang, source string, score float64) Hit {
@@ -53,11 +55,13 @@ func HitFrom(r model.Resource, lang, source string, score float64) Hit {
 		Unit:            r.Unit,
 		Conversions:     conv,
 		Category:        r.Category,
+		CategoryCode:    r.CategoryCode,
 		Version:         r.Version,
 		Lang:            lang,
 		Score:           score,
 		Source:          source,
 		Details:         "/api/resources/" + r.DocID(),
+		Origin:          r.Origin(),
 	}
 }
 
@@ -77,6 +81,7 @@ func (h Hit) View(attribution string) map[string]any {
 		Unit:            h.Unit,
 		Conversions:     h.Conversions,
 		Category:        h.Category,
+		CategoryCode:    h.CategoryCode,
 		Version:         h.Version,
 	}
 	m := r.View(attribution)
@@ -84,6 +89,9 @@ func (h Hit) View(attribution string) map[string]any {
 	m["score"] = h.Score
 	m["match_source"] = h.Source
 	m["details"] = h.Details
+	if h.Origin != "" {
+		m["origin"] = h.Origin
+	}
 	return m
 }
 

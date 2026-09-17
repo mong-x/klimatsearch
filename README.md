@@ -95,6 +95,7 @@ Optional for production embeddings: [ONNX Runtime](https://onnxruntime.ai) (`bre
 | GET | `/api/search?q=&vector=true\|false&rerank=true\|false&lang=sv\|en&databases=` |
 | GET | `/api/resources?lang=&databases=` |
 | GET | `/api/resources/{id}?lang=` |
+| GET | `/api/resources/{id}/origin` |
 | GET | `/api/resources/compare?a={id}&b={id}&unit=` |
 | POST | `/admin/ingest/file?catalog=` |
 
@@ -102,7 +103,7 @@ Optional for production embeddings: [ONNX Runtime](https://onnxruntime.ai) (`bre
 
 Resource `{id}` may be prefixed (`boverket:6000000000`) or a bare Resource ID when only one Catalog matches (**409** if ambiguous).
 
-JSON includes Attribution `"source": "Boverket Klimatdatabas"` and `"catalog"` (Catalog ID). Each **search hit is the full Resource** (names, descriptions, applicability, synonyms, conversions, A1A3, category, version) plus `score`, `match_source` (`fts` \| `vector` \| `both` \| `rerank`), and `details` (`/api/resources/{catalog}:{id}`). Follow `details` (or MCP `get_resource_details`) for the same row by GET. Do not confuse `match_source` with the citation `source`.
+JSON includes Attribution `"source": "Boverket Klimatdatabas"` and `"catalog"` (Catalog ID). Each **search hit is the full Resource** (names, descriptions, applicability, synonyms, conversions, A1A3, category, version) plus `score`, `match_source` (`fts` \| `vector` \| `both` \| `rerank`), `details` (`/api/resources/{catalog}:{id}`), and — for Boverket rows — `origin` (the official product sheet on [klimatdatabasen.boverket.se](https://klimatdatabasen.boverket.se)). Boverket's OpenAPI has no per-id GET; `origin` is `https://klimatdatabasen.boverket.se/detaljer/{category_code}/{resource_id}`. `GET {details}/origin` **302**s there. Follow `details` (or MCP `get_resource_details`) for klimatsearch's copy. Do not confuse `match_source` with the citation `source`.
 
 Admin file ingest is multipart field `file`, Guard-protected. Optional `KLIMAT_ADMIN_TOKEN` as `X-Admin-Token`. Unknown Catalog → 400.
 

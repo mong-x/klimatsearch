@@ -42,6 +42,7 @@ func TestHTTP(t *testing.T) {
 		Unit:            "kg",
 		Conversions:     map[string]float64{"kg/m³": 2400},
 		Category:        "Betong",
+		CategoryCode:    "6",
 		Version:         "t",
 	}
 	b := model.Resource{CatalogID: model.CatalogBoverket, ResourceID: "6000000992", NameSV: "Konstruktionsstål", NameEN: "Structural steel", A1A3: 1.55, Unit: "kg", Version: "t"}
@@ -163,6 +164,23 @@ func TestHTTP(t *testing.T) {
 		}
 		if got["id"] != "6000000991" || got["category"] != "Betong" {
 			t.Fatalf("details body=%v", got)
+		}
+		if got["origin"] != "https://klimatdatabasen.boverket.se/detaljer/6/6000000991" {
+			t.Fatalf("origin=%v", got["origin"])
+		}
+		noFollow := &http.Client{CheckRedirect: func(*http.Request, []*http.Request) error {
+			return http.ErrUseLastResponse
+		}}
+		redir, err := noFollow.Get(srv.URL + "/api/resources/boverket:6000000991/origin")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer redir.Body.Close()
+		if redir.StatusCode != http.StatusFound {
+			t.Fatalf("origin redirect=%d", redir.StatusCode)
+		}
+		if loc := redir.Header.Get("Location"); loc != "https://klimatdatabasen.boverket.se/detaljer/6/6000000991" {
+			t.Fatalf("Location=%q", loc)
 		}
 	})
 	t.Run("list and get", func(t *testing.T) {

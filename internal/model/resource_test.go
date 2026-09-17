@@ -24,6 +24,35 @@ func sample() Resource {
 	}
 }
 
+func TestOriginBoverketSheet(t *testing.T) {
+	r := Resource{CatalogID: CatalogBoverket, ResourceID: "6000000000", CategoryCode: "10"}
+	got := r.Origin()
+	want := "https://klimatdatabasen.boverket.se/detaljer/10/6000000000"
+	if got != want {
+		t.Fatalf("got %s", got)
+	}
+	if r.View("Boverket Klimatdatabas")["origin"] != want {
+		t.Fatal("view must include origin")
+	}
+}
+
+func TestOriginEmptyWithoutCode(t *testing.T) {
+	r := Resource{ResourceID: "6000000000"}
+	if r.Origin() != "" {
+		t.Fatalf("got %s", r.Origin())
+	}
+	if _, ok := r.View("Boverket Klimatdatabas")["origin"]; ok {
+		t.Fatal("view must omit origin when unknown")
+	}
+}
+
+func TestOriginNotBR25(t *testing.T) {
+	r := Resource{CatalogID: CatalogBR25, ResourceID: "x", CategoryCode: "10"}
+	if r.Origin() != "" {
+		t.Fatalf("br25 should not invent a Boverket URL: %s", r.Origin())
+	}
+}
+
 func TestContentHashStable(t *testing.T) {
 	r := sample()
 	a, err := r.ContentHash()

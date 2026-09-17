@@ -135,6 +135,7 @@ func parseV2Resource(raw json.RawMessage, culture string) (model.Resource, error
 			}
 			if firstString(cm, "ClassificationType") == "Boverket" {
 				r.Category = firstString(cm, "Text")
+				r.CategoryCode = firstString(cm, "Code")
 				break
 			}
 		}

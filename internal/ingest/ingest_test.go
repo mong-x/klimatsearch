@@ -49,6 +49,13 @@ func TestParseBoverketV2One(t *testing.T) {
 	if r.Category != "Byggskivor" {
 		t.Fatalf("category=%s", r.Category)
 	}
+	if r.CategoryCode != "10" {
+		t.Fatalf("category_code=%s", r.CategoryCode)
+	}
+	wantOrigin := "https://klimatdatabasen.boverket.se/detaljer/10/6000000000"
+	if r.Origin() != wantOrigin {
+		t.Fatalf("origin=%s", r.Origin())
+	}
 	if r.CatalogID != "boverket" {
 		t.Fatalf("catalog=%s", r.CatalogID)
 	}

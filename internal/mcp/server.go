@@ -58,7 +58,7 @@ func (s *Server) register() {
 	}, s.searchTool)
 	mcpsdk.AddTool(s.MCP, &mcpsdk.Tool{
 		Name:        ToolGet,
-		Description: "Get one Klimatdatabas Resource by Resource ID or catalog:id (the hit.details path without /api/resources/)",
+		Description: "Get one Klimatdatabas Resource by Resource ID or catalog:id. Includes origin (Boverket product sheet URL) when known. HTTP GET {details}/origin 302s there.",
 	}, s.getTool)
 	mcpsdk.AddTool(s.MCP, &mcpsdk.Tool{
 		Name:        ToolCompare,

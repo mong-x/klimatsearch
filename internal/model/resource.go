@@ -5,8 +5,11 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"strings"
 )
+
+const BoverketOriginBase = "https://klimatdatabasen.boverket.se"
 
 const (
 	CatalogBoverket = "boverket"
@@ -34,9 +37,28 @@ type Resource struct {
 	Unit            string // Declared unit
 	Conversions     map[string]float64
 	Category        string
+	CategoryCode    string // Boverket Categories[].Code, used to route to the official sheet
 	Hash            string // persisted ContentHash
 	Version         string // DatasetVersion
 	RawJSON         string
+}
+
+// Origin is the Catalog's own page for this Resource, if we can form one.
+// Boverket's API has no per-id GET; the public sheet is klimatdatabasen.boverket.se/detaljer/{code}/{id}.
+func (r Resource) Origin() string {
+	cat := r.CatalogID
+	if cat == "" {
+		cat = CatalogBoverket
+	}
+	if cat != CatalogBoverket {
+		return ""
+	}
+	code := strings.TrimSpace(r.CategoryCode)
+	id := strings.TrimSpace(r.ResourceID)
+	if code == "" || id == "" {
+		return ""
+	}
+	return BoverketOriginBase + "/detaljer/" + url.PathEscape(code) + "/" + url.PathEscape(id)
 }
 
 // DocID is sqlite-vec's single primary key: catalog_id:resource_id.
@@ -117,6 +139,7 @@ func (r Resource) ContentHash() (string, error) {
 		"applicability_en": r.ApplicabilityEN,
 		"applicability_sv": r.ApplicabilitySV,
 		"category":         r.Category,
+		"category_code":    r.CategoryCode,
 		"conversions":      conversions,
 		"description_en":   r.DescriptionEN,
 		"description_sv":   r.DescriptionSV,
@@ -140,7 +163,7 @@ func (r Resource) View(attribution string) map[string]any {
 	if conv == nil {
 		conv = map[string]float64{}
 	}
-	return map[string]any{
+	m := map[string]any{
 		"id":               r.ResourceID,
 		"catalog":          r.CatalogID,
 		"name_sv":          r.NameSV,
@@ -157,4 +180,8 @@ func (r Resource) View(attribution string) map[string]any {
 		"version":          r.Version,
 		"source":           attribution,
 	}
+	if o := r.Origin(); o != "" {
+		m["origin"] = o
+	}
+	return m
 }
