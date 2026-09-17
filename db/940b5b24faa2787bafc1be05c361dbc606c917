@@ -1,0 +1,23 @@
+internal/guard/guard.go
+  s_546f0a9ec1bffd::t_da1c6cdd43f259 1,3,5
+internal/guard/types_hosted.go
+  s_546f0a9ec1bffd::t_809be6b8e6517c 1-59
+internal/search/types.go
+  s_546f0a9ec1bffd::t_ddc584ad344f38 9-18,20-24,29-33,37,39,47-64,69,81
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "db940b5b24faa2787bafc1be05c361dbc606c917",
+  "prompts": {},
+  "sessions": {
+    "s_546f0a9ec1bffd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "01a0af4f-5c78-7b63-b802-9a718213d37a",
+        "model": "unknown"
+      },
+      "human_author": "mjnong <marcusnagy@icloud.com>"
+    }
+  }
+}
