@@ -4,7 +4,7 @@ Go 1.27. CGO is required (`CGO_ENABLED=1`) for mattn/go-sqlite3, sqlite-vec, and
 
 HTTP routing uses `net/http.ServeMux` only (Go 1.22 method + path values). Do not add Chi, Gin, or Echo.
 
-Glossary is `CONTEXT.md`. Human launch work (ONNX, Unkey, MPP, BR25, AWS) is `docs/LAUNCH.md`. Do not add architecture decision records, research notes, or a PRD to git.
+Glossary is `CONTEXT.md`. Human launch work (ONNX, hosted Unkey/MPP, BR25, AWS) is `docs/LAUNCH.md`. Default build is self-hosted (`-tags fts5` only): no Unkey, no MPP. Hosted Guard is `-tags hosted`. Do not add architecture decision records, research notes, or a PRD to git. `go mod tidy -tags "fts5 hosted"` so hosted module deps stay in go.mod.
 
 Do not commit `/data/*.db`, `/models/**` weights, `*.onnx`, or `*.safetensors`. Tests and default CI use the fake Embedder; they must not require ONNX weights or libonnxruntime.
 

@@ -15,9 +15,11 @@ jobs:
           go-version: "1.27"
       - name: Install C toolchain
         run: sudo apt-get update && sudo apt-get install -y gcc libc6-dev libsqlite3-dev
-      - name: Test
+      - name: Test (self-hosted)
         run: CGO_ENABLED=1 go test -tags fts5 ./...
-      - name: Build
+      - name: Test (hosted Guard)
+        run: CGO_ENABLED=1 go test -tags "fts5 hosted" ./...
+      - name: Build self-hosted
         run: CGO_ENABLED=1 go build -tags fts5 -o klimatsearch ./cmd/klimatsearch
       - uses: actions/upload-artifact@v4
         with:

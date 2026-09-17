@@ -102,7 +102,7 @@ func main() {
 		_ = srv.Shutdown(shctx)
 	}()
 
-	log.Info("listening", "addr", cfg.Listen, "embedder", cfg.Embedder, "reranker", cfg.Reranker, "db", cfg.DB, "guard_allow_all", g.AllowAll)
+	log.Info("listening", "addr", cfg.Listen, "embedder", cfg.Embedder, "reranker", cfg.Reranker, "db", cfg.DB, "hosted", cfg.Hosted(), "guard_allow_all", g.AllowAll)
 	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		log.Error("http", "err", err)
 		os.Exit(1)

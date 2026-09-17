@@ -10,7 +10,7 @@
 [![Pages](https://img.shields.io/badge/site-mong--x.github.io-1F6F4A?style=for-the-badge&logo=githubpages&logoColor=E6E8EB&labelColor=0A0B0D)](https://mong-x.github.io/klimatsearch/)
 [![OpenAPI](https://img.shields.io/badge/OpenAPI-Swagger_UI-82AAFF?style=for-the-badge&labelColor=0A0B0D)](https://mong-x.github.io/klimatsearch/swagger/)
 
-<sub>SQLite FTS5 · sqlite-vec · RRF k=60 · F2LLM-v2-80M · Unkey · MPP 402</sub>
+<sub>SQLite FTS5 · sqlite-vec · RRF k=60 · F2LLM-v2-80M · self-hosted ungated</sub>
 
 **[Live site →](https://mong-x.github.io/klimatsearch/)** · **[Swagger UI →](https://mong-x.github.io/klimatsearch/swagger/)** — REST spec (`GET /openapi.yaml`, `GET /docs` on a running process).
 
@@ -34,8 +34,8 @@ This project is **not affiliated with Boverket**. Klimatdatabas content remains 
 
 - Hybrid retrieval — FTS5 BM25 always; sqlite-vec KNN when vectors exist; fused with Reciprocal Rank Fusion (`k=60`)
 - Catalog identity — `(catalog_id, resource_id)` from day one (`boverket`, later `br25`)
-- Dual-lane Guard — agents pay with MPP (`Authorization: Payment` → HTTP 402); developers use Unkey Bearer
 - Fake embedder default — `make run` and CI need no model weights
+- Self-hosted build has **no Unkey and no MPP**; `make build-hosted` is the gated binary we run
 
 Software is ready for a laptop demo. Accounts, ONNX weights, and production hosting are yours — **[docs/LAUNCH.md](docs/LAUNCH.md)**.
 
@@ -156,25 +156,13 @@ File-only Catalogs (Denmark BR25) use `POST /admin/ingest/file?catalog=br25`. Ma
 
 Changed rows are detected with a canonical **ContentHash** of names, descriptions, applicability, synonyms, A1A3, Declared unit, Conversions, Category, Category Code, and DatasetVersion — not Resource ID or Catalog ID — and re-embedded. If any row was upserted, klimatsearch POSTs `catalog.changed` to `KLIMAT_WEBHOOK_URL` (optional HMAC). Unchanged ingest does not fire.
 
-## Guard
+## Self-hosted vs hosted
 
-Paid routes (`/api/*`, `/mcp`, `/admin/*`) go through one Guard. `GET /healthz` is public.
+`make build` / `make run` / kind e2e compile **without** Unkey or mpp-go. Paid env vars are ignored. That is the binary you self-host.
 
-1. `Authorization: Payment …` → [mpp-go](https://github.com/tempoxyz/mpp-go) Tempo charge. Missing credential → **HTTP 402** + `WWW-Authenticate: Payment`.
-2. Else `Authorization: Bearer …` → Unkey `Keys.VerifyKey` (`github.com/unkeyed/sdks/api/go/v2`). Invalid → 401.
-3. Else if MPP is configured → 402 challenge. Else 401.
-
-When `UNKEY_ROOT_KEY` and `MPP_SECRET_KEY` are both unset, the Guard **allows all traffic** so `make run` and kind e2e keep working. The moment either secret is set, it is fail-closed.
+The process we run is `make build-hosted` (`-tags hosted`): MPP `Authorization: Payment` (HTTP 402) and Unkey Bearer. See [LAUNCH.md](docs/LAUNCH.md) §2. Do not paste those secrets into issues or chat.
 
 Copy `.env.example` to a gitignored `.env`. Existing shell exports win over `.env`.
-
-| Env | Role |
-| --- | --- |
-| `UNKEY_ROOT_KEY` | Server-only root key (`unkey_…`) to call VerifyKey. **Not** a customer `sk_…` key. |
-| `MPP_SECRET_KEY` | HMAC for challenge IDs (`openssl rand -hex 32`) |
-| `MPP_RECIPIENT` | Tempo `0x…` payee (required with the secret). Default RPC is Tempo testnet `https://rpc.moderato.tempo.xyz`. |
-
-Do not paste secrets into issues or chat. Walkthrough: [LAUNCH.md](docs/LAUNCH.md) §2.
 
 ## Embeddings
 

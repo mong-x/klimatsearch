@@ -78,6 +78,8 @@ Documents use labeled bilingual `EmbeddingText` (no Instruct prefix). Queries us
 
 ## 2. Paid traffic (Unkey + MPP)
 
+This section is only for **our** process, built with `make build-hosted` (`-tags hosted`). `make build` / `make run` is the self-hosted binary: no Unkey SDK, no mpp-go, Guard is a pass-through. Docker default is self-hosted; production image: `docker build --build-arg GO_TAGS="fts5 hosted"`.
+
 **Why you:** dashboard accounts, Stripe, Tempo recipient. Local/kind **AllowAll** when Unkey and MPP secrets are unset.
 
 **Developer lane (REST / SaaS)**

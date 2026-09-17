@@ -13,9 +13,8 @@ info:
     `GET /api/resources/{id}/origin` 302s there.
 
     `GET /healthz`, `GET /openapi.yaml`, and `GET /docs` are public.
-    `/api/*`, `/mcp`, and `/admin/*` go through the Guard: MPP `Authorization: Payment`
-    (HTTP 402 challenge) or Unkey `Authorization: Bearer`. When both secrets are unset,
-    the Guard allows all traffic (local / kind).
+    The default self-hosted build (`make build`) has no Unkey or MPP and does not
+    gate `/api/*`. The binary we run is `make build-hosted` (`-tags hosted`).
 
     Outbound: when ingest upserts a changed Resource, klimatsearch POSTs `catalog.changed`
     to `KLIMAT_WEBHOOK_URL`. That is not an inbound path on this API.

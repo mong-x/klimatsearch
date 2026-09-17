@@ -104,8 +104,8 @@
         <dd><code>search_climate_data</code>, <code>get_resource_details</code>, <code>compare_resources</code> on <code>/mcp</code> (streamable) and <code>/mcp/sse</code>.</dd>
       </div>
       <div>
-        <dt>Guard</dt>
-        <dd>MPP <code>Authorization: Payment</code> → HTTP 402. Unkey Bearer for developers. <code>/healthz</code> stays public. AllowAll until secrets are set.</dd>
+        <dt>Self-hosted</dt>
+        <dd>Default binary has no Unkey and no MPP. <code>/healthz</code> and <code>/api/*</code> are ungated. The hosted build we run adds Guard via <code>-tags hosted</code>.</dd>
       </div>
     </dl>
   </section>
@@ -120,7 +120,7 @@
     <div class="tabs" role="tablist">
       <button type="button" role="tab" aria-selected="true" data-tab="rest">REST</button>
       <button type="button" role="tab" aria-selected="false" data-tab="mcp">MCP</button>
-      <button type="button" role="tab" aria-selected="false" data-tab="guard">Guard</button>
+      <button type="button" role="tab" aria-selected="false" data-tab="guard">Hosted</button>
     </div>
     <div class="panel active" id="tab-rest" role="tabpanel">
       <table class="specs">
@@ -148,12 +148,10 @@
     </div>
     <div class="panel" id="tab-guard" role="tabpanel">
       <table class="specs">
-        <thead><tr><th>Credential</th><th>Result</th></tr></thead>
+        <thead><tr><th>Build</th><th>What you get</th></tr></thead>
         <tbody>
-          <tr><td>Authorization: Payment</td><td>mpp-go Charge; else 402 + WWW-Authenticate</td></tr>
-          <tr><td>Authorization: Bearer</td><td>Unkey Keys.VerifyKey</td></tr>
-          <tr><td>none, MPP configured</td><td>HTTP 402 challenge (no RPC)</td></tr>
-          <tr><td>UNKEY_ROOT_KEY and MPP_SECRET_KEY unset</td><td>AllowAll (local / kind)</td></tr>
+          <tr><td>make build</td><td>Self-hosted. No Unkey, no mpp-go. API is ungated.</td></tr>
+          <tr><td>make build-hosted</td><td>Our process. MPP Payment (402) and Unkey Bearer.</td></tr>
         </tbody>
       </table>
     </div>
@@ -178,7 +176,7 @@
     </table>
   </section>
 
-  <p class="wrap cite">Data is from <strong>Boverket Klimatdatabas</strong>. You must cite Boverket as the source. This project is not affiliated with Boverket. Production weights, Unkey, and Tempo recipient are documented in <a href="https://github.com/mong-x/klimatsearch/blob/main/docs/LAUNCH.md">docs/LAUNCH.md</a> — they are not in git.</p>
+  <p class="wrap cite">Data is from <strong>Boverket Klimatdatabas</strong>. You must cite Boverket as the source. This project is not affiliated with Boverket. Production weights for the hosted process are documented in <a href="https://github.com/mong-x/klimatsearch/blob/main/docs/LAUNCH.md">docs/LAUNCH.md</a> — they are not in git.</p>
 
   <footer class="wrap">
     <span>klimatsearch · Apache-2.0 · mong-x.github.io/klimatsearch</span>
