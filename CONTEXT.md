@@ -1,6 +1,6 @@
 # Klimatsearch
 
-Glossary for the Boverket Klimatdatabas search engine: the terms used in APIs, ingest, and ranking.
+Glossary for Boverket Klimatdatabas retrieval: Resources, how they change, and how a Query becomes Hits.
 
 ## Language
 
@@ -8,29 +8,65 @@ Glossary for the Boverket Klimatdatabas search engine: the terms used in APIs, i
 A generic construction product or energy carrier from Boverket Klimatdatabas, identified by a stable Resource ID.
 _Avoid_: material, product, item
 
-**ContentHash**:
-A SHA-256 digest of a Resource's canonical fields, used to detect whether the Resource changed since last ingest.
-_Avoid_: checksum, etag, fingerprint
+**Resource ID**:
+The identifier Boverket assigns to a Resource and that callers use to fetch or compare it.
+_Avoid_: id (bare), key, material ID
 
-**A1A3**:
-The typical GWP-GHG climate impact of a Resource for life-cycle modules A1–A3, in kg CO2e per declared unit.
-_Avoid_: GWP, carbon footprint, emission factor, conservative A1-A3
+**Category**:
+Boverket's grouping of Resources (for example Betong, Stål).
+_Avoid_: type, class, group
+
+**Declared unit**:
+The unit A1A3 is expressed per (for example kg).
+_Avoid_: unit (bare), base unit
 
 **Conversion**:
-A factor that restates a Resource's declared unit in another unit (for example kg per m³).
+A factor that restates a Resource's Declared unit in another unit (for example kg per m³).
 _Avoid_: density, multiplier, unit map
 
+**A1A3**:
+The typical GWP-GHG climate impact of a Resource for life-cycle modules A1–A3, in kg CO2e per Declared unit.
+_Avoid_: GWP, carbon footprint, emission factor, conservative A1-A3
+
+**DatasetVersion**:
+The Klimatdatabas publication a Resource was ingested from (for example 02.07.000).
+_Avoid_: version (bare), schema version
+
+**ContentHash**:
+The identity of a Resource's names, descriptions, A1A3, Declared unit, Conversion, Category, and DatasetVersion, used to detect whether the Resource changed. Resource ID is identity, not content.
+_Avoid_: checksum, etag, fingerprint, SHA-256
+
+**Query**:
+A natural-language request for Resources, in Swedish or English.
+_Avoid_: search string, prompt, q
+
+**Hit**:
+A Resource returned for a Query, with a score and how it was matched (`fts`, `vector`, `both`, or `rerank`).
+_Avoid_: SearchResult, document, match
+
+**Language**:
+Swedish (`sv`) or English (`en`). FTS uses the Resource fields of that Language; vector retrieval is cross-lingual.
+_Avoid_: locale, lang flag
+
+**Attribution**:
+The required citation of Klimatdatabas as origin: "Boverket Klimatdatabas".
+_Avoid_: source (bare — overloaded with how a Hit was matched)
+
+**Comparison**:
+A1A3 of two Resources expressed in one shared unit, using Conversion when the caller asks or when Declared units already agree.
+_Avoid_: material compare, delta (bare)
+
 **Embedder**:
-A component that turns Resource text into a fixed-dimension vector for nearest-neighbour search.
-_Avoid_: encoder, model, embed
+The mapping from Resource text or a Query to a vector.
+_Avoid_: encoder, model, embed, component
 
 **Reranker**:
-A component that reorders SearchEngine results after retrieval, using the query and candidate Resources.
-_Avoid_: ranker, scorer
+The reordering of Hits after retrieval, using the Query and candidate Resources.
+_Avoid_: ranker, scorer, component
 
 **SearchEngine**:
-The hybrid retrieval component that answers a query from FTS, vectors, and an optional Reranker.
-_Avoid_: index, retriever, finder
+Hybrid retrieval of Hits from Klimatdatabas for a Query.
+_Avoid_: index, retriever, finder, component
 
 **Klimatdatabas**:
 Boverket's published climate database of generic construction Resources, cited as "Boverket Klimatdatabas".
