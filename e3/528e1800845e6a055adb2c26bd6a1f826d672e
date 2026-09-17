@@ -1,0 +1,16 @@
+README.md
+  h_af7161f060dc1e 29
+docs/LAUNCH.md
+  h_af7161f060dc1e 92
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "e3528e1800845e6a055adb2c26bd6a1f826d672e",
+  "prompts": {},
+  "humans": {
+    "h_af7161f060dc1e": {
+      "author": "mjnong <marcusnagy@icloud.com>"
+    }
+  }
+}
