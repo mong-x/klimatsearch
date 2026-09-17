@@ -54,6 +54,9 @@ echo "reranker: ${rerank} (${RDIR})"
 if [[ "${rerank}" == "onnx" ]]; then
   need "${RDIR}/model.onnx"
   need "${RDIR}/tokenizer.json"
+  if [[ -f "${RDIR}/model.onnx_data" ]]; then
+    echo "ok  ${RDIR}/model.onnx_data"
+  fi
 fi
 
 echo

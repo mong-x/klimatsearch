@@ -30,7 +30,8 @@ Expected tree:
 ```
 models/f2llm-v2-80m/model.onnx           # ~300 MB, gitignored
 models/f2llm-v2-80m/tokenizer.json
-models/bge-reranker-v2-m3/model.onnx     # ~1 GB, gitignored
+models/bge-reranker-v2-m3/model.onnx      # graph; gitignored
+models/bge-reranker-v2-m3/model.onnx_data # ~2 GB weights, keep next to model.onnx
 models/bge-reranker-v2-m3/tokenizer.json
 third_party/tokenizers/libtokenizers.a
 # Linux:
