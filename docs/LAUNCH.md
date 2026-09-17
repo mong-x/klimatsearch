@@ -82,12 +82,33 @@ Protocol: [ADR-0010](adr/0010-f2llm-query-prefix.md), [research note](research/2
 
 **Developer lane (REST / SaaS)**
 
-1. Create an [Unkey](https://unkey.com) workspace and API.
-2. Connect Unkey metered billing to **Stripe**.
-3. Create keys for customers.
-4. Set `UNKEY_ROOT_KEY` on the server.
-5. Clients send `Authorization: Bearer <key>`.
-6. Use the current SDK: `github.com/unkeyed/sdks/api/go/v2` (already in `go.mod`). Do not use archived `unkey-go`.
+You created a **keyspace**. klimatsearch needs two different kinds of Unkey material — do not mix them, and do not paste them into chat.
+
+| What | Where in Unkey | Where in klimatsearch | Who uses it |
+| --- | --- | --- | --- |
+| **Root key** | Dashboard → Settings → Root Keys (starts with `unkey_`) | Server env `UNKEY_ROOT_KEY` | Only the klimatsearch process, to call VerifyKey |
+| **API keys** | Your keyspace → Create key (often `sk_…`) | **Not** in server env. Callers send `Authorization: Bearer <api key>` | Apps, curl, BIM tools |
+
+A keyspace alone is not enough: create at least one **root key** for the server and one **API key** in that keyspace to test.
+
+Put secrets in a gitignored `.env` next to `go.mod` (copy `.env.example`) or export them in the shell. The process loads `.env` on startup; already-exported variables win.
+
+```bash
+cp .env.example .env
+# edit .env — UNKEY_ROOT_KEY=unkey_...
+KLIMAT_LISTEN=:8081 KLIMAT_EMBEDDER=onnx ./bin/klimatsearch
+```
+
+Test (use **your API key**, not the root key):
+
+```bash
+curl -sS -H "Authorization: Bearer sk_YOUR_API_KEY" \
+  'http://127.0.0.1:8081/api/search?q=betong&lang=sv'
+```
+
+`/healthz` stays public. After `UNKEY_ROOT_KEY` is set, other `/api/*` routes return 401 without a valid Bearer API key.
+
+Stripe metered billing is configured in the Unkey dashboard, not in this repo. SDK: `github.com/unkeyed/sdks/api/go/v2`.
 
 **Agent lane (MCP / x402 / MPP)**
 
@@ -165,7 +186,8 @@ Kind e2e uses `klimatsearch:e2e`, `imagePullPolicy: Never`, fake embedder, fixtu
 [ ] rm data/klimat.db && KLIMAT_EMBEDDER=onnx make build && ./bin/klimatsearch
 [ ] Score testdata/golden-queries.json with ONNX (not Fake)
 [ ] Score testdata/golden-queries.json
-[ ] Unkey root key + Stripe
+[ ] Unkey **root key** in `.env` as `UNKEY_ROOT_KEY` (not the keyspace API key)
+[ ] Create a customer **API key** in the keyspace; curl with `Authorization: Bearer`
 [ ] ZeroClick seller + storefront URL
 [ ] Confirm 401/402 with secrets set, 200 on /healthz without
 [ ] BR25 file + FileIngester mapping (when you have the workbook)
