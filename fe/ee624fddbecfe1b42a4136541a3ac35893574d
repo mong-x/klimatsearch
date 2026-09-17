@@ -1,0 +1,20 @@
+.env.example
+  h_af7161f060dc1e 1-23
+.gitignore
+  h_af7161f060dc1e 14
+docs/LAUNCH.md
+  h_af7161f060dc1e 85-111,189-190
+internal/config/config.go
+  h_af7161f060dc1e 49-50,52,120-150
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "feee624fddbecfe1b42a4136541a3ac35893574d",
+  "prompts": {},
+  "humans": {
+    "h_af7161f060dc1e": {
+      "author": "mjnong <marcusnagy@icloud.com>"
+    }
+  }
+}
