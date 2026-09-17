@@ -10,7 +10,7 @@ import (
 	"github.com/mong-x/klimatsearch/internal/config"
 )
 
-// Lane verifies one paid path (ZeroClick signature or Unkey Bearer).
+// Lane verifies one paid path (MPP Payment or Unkey Bearer).
 type Lane interface {
 	Present(*http.Request) bool
 	Check(*http.Request) Decision
@@ -26,31 +26,30 @@ type Decision struct {
 
 // Guard is the dual-lane check on paid endpoints.
 type Guard struct {
-	AllowAll   bool
-	ZeroClick  Lane
-	Unkey      Lane
-	Storefront string
+	AllowAll bool
+	Unkey    Lane
+	MPP      Lane
 }
 
 // New builds a Guard from process config.
-// No Unkey root key and no ZeroClick signing secrets → AllowAll.
+// No Unkey and no MPP secret → AllowAll.
 // Either set → fail-closed.
 func New(cfg config.Config) (*Guard, error) {
 	unkeyKey := strings.TrimSpace(cfg.UnkeyRootKey)
-	zcSecrets := strings.TrimSpace(cfg.ZeroClickSigningSecrets)
-	if unkeyKey == "" && zcSecrets == "" {
-		return &Guard{AllowAll: true, Storefront: cfg.ZeroClickStorefrontURL}, nil
+	mppSecret := strings.TrimSpace(cfg.MPPSecretKey)
+	if unkeyKey == "" && mppSecret == "" {
+		return &Guard{AllowAll: true}, nil
 	}
-	g := &Guard{Storefront: cfg.ZeroClickStorefrontURL}
+	g := &Guard{}
 	if unkeyKey != "" {
 		g.Unkey = newUnkeyLane(unkeyKey)
 	}
-	if zcSecrets != "" {
-		lane, err := newZeroClickLane(cfg)
+	if mppSecret != "" {
+		lane, err := newMPPLane(cfg)
 		if err != nil {
 			return nil, err
 		}
-		g.ZeroClick = lane
+		g.MPP = lane
 	}
 	return g, nil
 }
@@ -66,43 +65,44 @@ func (g *Guard) Wrap(next http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 			return
 		}
-		if g.ZeroClick != nil && g.ZeroClick.Present(r) {
-			d := g.ZeroClick.Check(r)
-			if !d.OK {
-				writeDecision(w, d)
-				return
-			}
-			next.ServeHTTP(w, r)
+		if g.MPP != nil && g.MPP.Present(r) {
+			passOrDeny(w, r, g.MPP.Check(r), next)
 			return
 		}
 		if g.Unkey != nil && g.Unkey.Present(r) {
-			d := g.Unkey.Check(r)
-			if !d.OK {
-				writeDecision(w, d)
-				return
-			}
-			next.ServeHTTP(w, r)
+			passOrDeny(w, r, g.Unkey.Check(r), next)
 			return
 		}
-		if g.Storefront != "" {
-			writeJSON(w, http.StatusPaymentRequired, map[string]string{
-				"error":      "payment required",
-				"storefront": g.Storefront,
-			})
+		if g.MPP != nil {
+			writeDecision(w, g.MPP.Check(r))
 			return
 		}
 		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
 	})
 }
 
-func writeDecision(w http.ResponseWriter, d Decision) {
-	if d.Header != nil {
-		for k, vs := range d.Header {
-			for _, v := range vs {
-				w.Header().Add(k, v)
-			}
+func passOrDeny(w http.ResponseWriter, r *http.Request, d Decision, next http.Handler) {
+	if !d.OK {
+		writeDecision(w, d)
+		return
+	}
+	applyHeaders(w, d.Header)
+	next.ServeHTTP(w, r)
+}
+
+func applyHeaders(w http.ResponseWriter, h http.Header) {
+	if h == nil {
+		return
+	}
+	for k, vs := range h {
+		for _, v := range vs {
+			w.Header().Add(k, v)
 		}
 	}
+}
+
+func writeDecision(w http.ResponseWriter, d Decision) {
+	applyHeaders(w, d.Header)
 	status := d.Status
 	if status == 0 {
 		status = http.StatusUnauthorized

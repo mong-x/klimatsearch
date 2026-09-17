@@ -39,10 +39,12 @@ type Config struct {
 	DemoFixture             bool
 	FixturePath             string
 	UnkeyRootKey            string
-	ZeroClickAPIKey         string
-	ZeroClickSigningSecrets string
-	ZeroClickStorefrontURL  string
 	AdminToken              string
+	MPPSecretKey            string
+	MPPRecipient            string
+	MPPRPCURL               string
+	MPPRealm                string
+	MPPAmount               string
 }
 
 // Parse reads flags and env. Flag values win over env over defaults.
@@ -65,10 +67,12 @@ func Parse(args []string) (Config, error) {
 		DemoFixture:             envBool("KLIMAT_DEMO_FIXTURE", false),
 		FixturePath:             env("KLIMAT_FIXTURE_PATH", DefaultFixtureJSON),
 		UnkeyRootKey:            env("UNKEY_ROOT_KEY", ""),
-		ZeroClickAPIKey:         env("ZEROCLICK_API_KEY", ""),
-		ZeroClickSigningSecrets: env("ZEROCLICK_SIGNING_SECRETS", ""),
-		ZeroClickStorefrontURL:  env("ZEROCLICK_STOREFRONT_URL", ""),
 		AdminToken:              env("KLIMAT_ADMIN_TOKEN", ""),
+		MPPSecretKey:            env("MPP_SECRET_KEY", ""),
+		MPPRecipient:            env("MPP_RECIPIENT", ""),
+		MPPRPCURL:               env("MPP_RPC_URL", "https://rpc.moderato.tempo.xyz"),
+		MPPRealm:                env("MPP_REALM", "klimatsearch"),
+		MPPAmount:               env("MPP_AMOUNT", "0.01"),
 	}
 	if v := os.Getenv("KLIMAT_INGEST_INTERVAL"); v != "" {
 		d, err := time.ParseDuration(v)

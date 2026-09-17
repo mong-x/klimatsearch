@@ -73,7 +73,7 @@ The required citation of a Catalog as origin, for example "Boverket Klimatdataba
 _Avoid_: source (bare — overloaded with how a Hit was matched and with Catalog)
 
 **Guard**:
-The dual-lane check on paid endpoints: ZeroClick agent signature first, then Unkey Bearer API key.
+The dual-lane check on paid endpoints: MPP `Authorization: Payment` (`github.com/tempoxyz/mpp-go`), then Unkey Bearer API key. Unpaid MPP traffic is HTTP 402.
 _Avoid_: auth middleware, billing proxy
 
 **Ingester**:

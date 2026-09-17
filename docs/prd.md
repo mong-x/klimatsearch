@@ -64,9 +64,9 @@ JSON includes Attribution `source: "Boverket Klimatdatabas"` and Catalog ID `cat
 
 Same binary serves AI agents and human/SaaS developers.
 
-### 5.1 Agent lane (ZeroClick / x402 & MPP)
+### 5.1 Agent lane (MPP)
 
-ZeroClick is the agent-facing storefront and proxy. Agents pay via x402 or MPP; ZeroClick forwards a signed request. klimatsearch verifies with the ZeroClick sellers Go SDK (`Guard` / `Verify`) and reports usage. No in-process payment math.
+Agents pay in the same HTTP request via the Machine Payments Protocol. klimatsearch verifies with official `github.com/tempoxyz/mpp-go` (`Charge` / Tempo `MethodFromConfig`). Unpaid requests get HTTP 402 and `WWW-Authenticate: Payment`. No in-process payment math beyond the SDK charge.
 
 ### 5.2 Developer lane (Unkey + Stripe)
 
@@ -76,11 +76,11 @@ ZeroClick is the agent-facing storefront and proxy. Agents pay via x402 or MPP; 
 
 On `/api/search`, resource routes, MCP, and admin ingest:
 
-1. ZeroClick signature present → verify; invalid → 401/402 as the SDK dictates.
+1. `Authorization: Payment` → MPP Charge; invalid or missing credential → 402 challenge.
 2. Else Bearer token → Unkey; invalid → 401.
-3. Else 401, or 402 pointing at the ZeroClick storefront URL when that lane is configured.
+3. Else if MPP is configured → 402 Payment challenge. Else 401.
 
-`GET /healthz` is public. If neither ZeroClick nor Unkey credentials are configured, the Guard allows all traffic (local/kind). If either is configured, fail-closed.
+`GET /healthz` is public. If Unkey and MPP credentials are both unset, the Guard allows all traffic (local/kind). If either is configured, fail-closed.
 
 ## 6. Multi-Catalog extensibility
 
