@@ -13,6 +13,7 @@ import (
 )
 
 // ParseExcel reads a Boverket-shaped workbook (SV or EN headers).
+// Empty lang detects the header language.
 func ParseExcel(data []byte, lang string) (Batch, error) {
 	f, err := excelize.OpenReader(bytes.NewReader(data))
 	if err != nil {
@@ -30,28 +31,48 @@ func ParseExcel(data []byte, lang string) (Batch, error) {
 	if len(rows) < 2 {
 		return Batch{}, fmt.Errorf("xlsx %s: no data rows", sheets[0])
 	}
+	return resourcesFromRows(rows, lang, "excel")
+}
+
+func resourcesFromRows(rows [][]string, lang, origin string) (Batch, error) {
+	if len(rows) < 2 {
+		return Batch{}, fmt.Errorf("%s: no data rows", origin)
+	}
+	if lang == "" {
+		lang = detectLang(rows[0])
+	}
 	idx := headerIndex(rows[0])
-	batch := Batch{Origin: "excel"}
+	batch := Batch{Origin: origin, CatalogID: model.CatalogBoverket}
 	for _, row := range rows[1:] {
 		id := cell(row, idx.id)
 		if id == "" {
 			continue
 		}
 		r := model.Resource{
-			ResourceID:  id,
-			Category:    cell(row, idx.category),
-			Version:     cell(row, idx.version),
-			Unit:        declaredUnit(cell(row, idx.unit)),
-			Conversions: map[string]float64{},
+			CatalogID:       model.CatalogBoverket,
+			ResourceID:      id,
+			Category:        cell(row, idx.category),
+			Version:         cell(row, idx.version),
+			Unit:            declaredUnit(cell(row, idx.unit)),
+			Conversions:     map[string]float64{},
+			ApplicabilitySV: cell(row, idx.applSV),
+			ApplicabilityEN: cell(row, idx.applEN),
+			Synonyms:        cell(row, idx.synonyms),
 		}
 		name := cell(row, idx.name)
 		desc := cell(row, idx.desc)
 		if lang == "en" {
 			r.NameEN = name
 			r.DescriptionEN = desc
+			if r.ApplicabilityEN == "" {
+				r.ApplicabilityEN = cell(row, idx.appl)
+			}
 		} else {
 			r.NameSV = name
 			r.DescriptionSV = desc
+			if r.ApplicabilitySV == "" {
+				r.ApplicabilitySV = cell(row, idx.appl)
+			}
 		}
 		r.A1A3 = parseFloat(cell(row, idx.a1a3))
 		if r.A1A3 == 0 {
@@ -68,6 +89,16 @@ func ParseExcel(data []byte, lang string) (Batch, error) {
 		batch.Resources = append(batch.Resources, r)
 	}
 	return batch, nil
+}
+
+func detectLang(headers []string) string {
+	for _, h := range headers {
+		n := normHeader(h)
+		if n == "product name" || n == "technical description" || n == "resource id" {
+			return "en"
+		}
+	}
+	return "sv"
 }
 
 // MergeLang joins Swedish and English batches on Resource ID.
@@ -88,6 +119,9 @@ func MergeLang(sv, en Batch) Batch {
 			if r.DescriptionEN != "" {
 				cur.DescriptionEN = r.DescriptionEN
 			}
+			if r.ApplicabilityEN != "" {
+				cur.ApplicabilityEN = r.ApplicabilityEN
+			}
 		} else {
 			if r.NameSV != "" {
 				cur.NameSV = r.NameSV
@@ -95,6 +129,12 @@ func MergeLang(sv, en Batch) Batch {
 			if r.DescriptionSV != "" {
 				cur.DescriptionSV = r.DescriptionSV
 			}
+			if r.ApplicabilitySV != "" {
+				cur.ApplicabilitySV = r.ApplicabilitySV
+			}
+		}
+		if cur.Synonyms == "" {
+			cur.Synonyms = r.Synonyms
 		}
 		if cur.A1A3 == 0 {
 			cur.A1A3 = r.A1A3
@@ -107,6 +147,9 @@ func MergeLang(sv, en Batch) Batch {
 		}
 		if cur.Version == "" {
 			cur.Version = r.Version
+		}
+		if cur.CatalogID == "" {
+			cur.CatalogID = r.CatalogID
 		}
 		if cur.Conversions == nil {
 			cur.Conversions = map[string]float64{}
@@ -122,9 +165,18 @@ func MergeLang(sv, en Batch) Batch {
 	for _, r := range en.Resources {
 		add(r, true)
 	}
-	out := Batch{Origin: "excel", Version: sv.Version}
+	out := Batch{Origin: sv.Origin, Version: sv.Version, CatalogID: sv.CatalogID}
+	if out.Origin == "" {
+		out.Origin = en.Origin
+	}
+	if out.Origin == "" {
+		out.Origin = "excel"
+	}
 	if out.Version == "" {
 		out.Version = en.Version
+	}
+	if out.CatalogID == "" {
+		out.CatalogID = en.CatalogID
 	}
 	for _, id := range order {
 		out.Resources = append(out.Resources, byID[id])
@@ -136,10 +188,11 @@ type colIdx struct {
 	id, name, category, version, unit int
 	a1a3, a1a3Energy                  int
 	desc, convFactor, convUnit        int
+	appl, applSV, applEN, synonyms    int
 }
 
 func headerIndex(headers []string) colIdx {
-	idx := colIdx{id: -1, name: -1, category: -1, version: -1, unit: -1, a1a3: -1, a1a3Energy: -1, desc: -1, convFactor: -1, convUnit: -1}
+	idx := colIdx{id: -1, name: -1, category: -1, version: -1, unit: -1, a1a3: -1, a1a3Energy: -1, desc: -1, convFactor: -1, convUnit: -1, appl: -1, applSV: -1, applEN: -1, synonyms: -1}
 	for i, h := range headers {
 		n := normHeader(h)
 		switch {
@@ -165,6 +218,10 @@ func headerIndex(headers []string) colIdx {
 			idx.convFactor = i
 		case strings.Contains(n, "enhet for omrakning") || n == "unit for conversion factor":
 			idx.convUnit = i
+		case strings.Contains(n, "anvandningsomrade") || n == "use of product" || strings.Contains(n, "technological applicability"):
+			idx.appl = i
+		case n == "synonyms" || n == "synonymer":
+			idx.synonyms = i
 		}
 	}
 	return idx

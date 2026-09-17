@@ -15,7 +15,7 @@ const (
 	DefaultModels         = "./models"
 	DefaultEmbeddingModel = "f2llm-v2-80m"
 	DefaultSource         = "Boverket Klimatdatabas"
-	DefaultAPIBase        = "https://api.boverket.se"
+	DefaultAPIBase        = "https://api.boverket.se/klimatdatabas"
 	DefaultIngestInterval = 168 * time.Hour
 	Attribution           = "Boverket Klimatdatabas"
 	ExcelSV               = "https://www.boverket.se/contentassets/4668ed4cc3da447385788ed30bff7d49/boverkets-klimatdatabas-version-02.07.000-sv-se.xlsx"
@@ -38,6 +38,11 @@ type Config struct {
 	Source                  string
 	DemoFixture             bool
 	FixturePath             string
+	UnkeyRootKey            string
+	ZeroClickAPIKey         string
+	ZeroClickSigningSecrets string
+	ZeroClickStorefrontURL  string
+	AdminToken              string
 }
 
 // Parse reads flags and env. Flag values win over env over defaults.
@@ -56,6 +61,11 @@ func Parse(args []string) (Config, error) {
 		Source:                  env("KLIMAT_SOURCE", DefaultSource),
 		DemoFixture:             envBool("KLIMAT_DEMO_FIXTURE", false),
 		FixturePath:             env("KLIMAT_FIXTURE_PATH", DefaultFixtureJSON),
+		UnkeyRootKey:            env("UNKEY_ROOT_KEY", ""),
+		ZeroClickAPIKey:         env("ZEROCLICK_API_KEY", ""),
+		ZeroClickSigningSecrets: env("ZEROCLICK_SIGNING_SECRETS", ""),
+		ZeroClickStorefrontURL:  env("ZEROCLICK_STOREFRONT_URL", ""),
+		AdminToken:              env("KLIMAT_ADMIN_TOKEN", ""),
 	}
 	if v := os.Getenv("KLIMAT_INGEST_INTERVAL"); v != "" {
 		d, err := time.ParseDuration(v)

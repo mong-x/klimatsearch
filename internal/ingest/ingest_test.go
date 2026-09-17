@@ -2,6 +2,7 @@ package ingest
 
 import (
 	"bytes"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -15,6 +16,49 @@ import (
 	"github.com/mong-x/klimatsearch/internal/model"
 	"github.com/mong-x/klimatsearch/internal/store"
 )
+
+func TestParseBoverketV2One(t *testing.T) {
+	path := filepath.Join("..", "..", "testdata", "fixtures", "boverket-v2-one.json")
+	b, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	batch, err := ParseJSON(b)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(batch.Resources) != 1 {
+		t.Fatalf("got %d", len(batch.Resources))
+	}
+	r := batch.Resources[0]
+	if r.ResourceID != "6000000000" {
+		t.Fatalf("id=%s", r.ResourceID)
+	}
+	if r.NameSV != "Spånskiva" || r.NameEN != "Particle board" {
+		t.Fatalf("names %+v", r)
+	}
+	if r.A1A3 != 0.39 {
+		t.Fatalf("a1a3=%v (must be Typical, not Conservative 0.488)", r.A1A3)
+	}
+	if r.Unit != "kg" {
+		t.Fatalf("unit=%s", r.Unit)
+	}
+	if r.Conversions["kg/m³"] != 700 {
+		t.Fatalf("conv %+v", r.Conversions)
+	}
+	if r.Category != "Byggskivor" {
+		t.Fatalf("category=%s", r.Category)
+	}
+	if r.CatalogID != "boverket" {
+		t.Fatalf("catalog=%s", r.CatalogID)
+	}
+	if r.Synonyms == "" {
+		t.Fatal("expected synonyms")
+	}
+	if r.ApplicabilitySV == "" {
+		t.Fatal("expected applicability sv")
+	}
+}
 
 func TestParseJSONFixture(t *testing.T) {
 	path := filepath.Join("..", "..", "testdata", "fixtures", "resources.json")
@@ -291,5 +335,74 @@ func TestHTTPFetcherZeroA1A3KeepsJSON(t *testing.T) {
 	}
 	if batch.Origin != "json" {
 		t.Fatalf("origin=%s", batch.Origin)
+	}
+}
+
+func TestHTTPFetcherUsesV2Paths(t *testing.T) {
+	v2, err := os.ReadFile(filepath.Join("..", "..", "testdata", "fixtures", "boverket-v2-one.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var paths []string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		paths = append(paths, r.URL.Path)
+		if strings.Contains(r.URL.Path, "/klimatdatabas/v1/") {
+			http.NotFound(w, r)
+			return
+		}
+		if strings.Contains(r.URL.Path, "GetAllResources") && strings.HasSuffix(r.URL.Path, "/json") {
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write(v2)
+			return
+		}
+		http.NotFound(w, r)
+	}))
+	t.Cleanup(srv.Close)
+	f := &HTTPFetcher{
+		Client:  srv.Client(),
+		APIBase: srv.URL,
+		ExcelSV: srv.URL + "/sv.xlsx",
+		ExcelEN: srv.URL + "/en.xlsx",
+	}
+	batch, err := f.Fetch(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+	joined := strings.Join(paths, " ")
+	if strings.Contains(joined, "/klimatdatabas/v1/resources") {
+		t.Fatalf("must not probe fake v1 paths: %v", paths)
+	}
+	if !strings.Contains(joined, "/api/Klimat/v2/GetAllResources/latest/sv/json") {
+		t.Fatalf("missing sv v2 path: %v", paths)
+	}
+	if !strings.Contains(joined, "/api/Klimat/v2/GetAllResources/latest/en/json") {
+		t.Fatalf("missing en v2 path: %v", paths)
+	}
+	if len(batch.Resources) != 1 || batch.Resources[0].ResourceID != "6000000000" {
+		t.Fatalf("%+v", batch.Resources)
+	}
+	if batch.Resources[0].A1A3 != 0.39 {
+		t.Fatalf("a1a3=%v", batch.Resources[0].A1A3)
+	}
+}
+
+func TestFileIngesterUnknownAndBR25(t *testing.T) {
+	f := FileIngester{Catalog: "nope", Data: []byte("x")}
+	_, err := f.Fetch(t.Context())
+	var unknown UnknownCatalogError
+	if !errors.As(err, &unknown) {
+		t.Fatalf("want UnknownCatalogError, got %v", err)
+	}
+	_, err = FileIngester{Catalog: "br25", Data: []byte("x")}.Fetch(t.Context())
+	var ni ErrCatalogNotImplemented
+	if !errors.As(err, &ni) {
+		t.Fatalf("want ErrCatalogNotImplemented, got %v", err)
+	}
+}
+
+func TestHTTPFetcherCatalogID(t *testing.T) {
+	var f HTTPFetcher
+	if f.CatalogID() != "boverket" {
+		t.Fatal(f.CatalogID())
 	}
 }

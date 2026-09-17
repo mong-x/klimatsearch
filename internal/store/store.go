@@ -25,9 +25,10 @@ import (
 const DefaultDim = 320
 
 var (
-	vecOnce     sync.Once
-	migrateMu   sync.Mutex
-	ErrNotFound = errors.New("resource not found")
+	vecOnce      sync.Once
+	migrateMu    sync.Mutex
+	ErrNotFound  = errors.New("resource not found")
+	ErrAmbiguous = errors.New("resource id is ambiguous across catalogs")
 )
 
 // Store is the SQLite + FTS5 + sqlite-vec persistence layer.
@@ -160,19 +161,25 @@ func (s *Store) SetMeta(ctx context.Context, key, value string) error {
 	return nil
 }
 
-func (s *Store) Hash(ctx context.Context, id string) (string, error) {
+func (s *Store) Hash(ctx context.Context, catalogID, id string) (string, error) {
+	if catalogID == "" {
+		catalogID = model.CatalogBoverket
+	}
 	var h string
-	err := s.db.QueryRowContext(ctx, `SELECT content_hash FROM resources WHERE id = ?`, id).Scan(&h)
+	err := s.db.QueryRowContext(ctx, `SELECT content_hash FROM resources WHERE catalog_id = ? AND id = ?`, catalogID, id).Scan(&h)
 	if errors.Is(err, sql.ErrNoRows) {
 		return "", nil
 	}
 	if err != nil {
-		return "", fmt.Errorf("hash %s: %w", id, err)
+		return "", fmt.Errorf("hash %s: %w", model.DocID(catalogID, id), err)
 	}
 	return h, nil
 }
 
 func (s *Store) Upsert(ctx context.Context, r model.Resource, embedding []float32) error {
+	if r.CatalogID == "" {
+		r.CatalogID = model.CatalogBoverket
+	}
 	if r.Conversions == nil {
 		r.Conversions = map[string]float64{}
 	}
@@ -182,15 +189,19 @@ func (s *Store) Upsert(ctx context.Context, r model.Resource, embedding []float3
 	}
 	_, err = s.db.ExecContext(ctx, `
 INSERT INTO resources (
-    id, name_sv, name_en, description_sv, description_en,
+    catalog_id, id, name_sv, name_en, description_sv, description_en,
+    applicability_sv, applicability_en, synonyms,
     a1_a3, unit, conversions_json, category, version,
     content_hash, raw_json, updated_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
-ON CONFLICT(id) DO UPDATE SET
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+ON CONFLICT(catalog_id, id) DO UPDATE SET
     name_sv=excluded.name_sv,
     name_en=excluded.name_en,
     description_sv=excluded.description_sv,
     description_en=excluded.description_en,
+    applicability_sv=excluded.applicability_sv,
+    applicability_en=excluded.applicability_en,
+    synonyms=excluded.synonyms,
     a1_a3=excluded.a1_a3,
     unit=excluded.unit,
     conversions_json=excluded.conversions_json,
@@ -199,53 +210,97 @@ ON CONFLICT(id) DO UPDATE SET
     content_hash=excluded.content_hash,
     raw_json=excluded.raw_json,
     updated_at=excluded.updated_at
-`, r.ResourceID, r.NameSV, r.NameEN, r.DescriptionSV, r.DescriptionEN,
+`, r.CatalogID, r.ResourceID, r.NameSV, r.NameEN, r.DescriptionSV, r.DescriptionEN,
+		r.ApplicabilitySV, r.ApplicabilityEN, r.Synonyms,
 		r.A1A3, r.Unit, string(conv), r.Category, r.Version, r.Hash, r.RawJSON)
 	if err != nil {
-		return fmt.Errorf("upsert resource %s: %w", r.ResourceID, err)
+		return fmt.Errorf("upsert resource %s: %w", r.DocID(), err)
 	}
 	if len(embedding) > 0 {
-		if err := s.upsertVec(ctx, r.ResourceID, embedding); err != nil {
+		if err := s.upsertVec(ctx, r.CatalogID, r.ResourceID, embedding); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (s *Store) upsertVec(ctx context.Context, id string, embedding []float32) error {
+func (s *Store) upsertVec(ctx context.Context, catalogID, id string, embedding []float32) error {
 	blob, err := sqlite_vec.SerializeFloat32(embedding)
 	if err != nil {
 		return fmt.Errorf("serialize embedding: %w", err)
 	}
-	if _, err := s.db.ExecContext(ctx, `DELETE FROM resource_vec WHERE resource_id = ?`, id); err != nil {
-		return fmt.Errorf("delete vec %s: %w", id, err)
+	docID := model.DocID(catalogID, id)
+	if _, err := s.db.ExecContext(ctx, `DELETE FROM resource_vec WHERE doc_id = ?`, docID); err != nil {
+		return fmt.Errorf("delete vec %s: %w", docID, err)
 	}
-	if _, err := s.db.ExecContext(ctx, `INSERT INTO resource_vec(resource_id, embedding) VALUES (?, ?)`, id, blob); err != nil {
-		return fmt.Errorf("insert vec %s: %w", id, err)
+	if _, err := s.db.ExecContext(ctx, `INSERT INTO resource_vec(doc_id, embedding, catalog_id) VALUES (?, ?, ?)`, docID, blob, catalogID); err != nil {
+		return fmt.Errorf("insert vec %s: %w", docID, err)
 	}
 	return nil
 }
 
 func (s *Store) Get(ctx context.Context, id string) (*model.Resource, error) {
+	catalogID, resourceID := model.SplitDocID(id)
+	if catalogID != "" {
+		return s.getExact(ctx, catalogID, resourceID)
+	}
+	rows, err := s.db.QueryContext(ctx, `
+SELECT `+resourceCols+`
+FROM resources r WHERE r.id = ?`, resourceID)
+	if err != nil {
+		return nil, fmt.Errorf("get %s: %w", id, err)
+	}
+	defer rows.Close()
+	var found []model.Resource
+	for rows.Next() {
+		r, err := scanResource(rows)
+		if err != nil {
+			return nil, fmt.Errorf("get %s: %w", id, err)
+		}
+		found = append(found, *r)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("get %s: %w", id, err)
+	}
+	switch len(found) {
+	case 0:
+		return nil, ErrNotFound
+	case 1:
+		return &found[0], nil
+	default:
+		cats := make([]string, 0, len(found))
+		for _, r := range found {
+			cats = append(cats, r.CatalogID)
+		}
+		return nil, &AmbiguousError{ID: resourceID, Catalogs: cats}
+	}
+}
+
+func (s *Store) getExact(ctx context.Context, catalogID, id string) (*model.Resource, error) {
 	row := s.db.QueryRowContext(ctx, `
-SELECT id, name_sv, name_en, description_sv, description_en, a1_a3, unit,
-       conversions_json, category, version, content_hash, raw_json
-FROM resources WHERE id = ?`, id)
+SELECT `+resourceCols+`
+FROM resources r WHERE r.catalog_id = ? AND r.id = ?`, catalogID, id)
 	r, err := scanResource(row)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}
 	if err != nil {
-		return nil, fmt.Errorf("get %s: %w", id, err)
+		return nil, fmt.Errorf("get %s: %w", model.DocID(catalogID, id), err)
 	}
 	return r, nil
 }
 
-func (s *Store) List(ctx context.Context) ([]model.Resource, error) {
-	rows, err := s.db.QueryContext(ctx, `
-SELECT id, name_sv, name_en, description_sv, description_en, a1_a3, unit,
-       conversions_json, category, version, content_hash, raw_json
-FROM resources ORDER BY id`)
+func (s *Store) List(ctx context.Context, catalogs []string) ([]model.Resource, error) {
+	q := `
+SELECT ` + resourceCols + `
+FROM resources r`
+	args := []any{}
+	if clause, cargs := catalogWhere("r", catalogs); clause != "" {
+		q += " WHERE " + strings.TrimPrefix(clause, " AND ")
+		args = cargs
+	}
+	q += " ORDER BY r.catalog_id, r.id"
+	rows, err := s.db.QueryContext(ctx, q, args...)
 	if err != nil {
 		return nil, fmt.Errorf("list: %w", err)
 	}
@@ -269,22 +324,31 @@ func (s *Store) Count(ctx context.Context) (int, error) {
 	return n, nil
 }
 
-const resourceCols = `r.id, r.name_sv, r.name_en, r.description_sv, r.description_en, r.a1_a3, r.unit,
+const resourceCols = `r.catalog_id, r.id, r.name_sv, r.name_en, r.description_sv, r.description_en,
+       r.applicability_sv, r.applicability_en, r.synonyms, r.a1_a3, r.unit,
        r.conversions_json, r.category, r.version, r.content_hash, r.raw_json`
 
 // SearchFTS runs BM25 over language-specific columns. Rank is 1-based in this list.
-func (s *Store) SearchFTS(ctx context.Context, query, lang string, limit int) ([]model.Ranked, error) {
+func (s *Store) SearchFTS(ctx context.Context, query, lang string, limit int, catalogs []string) ([]model.Ranked, error) {
 	if limit <= 0 {
 		limit = 20
 	}
 	match := columnFilter(lang) + quoteFTS(query)
-	rows, err := s.db.QueryContext(ctx, `
-SELECT `+resourceCols+`
+	q := `
+SELECT ` + resourceCols + `
 FROM resources_fts
 JOIN resources r ON r.rowid = resources_fts.rowid
-WHERE resources_fts MATCH ?
+WHERE resources_fts MATCH ?`
+	args := []any{match}
+	if clause, cargs := catalogWhere("r", catalogs); clause != "" {
+		q += clause
+		args = append(args, cargs...)
+	}
+	q += `
 ORDER BY bm25(resources_fts)
-LIMIT ?`, match, limit)
+LIMIT ?`
+	args = append(args, limit)
+	rows, err := s.db.QueryContext(ctx, q, args...)
 	if err != nil {
 		return nil, fmt.Errorf("fts: %w", err)
 	}
@@ -293,7 +357,7 @@ LIMIT ?`, match, limit)
 }
 
 // SearchVector runs sqlite-vec cosine KNN. Rank is 1-based in this list.
-func (s *Store) SearchVector(ctx context.Context, embedding []float32, lang string, limit int) ([]model.Ranked, error) {
+func (s *Store) SearchVector(ctx context.Context, embedding []float32, lang string, limit int, catalogs []string) ([]model.Ranked, error) {
 	if !s.vectorOK {
 		return nil, fmt.Errorf("vector search disabled: %s", s.vectorSkipReason)
 	}
@@ -304,18 +368,42 @@ func (s *Store) SearchVector(ctx context.Context, embedding []float32, lang stri
 	if err != nil {
 		return nil, fmt.Errorf("serialize query vec: %w", err)
 	}
-	rows, err := s.db.QueryContext(ctx, `
-SELECT `+resourceCols+`
+	q := `
+SELECT ` + resourceCols + `
 FROM resource_vec v
-JOIN resources r ON r.id = v.resource_id
+JOIN resources r ON r.catalog_id || ':' || r.id = v.doc_id
 WHERE v.embedding MATCH ?
-  AND k = ?
-ORDER BY v.distance`, blob, limit)
+  AND k = ?`
+	args := []any{blob, limit}
+	if clause, cargs := catalogWhere("r", catalogs); clause != "" {
+		q += clause
+		args = append(args, cargs...)
+	}
+	q += `
+ORDER BY v.distance`
+	rows, err := s.db.QueryContext(ctx, q, args...)
 	if err != nil {
 		return nil, fmt.Errorf("vector: %w", err)
 	}
 	defer rows.Close()
 	return scanRanked(rows)
+}
+
+func catalogWhere(alias string, catalogs []string) (string, []any) {
+	if len(catalogs) == 0 {
+		return "", nil
+	}
+	ph := make([]string, len(catalogs))
+	args := make([]any, len(catalogs))
+	for i, c := range catalogs {
+		ph[i] = "?"
+		args[i] = c
+	}
+	col := "catalog_id"
+	if alias != "" {
+		col = alias + ".catalog_id"
+	}
+	return " AND " + col + " IN (" + strings.Join(ph, ",") + ")", args
 }
 
 func scanRanked(rows *sql.Rows) ([]model.Ranked, error) {
@@ -353,7 +441,8 @@ func scanResource(row scanner) (*model.Resource, error) {
 	var r model.Resource
 	var conv string
 	if err := row.Scan(
-		&r.ResourceID, &r.NameSV, &r.NameEN, &r.DescriptionSV, &r.DescriptionEN,
+		&r.CatalogID, &r.ResourceID, &r.NameSV, &r.NameEN, &r.DescriptionSV, &r.DescriptionEN,
+		&r.ApplicabilitySV, &r.ApplicabilityEN, &r.Synonyms,
 		&r.A1A3, &r.Unit, &conv, &r.Category, &r.Version, &r.Hash, &r.RawJSON,
 	); err != nil {
 		return nil, err
@@ -365,4 +454,32 @@ func scanResource(row scanner) (*model.Resource, error) {
 		}
 	}
 	return &r, nil
+}
+
+// AmbiguousError is returned when a bare Resource ID matches more than one Catalog.
+type AmbiguousError struct {
+	ID       string
+	Catalogs []string
+}
+
+func (e *AmbiguousError) Error() string {
+	return fmt.Sprintf("resource %s is present in multiple catalogs; use catalog_id:resource_id", e.ID)
+}
+
+func (e *AmbiguousError) Unwrap() error { return ErrAmbiguous }
+
+// ParseCatalogs splits a comma-separated databases query. Empty means all Catalogs.
+func ParseCatalogs(s string) []string {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return nil
+	}
+	var out []string
+	for _, p := range strings.Split(s, ",") {
+		p = strings.TrimSpace(p)
+		if p != "" {
+			out = append(out, p)
+		}
+	}
+	return out
 }

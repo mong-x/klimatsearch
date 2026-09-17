@@ -14,7 +14,7 @@ import (
 
 // Store is the persistence ingest needs.
 type Store interface {
-	Hash(ctx context.Context, id string) (string, error)
+	Hash(ctx context.Context, catalogID, id string) (string, error)
 	Upsert(ctx context.Context, r model.Resource, embedding []float32) error
 	SetMeta(ctx context.Context, key, value string) error
 }
@@ -24,11 +24,18 @@ type Fetcher interface {
 	Fetch(ctx context.Context) (Batch, error)
 }
 
+// Ingester is fetch-and-map for one Catalog.
+type Ingester interface {
+	CatalogID() string
+	Fetch(ctx context.Context) (Batch, error)
+}
+
 // Batch is one ingest snapshot.
 type Batch struct {
 	Resources []model.Resource
 	Version   string
-	Origin    string // "json", "excel", "fixture"
+	Origin    string // "json", "excel", "fixture", "file"
+	CatalogID string
 }
 
 // Result counts upserts.
@@ -38,6 +45,7 @@ type Result struct {
 	Skipped  int
 	Origin   string
 	Version  string
+	Catalog  string
 }
 
 // Runner hashes, embeds changed Resources, and upserts.
@@ -55,7 +63,16 @@ func (r *Runner) log() *slog.Logger {
 }
 
 func (r *Runner) Apply(ctx context.Context, batch Batch) (Result, error) {
-	res := Result{Seen: len(batch.Resources), Origin: batch.Origin, Version: batch.Version}
+	res := Result{Seen: len(batch.Resources), Origin: batch.Origin, Version: batch.Version, Catalog: batch.CatalogID}
+	for i := range batch.Resources {
+		if batch.Resources[i].CatalogID == "" {
+			if batch.CatalogID != "" {
+				batch.Resources[i].CatalogID = batch.CatalogID
+			} else {
+				batch.Resources[i].CatalogID = model.CatalogBoverket
+			}
+		}
+	}
 	for _, item := range batch.Resources {
 		if item.ResourceID == "" {
 			res.Skipped++
@@ -66,7 +83,7 @@ func (r *Runner) Apply(ctx context.Context, batch Batch) (Result, error) {
 			return res, fmt.Errorf("hash %s: %w", item.ResourceID, err)
 		}
 		item.Hash = h
-		prev, err := r.Store.Hash(ctx, item.ResourceID)
+		prev, err := r.Store.Hash(ctx, item.CatalogID, item.ResourceID)
 		if err != nil {
 			return res, err
 		}
@@ -98,7 +115,7 @@ func (r *Runner) Apply(ctx context.Context, batch Batch) (Result, error) {
 			return res, err
 		}
 	}
-	r.log().Info("ingest complete", "origin", batch.Origin, "version", batch.Version, "seen", res.Seen, "upserted", res.Upserted, "skipped", res.Skipped)
+	r.log().Info("ingest complete", "origin", batch.Origin, "catalog", res.Catalog, "version", batch.Version, "seen", res.Seen, "upserted", res.Upserted, "skipped", res.Skipped)
 	return res, nil
 }
 
@@ -106,6 +123,9 @@ func (r *Runner) Run(ctx context.Context, f Fetcher) (Result, error) {
 	batch, err := f.Fetch(ctx)
 	if err != nil {
 		return Result{}, err
+	}
+	if ing, ok := f.(Ingester); ok && batch.CatalogID == "" {
+		batch.CatalogID = ing.CatalogID()
 	}
 	return r.Apply(ctx, batch)
 }
@@ -141,6 +161,7 @@ func LoadFixtureJSON(path string) (Batch, error) {
 		return Batch{}, err
 	}
 	batch.Origin = "fixture"
+	batch.CatalogID = model.CatalogBoverket
 	if batch.Version == "" {
 		batch.Version = "fixture"
 	}

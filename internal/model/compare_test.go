@@ -109,6 +109,9 @@ func TestResourceView(t *testing.T) {
 	if v["id"] != "1" || v["source"] != "Boverket Klimatdatabas" {
 		t.Fatalf("%v", v)
 	}
+	if _, ok := v["catalog"]; !ok {
+		t.Fatal("view must include catalog")
+	}
 	if v["conversions"] == nil {
 		t.Fatal("conversions should be empty map, not nil")
 	}

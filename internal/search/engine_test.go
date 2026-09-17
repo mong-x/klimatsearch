@@ -49,7 +49,7 @@ func TestEngineFTSAndVector(t *testing.T) {
 	}
 	eng := search.New(st, st, fake, reranker.None{})
 
-	hits, err := eng.Search(t.Context(), "Betong", false, false, "sv")
+	hits, err := eng.Search(t.Context(), "Betong", false, false, "sv", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -57,7 +57,7 @@ func TestEngineFTSAndVector(t *testing.T) {
 		t.Fatalf("fts: %+v", hits)
 	}
 
-	hits, err = eng.Search(t.Context(), r.EmbeddingText(), true, false, "sv")
+	hits, err = eng.Search(t.Context(), r.EmbeddingText(), true, false, "sv", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -65,7 +65,7 @@ func TestEngineFTSAndVector(t *testing.T) {
 		t.Fatalf("vector: %+v", hits)
 	}
 
-	if _, err := eng.Search(t.Context(), "x", false, false, "xx"); err == nil {
+	if _, err := eng.Search(t.Context(), "x", false, false, "xx", nil); err == nil {
 		t.Fatal("expected bad lang")
 	}
 }
@@ -101,7 +101,7 @@ func TestEngineRRF(t *testing.T) {
 
 	eng := search.New(st, st, fake, reranker.None{})
 
-	ftsHits, err := eng.Search(t.Context(), "Betong", false, false, "sv")
+	ftsHits, err := eng.Search(t.Context(), "Betong", false, false, "sv", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -114,7 +114,7 @@ func TestEngineRRF(t *testing.T) {
 		}
 	}
 
-	hits, err := eng.Search(t.Context(), "Betong", true, false, "sv")
+	hits, err := eng.Search(t.Context(), "Betong", true, false, "sv", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -138,7 +138,7 @@ func TestEngineRRF(t *testing.T) {
 		t.Fatalf("both RRF %v should beat vec %v and fts %v", b.Score, v.Score, f.Score)
 	}
 
-	reranked, err := eng.Search(t.Context(), "Betong", true, true, "sv")
+	reranked, err := eng.Search(t.Context(), "Betong", true, true, "sv", nil)
 	if err != nil {
 		t.Fatal(err)
 	}

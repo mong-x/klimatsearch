@@ -3,11 +3,13 @@ package api
 import (
 	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"strconv"
 	"strings"
 
 	"github.com/mong-x/klimatsearch/internal/config"
+	"github.com/mong-x/klimatsearch/internal/ingest"
 	"github.com/mong-x/klimatsearch/internal/model"
 	"github.com/mong-x/klimatsearch/internal/search"
 	"github.com/mong-x/klimatsearch/internal/store"
@@ -15,9 +17,11 @@ import (
 
 // Handler serves REST on a ServeMux.
 type Handler struct {
-	Engine search.SearchEngine
-	Store  *store.Store
-	Source string
+	Engine     search.SearchEngine
+	Store      *store.Store
+	Source     string
+	Runner     *ingest.Runner
+	AdminToken string
 }
 
 func New(eng search.SearchEngine, st *store.Store, source string) *Handler {
@@ -33,6 +37,7 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/resources", h.list)
 	mux.HandleFunc("GET /api/resources/compare", h.compare)
 	mux.HandleFunc("GET /api/resources/{id}", h.get)
+	mux.HandleFunc("POST /admin/ingest/file", h.ingestFile)
 }
 
 func (h *Handler) healthz(w http.ResponseWriter, r *http.Request) {
@@ -58,7 +63,8 @@ func (h *Handler) search(w http.ResponseWriter, r *http.Request) {
 	}
 	useVector := parseBool(r.URL.Query().Get("vector"), false)
 	useRerank := parseBool(r.URL.Query().Get("rerank"), false)
-	hits, err := h.Engine.Search(r.Context(), q, useVector, useRerank, lang)
+	catalogs := store.ParseCatalogs(r.URL.Query().Get("databases"))
+	hits, err := h.Engine.Search(r.Context(), q, useVector, useRerank, lang, catalogs)
 	if err != nil {
 		var bad search.ErrBadLang
 		if errors.As(err, &bad) {
@@ -75,6 +81,7 @@ func (h *Handler) search(w http.ResponseWriter, r *http.Request) {
 	for _, hit := range hits {
 		results = append(results, map[string]any{
 			"id":             hit.ID,
+			"catalog":        hit.CatalogID,
 			"name_sv":        hit.NameSV,
 			"name_en":        hit.NameEN,
 			"description_sv": hit.DescriptionSV,
@@ -99,7 +106,8 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
 		return
 	}
-	items, err := h.Store.List(r.Context())
+	catalogs := store.ParseCatalogs(r.URL.Query().Get("databases"))
+	items, err := h.Store.List(r.Context(), catalogs)
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return
@@ -132,6 +140,10 @@ func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusNotFound, map[string]string{"error": "not found"})
 		return
 	}
+	if errors.Is(err, store.ErrAmbiguous) {
+		writeJSON(w, http.StatusConflict, map[string]string{"error": err.Error()})
+		return
+	}
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return
@@ -148,22 +160,14 @@ func (h *Handler) compare(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	unit := strings.TrimSpace(r.URL.Query().Get("unit"))
-	ra, err := h.Store.Get(r.Context(), idA)
-	if errors.Is(err, store.ErrNotFound) {
-		writeJSON(w, http.StatusNotFound, map[string]string{"error": "not found"})
-		return
-	}
+	ra, status, err := h.loadResource(r, idA)
 	if err != nil {
-		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		writeJSON(w, status, map[string]string{"error": err.Error()})
 		return
 	}
-	rb, err := h.Store.Get(r.Context(), idB)
-	if errors.Is(err, store.ErrNotFound) {
-		writeJSON(w, http.StatusNotFound, map[string]string{"error": "not found"})
-		return
-	}
+	rb, status, err := h.loadResource(r, idB)
 	if err != nil {
-		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		writeJSON(w, status, map[string]string{"error": err.Error()})
 		return
 	}
 	cmp, err := model.Compare(*ra, *rb, h.Source, unit)
@@ -184,6 +188,79 @@ func (h *Handler) compare(w http.ResponseWriter, r *http.Request) {
 		"delta_a1a3":      cmp.DeltaA1A3,
 		"lower_impact_id": cmp.LowerImpactID,
 		"incomparable":    cmp.Incomparable,
+	})
+}
+
+func (h *Handler) loadResource(r *http.Request, id string) (*model.Resource, int, error) {
+	it, err := h.Store.Get(r.Context(), id)
+	if errors.Is(err, store.ErrNotFound) {
+		return nil, http.StatusNotFound, errors.New("not found")
+	}
+	if errors.Is(err, store.ErrAmbiguous) {
+		return nil, http.StatusConflict, err
+	}
+	if err != nil {
+		return nil, http.StatusInternalServerError, err
+	}
+	return it, http.StatusOK, nil
+}
+
+func (h *Handler) ingestFile(w http.ResponseWriter, r *http.Request) {
+	if h.AdminToken != "" && r.Header.Get("X-Admin-Token") != h.AdminToken {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
+		return
+	}
+	catalog := strings.TrimSpace(r.URL.Query().Get("catalog"))
+	if catalog == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "catalog query is required"})
+		return
+	}
+	if h.Runner == nil {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "ingest is not configured"})
+		return
+	}
+	if err := r.ParseMultipartForm(32 << 20); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "file is required"})
+		return
+	}
+	file, hdr, err := r.FormFile("file")
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "file is required"})
+		return
+	}
+	defer file.Close()
+	data, err := io.ReadAll(io.LimitReader(file, 32<<20))
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "file is required"})
+		return
+	}
+	name := ""
+	if hdr != nil {
+		name = hdr.Filename
+	}
+	ing := ingest.FileIngester{Catalog: catalog, Data: data, Name: name}
+	res, err := h.Runner.Run(r.Context(), ing)
+	if err != nil {
+		var unknown ingest.UnknownCatalogError
+		if errors.As(err, &unknown) {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+			return
+		}
+		var ni ingest.ErrCatalogNotImplemented
+		if errors.As(err, &ni) {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+			return
+		}
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"catalog":  catalog,
+		"origin":   res.Origin,
+		"version":  res.Version,
+		"seen":     res.Seen,
+		"upserted": res.Upserted,
+		"skipped":  res.Skipped,
 	})
 }
 

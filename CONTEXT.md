@@ -1,20 +1,40 @@
 # Klimatsearch
 
-Glossary for Boverket Klimatdatabas retrieval: Resources, how they change, and how a Query becomes Hits.
+Glossary for climate-data retrieval: Resources in a Catalog, how they change, and how a Query becomes Hits.
 
 ## Language
 
+**Catalog**:
+A national climate-data publication klimatsearch can ingest (Boverket Klimatdatabas, BR25).
+_Avoid_: source, namespace, database
+
+**Catalog ID**:
+The stable code for a Catalog (`boverket`, `br25`).
+_Avoid_: source_id, namespace, database name
+
 **Resource**:
-A generic construction product or energy carrier from Boverket Klimatdatabas, identified by a stable Resource ID.
+A generic construction product or energy carrier in a Catalog, identified by Catalog ID plus Resource ID.
 _Avoid_: material, product, item
 
 **Resource ID**:
-The identifier Boverket assigns to a Resource and that callers use to fetch or compare it.
+The identifier the Catalog assigns to a Resource (Boverket's `ResourceId`, for example 6000000000). Unique only inside that Catalog.
 _Avoid_: id (bare), key, material ID
 
 **Category**:
-Boverket's grouping of Resources (for example Betong, Stål).
+The Catalog's grouping of Resources. Boverket exposes a numeric Category Code (`code`) and a title (for example Betong).
 _Avoid_: type, class, group
+
+**Culture**:
+Boverket API language path (`sv`, `en`); payloads use `sv-se` and `en-gb`. Maps to Language.
+_Avoid_: locale, cultureInfo
+
+**Synonym**:
+An alternate name listed on a Resource (Boverket `Synonyms`).
+_Avoid_: alias, tag
+
+**Applicability**:
+Where a Resource is typically used (Boverket `TechnologicalApplicability` / use of product).
+_Avoid_: usage, application
 
 **Declared unit**:
 The unit A1A3 is expressed per (for example kg).
@@ -49,8 +69,16 @@ Swedish (`sv`) or English (`en`). FTS uses the Resource fields of that Language;
 _Avoid_: locale, lang flag
 
 **Attribution**:
-The required citation of Klimatdatabas as origin: "Boverket Klimatdatabas".
-_Avoid_: source (bare — overloaded with how a Hit was matched)
+The required citation of a Catalog as origin, for example "Boverket Klimatdatabas".
+_Avoid_: source (bare — overloaded with how a Hit was matched and with Catalog)
+
+**Guard**:
+The dual-lane check on paid endpoints: ZeroClick agent signature first, then Unkey Bearer API key.
+_Avoid_: auth middleware, billing proxy
+
+**Ingester**:
+The fetch-and-map of one Catalog into Resources (JSON API, Excel, or an uploaded file).
+_Avoid_: crawler, importer, connector
 
 **Comparison**:
 A1A3 of two Resources expressed in one shared unit, using Conversion when the caller asks or when Declared units already agree.
@@ -69,5 +97,5 @@ Hybrid retrieval of Hits from Klimatdatabas for a Query.
 _Avoid_: index, retriever, finder, component
 
 **Klimatdatabas**:
-Boverket's published climate database of generic construction Resources, cited as "Boverket Klimatdatabas".
+Boverket's Catalog of generic construction Resources, cited as "Boverket Klimatdatabas".
 _Avoid_: climate DB, Boverket API, LCA database

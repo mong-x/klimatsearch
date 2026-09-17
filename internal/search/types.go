@@ -9,6 +9,7 @@ import (
 // Hit is one Resource returned for a Query.
 type Hit struct {
 	ID            string
+	CatalogID     string
 	NameSV        string
 	NameEN        string
 	DescriptionSV string
@@ -23,6 +24,7 @@ type Hit struct {
 func HitFrom(r model.Resource, lang, source string, score float64) Hit {
 	return Hit{
 		ID:            r.ResourceID,
+		CatalogID:     r.CatalogID,
 		NameSV:        r.NameSV,
 		NameEN:        r.NameEN,
 		DescriptionSV: r.DescriptionSV,
@@ -47,7 +49,7 @@ type Reranker interface {
 
 // SearchEngine is hybrid retrieval over Klimatdatabas.
 type SearchEngine interface {
-	Search(ctx context.Context, query string, useVector bool, useRerank bool, lang string) ([]Hit, error)
+	Search(ctx context.Context, query string, useVector bool, useRerank bool, lang string, catalogs []string) ([]Hit, error)
 }
 
 // Dimensional is implemented by embedders that know their output width.

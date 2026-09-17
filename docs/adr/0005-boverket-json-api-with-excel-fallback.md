@@ -1,6 +1,6 @@
 # Boverket JSON API with Excel fallback
 
-Boverket publishes Klimatdatabas as open data through Azure APIM (`api-portal.boverket.se` / `api.boverket.se`) and as public Excel files. The JSON path behind APIM is not a stable public URL and may require `BOVERKET_SUBSCRIPTION_KEY`. Ingest therefore treats JSON as preferred: configurable `BOVERKET_API_BASE` (default `https://api.boverket.se`), optional subscription key, and probes of common paths such as `/klimatdatabas/v1/resources`. A 404 or network error must not fail boot.
+Boverket publishes Klimatdatabas as open data through Azure APIM. The OpenAPI server is `https://api.boverket.se/klimatdatabas`. Live GETs without a subscription key return 200 for `GetLatestVersion`, `GetAllVersions`, `GetAllResources/{latest|senaste}/{sv|en}/json`, `GetAllCategories`, and `GetResourcesByCategory?code=`. Default `BOVERKET_API_BASE` is that server URL. JSON is preferred; Excel remains the fallback when JSON fails or returns no Resources. Optional `BOVERKET_SUBSCRIPTION_KEY` is still sent as `Ocp-Apim-Subscription-Key` if set. A JSON failure must not fail boot.
 
 Fallback is the versioned Excel pair:
 

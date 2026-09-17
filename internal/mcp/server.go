@@ -80,8 +80,9 @@ func (s *Server) Mount(mux *http.ServeMux) {
 }
 
 type searchIn struct {
-	Query string `json:"query" jsonschema:"Search query"`
-	Lang  string `json:"lang,omitempty" jsonschema:"Language sv or en (default sv)"`
+	Query     string   `json:"query" jsonschema:"Search query"`
+	Lang      string   `json:"lang,omitempty" jsonschema:"Language sv or en (default sv)"`
+	Databases []string `json:"databases,omitempty" jsonschema:"Optional Catalog IDs to search"`
 }
 
 type searchOut struct {
@@ -96,7 +97,7 @@ func (s *Server) searchTool(ctx context.Context, _ *mcpsdk.CallToolRequest, in s
 	if err != nil {
 		return nil, searchOut{}, err
 	}
-	hits, err := s.engine.Search(ctx, in.Query, s.useVector, s.useRerank, lang)
+	hits, err := s.engine.Search(ctx, in.Query, s.useVector, s.useRerank, lang, in.Databases)
 	if err != nil {
 		return nil, searchOut{}, err
 	}
@@ -120,6 +121,9 @@ func (s *Server) getTool(ctx context.Context, _ *mcpsdk.CallToolRequest, in getI
 	r, err := s.st.Get(ctx, in.ID)
 	if errors.Is(err, store.ErrNotFound) {
 		return nil, getOut{}, fmt.Errorf("resource %s not found", in.ID)
+	}
+	if errors.Is(err, store.ErrAmbiguous) {
+		return nil, getOut{}, err
 	}
 	if err != nil {
 		return nil, getOut{}, err

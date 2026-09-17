@@ -1,7 +1,9 @@
 package api_test
 
 import (
+	"bytes"
 	"encoding/json"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -10,6 +12,8 @@ import (
 
 	"github.com/mong-x/klimatsearch/internal/api"
 	"github.com/mong-x/klimatsearch/internal/embedder"
+	"github.com/mong-x/klimatsearch/internal/guard"
+	"github.com/mong-x/klimatsearch/internal/ingest"
 	"github.com/mong-x/klimatsearch/internal/model"
 	"github.com/mong-x/klimatsearch/internal/reranker"
 	"github.com/mong-x/klimatsearch/internal/search"
@@ -39,7 +43,9 @@ func TestHTTP(t *testing.T) {
 	}
 	eng := search.New(st, st, fake, reranker.None{})
 	mux := http.NewServeMux()
-	api.New(eng, st, "Boverket Klimatdatabas").Register(mux)
+	h := api.New(eng, st, "Boverket Klimatdatabas")
+	h.Runner = &ingest.Runner{Store: st, Embedder: fake}
+	h.Register(mux)
 	srv := httptest.NewServer(mux)
 	t.Cleanup(srv.Close)
 
@@ -159,6 +165,146 @@ func TestHTTP(t *testing.T) {
 			t.Fatalf("want 400 got %d", bad.StatusCode)
 		}
 	})
+	t.Run("list catalog field", func(t *testing.T) {
+		resp := get(t, srv.URL+"/api/resources")
+		defer resp.Body.Close()
+		var body struct {
+			Resources []struct {
+				ID      string `json:"id"`
+				Catalog string `json:"catalog"`
+				Source  string `json:"source"`
+			} `json:"resources"`
+		}
+		if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+			t.Fatal(err)
+		}
+		if len(body.Resources) == 0 || body.Resources[0].Catalog != "boverket" {
+			t.Fatalf("%+v", body.Resources)
+		}
+		if body.Resources[0].Source != "Boverket Klimatdatabas" {
+			t.Fatalf("source=%s", body.Resources[0].Source)
+		}
+	})
+	t.Run("admin ingest missing file 400", func(t *testing.T) {
+		req, err := http.NewRequest(http.MethodPost, srv.URL+"/admin/ingest/file?catalog=br25", nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode != 400 {
+			t.Fatalf("want 400 got %d", resp.StatusCode)
+		}
+	})
+	t.Run("admin ingest unknown catalog 400", func(t *testing.T) {
+		var buf bytes.Buffer
+		mw := multipart.NewWriter(&buf)
+		fw, err := mw.CreateFormFile("file", "x.csv")
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, _ = fw.Write([]byte("id,name\n1,x\n"))
+		_ = mw.Close()
+		req, err := http.NewRequest(http.MethodPost, srv.URL+"/admin/ingest/file?catalog=unknown", &buf)
+		if err != nil {
+			t.Fatal(err)
+		}
+		req.Header.Set("Content-Type", mw.FormDataContentType())
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode != 400 {
+			t.Fatalf("want 400 got %d", resp.StatusCode)
+		}
+	})
+}
+
+func TestFailClosedGuard(t *testing.T) {
+	if os.Getenv("CGO_ENABLED") == "0" {
+		t.Skip("CGO is disabled; sqlite store tests require CGO_ENABLED=1")
+	}
+	st, err := store.Open(filepath.Join(t.TempDir(), "guard.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = st.Close() })
+	var fake embedder.Fake
+	st.ConfigureVector(fake.Dim())
+	eng := search.New(st, st, fake, reranker.None{})
+	mux := http.NewServeMux()
+	api.New(eng, st, "Boverket Klimatdatabas").Register(mux)
+	g := &guard.Guard{}
+	srv := httptest.NewServer(g.Wrap(mux))
+	t.Cleanup(srv.Close)
+
+	hz := get(t, srv.URL+"/healthz")
+	defer hz.Body.Close()
+	if hz.StatusCode != 200 {
+		t.Fatalf("healthz=%d", hz.StatusCode)
+	}
+	denied := get(t, srv.URL+"/api/search?q=betong")
+	defer denied.Body.Close()
+	if denied.StatusCode != 401 {
+		t.Fatalf("search without auth want 401 got %d", denied.StatusCode)
+	}
+}
+
+func TestAmbiguousResourceHTTP(t *testing.T) {
+	if os.Getenv("CGO_ENABLED") == "0" {
+		t.Skip("CGO is disabled; sqlite store tests require CGO_ENABLED=1")
+	}
+	st, err := store.Open(filepath.Join(t.TempDir(), "amb.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = st.Close() })
+	var fake embedder.Fake
+	st.ConfigureVector(fake.Dim())
+	a := model.Resource{CatalogID: "boverket", ResourceID: "same", NameSV: "A", A1A3: 0.1, Unit: "kg"}
+	b := model.Resource{CatalogID: "br25", ResourceID: "same", NameSV: "B", A1A3: 0.2, Unit: "kg"}
+	for _, r := range []model.Resource{a, b} {
+		hsh, _ := r.ContentHash()
+		r.Hash = hsh
+		if err := st.Upsert(t.Context(), r, nil); err != nil {
+			t.Fatal(err)
+		}
+	}
+	eng := search.New(st, st, fake, reranker.None{})
+	mux := http.NewServeMux()
+	h := api.New(eng, st, "Boverket Klimatdatabas")
+	h.Runner = &ingest.Runner{Store: st, Embedder: fake}
+	h.Register(mux)
+	srv := httptest.NewServer(mux)
+	t.Cleanup(srv.Close)
+
+	resp := get(t, srv.URL+"/api/resources/same")
+	defer resp.Body.Close()
+	if resp.StatusCode != 409 {
+		t.Fatalf("want 409 got %d", resp.StatusCode)
+	}
+	ok := get(t, srv.URL+"/api/resources/br25:same")
+	defer ok.Body.Close()
+	if ok.StatusCode != 200 {
+		t.Fatal(ok.Status)
+	}
+	list := get(t, srv.URL+"/api/resources?databases=br25")
+	defer list.Body.Close()
+	var body struct {
+		Resources []struct {
+			Catalog string `json:"catalog"`
+		} `json:"resources"`
+	}
+	if err := json.NewDecoder(list.Body).Decode(&body); err != nil {
+		t.Fatal(err)
+	}
+	if len(body.Resources) != 1 || body.Resources[0].Catalog != "br25" {
+		t.Fatalf("%+v", body.Resources)
+	}
 }
 
 func get(t *testing.T, url string) *http.Response {

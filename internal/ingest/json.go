@@ -10,40 +10,51 @@ import (
 	"github.com/mong-x/klimatsearch/internal/model"
 )
 
-// ParseJSON accepts a Boverket-shaped document or a bare array of resources.
+// ParseJSON accepts official Boverket OpenAPI v2 JSON, the old fixture shape
+// (`resources` + name_sv), or a bare array of resources.
 func ParseJSON(raw []byte) (Batch, error) {
 	raw = bytes.TrimSpace(raw)
 	if len(raw) == 0 {
 		return Batch{}, fmt.Errorf("empty json")
 	}
-	var version string
-	var items []json.RawMessage
 	if raw[0] == '[' {
+		var items []json.RawMessage
 		if err := json.Unmarshal(raw, &items); err != nil {
 			return Batch{}, fmt.Errorf("json array: %w", err)
 		}
-	} else {
-		var doc map[string]json.RawMessage
-		if err := json.Unmarshal(raw, &doc); err != nil {
-			return Batch{}, fmt.Errorf("json object: %w", err)
+		if looksV2Items(items) {
+			return parseV2Items(items, "", "")
 		}
-		version = stringField(doc, "version", "datasetVersion", "dataset_version")
-		for _, key := range []string{"resources", "data", "value", "items", "results"} {
-			if v, ok := doc[key]; ok {
-				if err := json.Unmarshal(v, &items); err != nil {
-					return Batch{}, fmt.Errorf("json %s: %w", key, err)
-				}
-				break
-			}
-		}
-		if items == nil {
-			// single resource object
-			items = []json.RawMessage{raw}
-		}
+		return parseLegacyItems(items, "")
 	}
-	out := Batch{Version: version, Origin: "json"}
+
+	var doc map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &doc); err != nil {
+		return Batch{}, fmt.Errorf("json object: %w", err)
+	}
+	if _, ok := doc["Resources"]; ok {
+		return parseV2Doc(doc)
+	}
+	if looksV2Object(raw) {
+		return parseV2Items([]json.RawMessage{raw}, stringField(doc, "Version", "version"), cultureOf(doc))
+	}
+	return parseLegacyDoc(doc, raw)
+}
+
+func parseV2Doc(doc map[string]json.RawMessage) (Batch, error) {
+	version := stringField(doc, "Version", "version")
+	culture := cultureOf(doc)
+	var items []json.RawMessage
+	if err := json.Unmarshal(doc["Resources"], &items); err != nil {
+		return Batch{}, fmt.Errorf("json Resources: %w", err)
+	}
+	return parseV2Items(items, version, culture)
+}
+
+func parseV2Items(items []json.RawMessage, version, culture string) (Batch, error) {
+	out := Batch{Version: version, Origin: "json", CatalogID: model.CatalogBoverket}
 	for _, it := range items {
-		r, err := parseResource(it)
+		r, err := parseV2Resource(it, culture)
 		if err != nil {
 			return Batch{}, err
 		}
@@ -53,26 +64,169 @@ func ParseJSON(raw []byte) (Batch, error) {
 		if r.Version == "" {
 			r.Version = version
 		}
+		r.CatalogID = model.CatalogBoverket
 		out.Resources = append(out.Resources, r)
 	}
 	return out, nil
 }
 
-func parseResource(raw json.RawMessage) (model.Resource, error) {
+func parseV2Resource(raw json.RawMessage, culture string) (model.Resource, error) {
 	var m map[string]any
 	if err := json.Unmarshal(raw, &m); err != nil {
 		return model.Resource{}, fmt.Errorf("resource object: %w", err)
 	}
 	r := model.Resource{
-		ResourceID:    firstString(m, "resourceId", "resource_id", "id", "Resurs-ID", "Resource ID"),
-		NameSV:        firstString(m, "nameSV", "name_sv", "nameSv", "produktnamn", "NameSV"),
-		NameEN:        firstString(m, "nameEN", "name_en", "nameEn", "NameEN"),
-		DescriptionSV: firstString(m, "descriptionSV", "description_sv", "DescriptionSV"),
-		DescriptionEN: firstString(m, "descriptionEN", "description_en", "DescriptionEN"),
-		Unit:          firstString(m, "unit", "Unit", "enhet"),
-		Category:      firstString(m, "category", "Category", "kategori"),
-		Version:       firstString(m, "version", "Version"),
-		RawJSON:       string(raw),
+		CatalogID:   model.CatalogBoverket,
+		ResourceID:  firstString(m, "ResourceId", "resourceId"),
+		Synonyms:    firstString(m, "Synonyms", "synonyms"),
+		Unit:        firstString(m, "InventoryUnit", "inventoryUnit"),
+		Version:     firstString(m, "Version", "SourceVersion", "version"),
+		RawJSON:     string(raw),
+		Conversions: map[string]float64{},
+	}
+	if names, ok := nestedMap(m, "Names", "names"); ok {
+		r.NameSV = firstString(names, "SV", "sv")
+		r.NameEN = firstString(names, "EN", "en")
+	}
+	name := firstString(m, "Name", "name")
+	if name != "" {
+		if r.NameSV == "" && !strings.HasPrefix(strings.ToLower(culture), "en") {
+			r.NameSV = name
+		}
+		if r.NameEN == "" && strings.HasPrefix(strings.ToLower(culture), "en") {
+			r.NameEN = name
+		}
+		if r.NameSV == "" {
+			r.NameSV = name
+		}
+		if r.NameEN == "" && r.NameSV == "" {
+			r.NameEN = name
+		}
+	}
+	desc := firstString(m, "TechnologyDescriptionAndIncludedProcesses")
+	appl := firstString(m, "TechnologicalApplicability")
+	if strings.HasPrefix(strings.ToLower(culture), "en") {
+		r.DescriptionEN = desc
+		r.ApplicabilityEN = appl
+	} else {
+		r.DescriptionSV = desc
+		r.ApplicabilitySV = appl
+	}
+	if convs, ok := m["Conversions"].([]any); ok {
+		for _, c := range convs {
+			cm, ok := c.(map[string]any)
+			if !ok {
+				continue
+			}
+			unit := firstString(cm, "Unit")
+			if unit == "" {
+				continue
+			}
+			if f, ok := asFloat(cm["Value"]); ok {
+				r.Conversions[unit] = f
+			}
+		}
+	}
+	if cats, ok := m["Categories"].([]any); ok {
+		for _, c := range cats {
+			cm, ok := c.(map[string]any)
+			if !ok {
+				continue
+			}
+			if firstString(cm, "ClassificationType") == "Boverket" {
+				r.Category = firstString(cm, "Text")
+				break
+			}
+		}
+	}
+	r.A1A3 = typicalA1A3(m)
+	return r, nil
+}
+
+func typicalA1A3(m map[string]any) float64 {
+	items, ok := m["DataItems"].([]any)
+	if !ok {
+		return 0
+	}
+	for _, di := range items {
+		dim, ok := di.(map[string]any)
+		if !ok {
+			continue
+		}
+		dvis, ok := dim["DataValueItems"].([]any)
+		if !ok {
+			continue
+		}
+		for _, dvi := range dvis {
+			item, ok := dvi.(map[string]any)
+			if !ok {
+				continue
+			}
+			if firstString(item, "DataModuleCode") == "A1-A3 Typical" {
+				if f, ok := asFloat(item["Value"]); ok {
+					return f
+				}
+			}
+		}
+	}
+	return 0
+}
+
+func parseLegacyDoc(doc map[string]json.RawMessage, raw []byte) (Batch, error) {
+	version := stringField(doc, "version", "datasetVersion", "dataset_version")
+	var items []json.RawMessage
+	for _, key := range []string{"resources", "data", "value", "items", "results"} {
+		if v, ok := doc[key]; ok {
+			if err := json.Unmarshal(v, &items); err != nil {
+				return Batch{}, fmt.Errorf("json %s: %w", key, err)
+			}
+			break
+		}
+	}
+	if items == nil {
+		items = []json.RawMessage{raw}
+	}
+	return parseLegacyItems(items, version)
+}
+
+func parseLegacyItems(items []json.RawMessage, version string) (Batch, error) {
+	out := Batch{Version: version, Origin: "json", CatalogID: model.CatalogBoverket}
+	for _, it := range items {
+		r, err := parseLegacyResource(it)
+		if err != nil {
+			return Batch{}, err
+		}
+		if r.ResourceID == "" {
+			continue
+		}
+		if r.Version == "" {
+			r.Version = version
+		}
+		r.CatalogID = model.CatalogBoverket
+		out.Resources = append(out.Resources, r)
+	}
+	return out, nil
+}
+
+func parseLegacyResource(raw json.RawMessage) (model.Resource, error) {
+	var m map[string]any
+	if err := json.Unmarshal(raw, &m); err != nil {
+		return model.Resource{}, fmt.Errorf("resource object: %w", err)
+	}
+	r := model.Resource{
+		CatalogID:       model.CatalogBoverket,
+		ResourceID:      firstString(m, "resourceId", "resource_id", "id", "Resurs-ID", "Resource ID"),
+		NameSV:          firstString(m, "nameSV", "name_sv", "nameSv", "produktnamn", "NameSV"),
+		NameEN:          firstString(m, "nameEN", "name_en", "nameEn", "NameEN"),
+		DescriptionSV:   firstString(m, "descriptionSV", "description_sv", "DescriptionSV"),
+		DescriptionEN:   firstString(m, "descriptionEN", "description_en", "DescriptionEN"),
+		ApplicabilitySV: firstString(m, "applicabilitySV", "applicability_sv"),
+		ApplicabilityEN: firstString(m, "applicabilityEN", "applicability_en"),
+		Synonyms:        firstString(m, "synonyms", "Synonyms"),
+		Unit:            firstString(m, "unit", "Unit", "enhet"),
+		Category:        firstString(m, "category", "Category", "kategori"),
+		Version:         firstString(m, "version", "Version"),
+		RawJSON:         string(raw),
 	}
 	if r.NameSV == "" {
 		r.NameSV = firstString(m, "name", "productName", "product_name")
@@ -93,6 +247,44 @@ func parseResource(raw json.RawMessage) (model.Resource, error) {
 		}
 	}
 	return r, nil
+}
+
+func looksV2Items(items []json.RawMessage) bool {
+	for _, it := range items {
+		if looksV2Object(it) {
+			return true
+		}
+	}
+	return false
+}
+
+func looksV2Object(raw json.RawMessage) bool {
+	var m map[string]any
+	if json.Unmarshal(raw, &m) != nil {
+		return false
+	}
+	if _, ok := m["ResourceId"]; ok {
+		return true
+	}
+	if _, ok := m["Resources"]; ok {
+		return true
+	}
+	return false
+}
+
+func cultureOf(doc map[string]json.RawMessage) string {
+	return stringField(doc, "Culture", "culture")
+}
+
+func nestedMap(m map[string]any, keys ...string) (map[string]any, bool) {
+	for _, k := range keys {
+		if v, ok := m[k]; ok {
+			if nested, ok := v.(map[string]any); ok {
+				return nested, true
+			}
+		}
+	}
+	return nil, false
 }
 
 func stringField(doc map[string]json.RawMessage, keys ...string) string {
@@ -119,6 +311,8 @@ func firstString(m map[string]any, keys ...string) string {
 				return t
 			case float64:
 				return strconv.FormatFloat(t, 'f', -1, 64)
+			case json.Number:
+				return t.String()
 			}
 		}
 	}

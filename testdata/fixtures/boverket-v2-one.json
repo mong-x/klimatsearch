@@ -1,0 +1,90 @@
+{
+  "Location": "SE",
+  "Culture": "sv-se",
+  "Publisher": "Boverket, Sweden",
+  "Version": "02.07.000",
+  "Resources": [
+    {
+      "ResourceId": 6000000000,
+      "SourceVersion": "02.07.000",
+      "ProductSystemId": 6,
+      "ProductSystemResourceId": "0e041aec-e8be-4383-a760-6b7fe1325341",
+      "Location": "SE",
+      "Publisher": "Boverket, Sweden",
+      "Version": "02.07.000",
+      "Copyright": true,
+      "TimeStamp": "2025-10-23T13:03:06Z",
+      "Name": "Spånskiva",
+      "Names": {
+        "EN": "Particle board",
+        "SV": "Spånskiva"
+      },
+      "StdName": "EN 312:2010",
+      "StdDescription": "EN 312:2010",
+      "StdCalc": "EN 15804:A1",
+      "UseAdviceForDataSet": "Data är representativa för en spånskiva för byggnadsändamål utan särskilda behandlings- eller tillsatsmaterial. Om ett sådan variant av skivan används kan en EPD användas om sådan finns eller så kan dessa data användas som proxy.",
+      "TechnologicalApplicability": "Standard spånskiva används vanligtvis som ytmaterial i en skyddad miljö, vanligtvis inomhus.",
+      "GeneralComment": "GWP-GHG (A1-A3) för standardspånskivor varierar vanligtvis mellan 0,35-0,45 kg CO₂e/kg baserat på nordiska och mellan-europeiska EPDer. Genomsnittliga datavärden är baserade på EPDer från följande länder (i ordning efter antagen marknadsandel): Sverige, Norge och Finland.",
+      "Synonyms": "Spånskivor, skivor",
+      "TechnologyDescriptionAndIncludedProcesses": "Spånskivor är gjorda av träspån och lim som pressats samman. Mängden lim är mindre än 10 %. Biprodukter från tillverkning av sågat virke används vid tillverkning av spånskivor. Densiteten varierar mellan 650 och 750 kg/m³.",
+      "GeographicalRepresentativenessDescription": "Swedish average",
+      "TimeRepresentativenessDescription": "Uppgifterna är representativa för tillverkningsprocessen och produkter som för närvarande konsumeras på marknaden. Uppgifterna är giltiga tills nya publiceras.",
+      "UpdatedTime": "2025-10-23T13:03:06Z",
+      "InventoryUnit": "kg",
+      "CalculatedBiogenicCarbon": 0.42,
+      "ConservativeDataConversionFactor": 1.25,
+      "WasteFactor": 1.1,
+      "RefServiceLifeNormal": ">50 år",
+      "RefServiceLifeNormalComment": "Livslängden för produkten är normalt lika med livslängden för den konstruktion den är en del av.",
+      "ComparativeProperty": "En spånskiva kan ha olika behandling, beläggning etc. som är tillämplig på olika applikationer som inte beaktas här utan gäller för en standardprodukt.",
+      "A4ValueBackground": "",
+      "AnnualSupplyOrProductionVolume": "Konsumtionen i Sverige domineras av inhemska producenter, men betydande import sker från (i relativ ordning): Norge, Finland och Europa.",
+      "Conversions": [
+        {
+          "Field": "Volume",
+          "Unit": "kg/m³",
+          "Value": 700.0
+        }
+      ],
+      "DataItems": [
+        {
+          "PropertyId": 1845,
+          "PropertyName": "Global Warming potential",
+          "PropertyCode": "GWP-GHG AR4",
+          "PropertyTypeId": 2,
+          "PropertyUnitCode": "kg CO2 eq./kg",
+          "DataValueItems": [
+            {
+              "DataModuleCode": "A1-A3 Conservative",
+              "Value": 0.488
+            },
+            {
+              "DataModuleCode": "A1-A3 Typical",
+              "Value": 0.39
+            },
+            {
+              "DataModuleCode": "A4",
+              "Value": 0.0629
+            },
+            {
+              "DataModuleCode": "A5.1",
+              "Value": 0.055
+            }
+          ]
+        }
+      ],
+      "Categories": [
+        {
+          "ClassificationType": "Boverket",
+          "Code": "10",
+          "Text": "Byggskivor"
+        },
+        {
+          "ClassificationType": "BK04",
+          "Code": "01208",
+          "Text": "Spånskivor"
+        }
+      ]
+    }
+  ]
+}

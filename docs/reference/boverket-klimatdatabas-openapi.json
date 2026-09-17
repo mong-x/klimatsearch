@@ -1,0 +1,80 @@
+{
+    "openapi": "3.0.1",
+    "info": {
+        "title": "Klimatdatabas",
+        "description": "Boverkets öppna data för Klimatdatabasen består av över 200 generiska byggresurser på svenska respektive engelska. Innehållet tillgängliggörs som öppen data via ett API dels i JSON-format och dels i XML-format. Genom öppna data kan alla som vill fritt använda innehållet i databasen. Vid användandet av Boverkets generisk klimatdata ska Boverket anges som källa.",
+        "version": "1.0"
+    },
+    "servers": [
+        {
+            "url": "https://api.boverket.se/klimatdatabas"
+        }
+    ],
+    "paths": {
+        "/api/Klimat/v2/GetAllResources/{dbVersion}/{culture}/{type}": {
+            "get": {
+                "tags": ["Klimat"],
+                "summary": "Hämtar alla resurser för en viss databasversion, språk och typ.",
+                "operationId": "get-api-klimat-v2-getallresources-dbversion-culture-type",
+                "parameters": [
+                    {"name": "dbVersion", "in": "path", "required": true, "schema": {"type": "string"}, "description": "Version of the database, e.g. \"02.07.000\" or \"latest\"/\"senaste\""},
+                    {"name": "culture", "in": "path", "required": true, "schema": {"type": "string"}, "description": "Language, e.g. \"sv\" or \"en\""},
+                    {"name": "type", "in": "path", "required": true, "schema": {"type": "string"}, "description": "Response format, e.g. \"json\" or \"xml\""}
+                ],
+                "responses": {"200": {"description": "OK"}}
+            }
+        },
+        "/api/Klimat/v2/GetAllVersions/{culture}/{type}": {
+            "get": {
+                "tags": ["Klimat"],
+                "summary": "Hämtar lista på alla versioner.",
+                "operationId": "get-api-klimat-v2-getallversions-culture-type",
+                "parameters": [
+                    {"name": "culture", "in": "path", "required": true, "schema": {"type": "string"}},
+                    {"name": "type", "in": "path", "required": true, "schema": {"type": "string"}}
+                ],
+                "responses": {"200": {"description": "OK"}}
+            }
+        },
+        "/api/Klimat/v2/GetLatestVersion/{culture}/{type}": {
+            "get": {
+                "tags": ["Klimat"],
+                "summary": "Hämtar senaste versionsnumret.",
+                "operationId": "get-api-klimat-v2-getlatestversion-culture-type",
+                "parameters": [
+                    {"name": "culture", "in": "path", "required": true, "schema": {"type": "string"}},
+                    {"name": "type", "in": "path", "required": true, "schema": {"type": "string"}}
+                ],
+                "responses": {"200": {"description": "OK"}}
+            }
+        },
+        "/api/Klimat/v2/GetAllCategories/{dbVersion}/{culture}/{type}": {
+            "get": {
+                "tags": ["Klimat"],
+                "summary": "Hämtar alla kategorier för en viss version.",
+                "operationId": "get-api-klimat-v2-getallcategories-dbversion-culture-type",
+                "parameters": [
+                    {"name": "dbVersion", "in": "path", "required": true, "schema": {"type": "string"}},
+                    {"name": "culture", "in": "path", "required": true, "schema": {"type": "string"}},
+                    {"name": "type", "in": "path", "required": true, "schema": {"type": "string"}}
+                ],
+                "responses": {"200": {"description": "OK"}}
+            }
+        },
+        "/api/Klimat/v2/GetResourcesByCategory/{dbVersion}/{culture}/{type}": {
+            "get": {
+                "tags": ["Klimat"],
+                "summary": "Hämtar alla resurser för en viss kategori och version.",
+                "operationId": "get-api-klimat-v2-getresourcesbycategory-dbversion-culture-type",
+                "parameters": [
+                    {"name": "dbVersion", "in": "path", "required": true, "schema": {"type": "string"}},
+                    {"name": "culture", "in": "path", "required": true, "schema": {"type": "string"}},
+                    {"name": "type", "in": "path", "required": true, "schema": {"type": "string"}},
+                    {"name": "code", "in": "query", "schema": {"type": "string"}, "description": "Category code, e.g. \"1\" or \"12\""}
+                ],
+                "responses": {"200": {"description": "OK"}}
+            }
+        }
+    },
+    "components": {}
+}

@@ -48,12 +48,12 @@ type Engine struct {
 
 // FTS is BM25 search. Store implements this and returns Ranked, not Hits.
 type FTS interface {
-	SearchFTS(ctx context.Context, query, lang string, limit int) ([]model.Ranked, error)
+	SearchFTS(ctx context.Context, query, lang string, limit int, catalogs []string) ([]model.Ranked, error)
 }
 
 // Vector is KNN search.
 type Vector interface {
-	SearchVector(ctx context.Context, embedding []float32, lang string, limit int) ([]model.Ranked, error)
+	SearchVector(ctx context.Context, embedding []float32, lang string, limit int, catalogs []string) ([]model.Ranked, error)
 	VectorEnabled() bool
 	VectorSkipReason() string
 }
@@ -71,7 +71,7 @@ func (nopReranker) Rerank(_ string, docs []Hit) ([]Hit, error) {
 	return docs, nil
 }
 
-func (e *Engine) Search(ctx context.Context, query string, useVector bool, useRerank bool, lang string) ([]Hit, error) {
+func (e *Engine) Search(ctx context.Context, query string, useVector bool, useRerank bool, lang string, catalogs []string) ([]Hit, error) {
 	lang, err := NormalizeLang(lang)
 	if err != nil {
 		return nil, err
@@ -81,7 +81,7 @@ func (e *Engine) Search(ctx context.Context, query string, useVector bool, useRe
 		return nil, fmt.Errorf("empty query")
 	}
 
-	ftsRanked, err := e.fts.SearchFTS(ctx, query, lang, e.limit)
+	ftsRanked, err := e.fts.SearchFTS(ctx, query, lang, e.limit, catalogs)
 	if err != nil {
 		return nil, err
 	}
@@ -101,7 +101,7 @@ func (e *Engine) Search(ctx context.Context, query string, useVector bool, useRe
 			if err != nil {
 				return nil, fmt.Errorf("embed query: %w", err)
 			}
-			vecRanked, err = e.vec.SearchVector(ctx, emb, lang, e.limit)
+			vecRanked, err = e.vec.SearchVector(ctx, emb, lang, e.limit, catalogs)
 			if err != nil {
 				return nil, err
 			}
@@ -149,7 +149,7 @@ func rrf(fts, knn []model.Ranked, lang string, limit int) []Hit {
 	byID := map[string]*acc{}
 	add := func(list []model.Ranked, fromV bool) {
 		for _, r := range list {
-			id := r.Resource.ResourceID
+			id := r.Resource.DocID()
 			s, ok := byID[id]
 			if !ok {
 				s = &acc{res: r.Resource}
@@ -179,6 +179,9 @@ func rrf(fts, knn []model.Ranked, lang string, limit int) []Hit {
 	sort.SliceStable(out, func(i, j int) bool {
 		if out[i].Score != out[j].Score {
 			return out[i].Score > out[j].Score
+		}
+		if out[i].CatalogID != out[j].CatalogID {
+			return out[i].CatalogID < out[j].CatalogID
 		}
 		return out[i].ID < out[j].ID
 	})

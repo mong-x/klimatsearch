@@ -1,6 +1,9 @@
 package model
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func sample() Resource {
 	return Resource{
@@ -137,5 +140,73 @@ func TestContentHashNilConversions(t *testing.T) {
 	}
 	if h != h2 {
 		t.Fatal("nil and empty conversions should hash the same")
+	}
+}
+
+func TestContentHashApplicabilityAndSynonyms(t *testing.T) {
+	r := sample()
+	a, err := r.ContentHash()
+	if err != nil {
+		t.Fatal(err)
+	}
+	r.ApplicabilitySV = "inomhus"
+	d, err := r.ContentHash()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if d == a {
+		t.Fatal("changed Applicability should change hash")
+	}
+	r = sample()
+	r.Synonyms = "skivor"
+	d, err = r.ContentHash()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if d == a {
+		t.Fatal("changed Synonyms should change hash")
+	}
+}
+
+func TestContentHashCatalogIDDoesNotChange(t *testing.T) {
+	r := sample()
+	a, err := r.ContentHash()
+	if err != nil {
+		t.Fatal(err)
+	}
+	r.CatalogID = CatalogBR25
+	d, err := r.ContentHash()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if d != a {
+		t.Fatal("Catalog ID change should not change hash")
+	}
+}
+
+func TestEmbeddingTextOmitsA1A3(t *testing.T) {
+	r := sample()
+	r.Category = "Byggskivor"
+	r.ApplicabilitySV = "inomhus"
+	text := r.EmbeddingText()
+	if !strings.Contains(text, "Betong") || !strings.Contains(text, "Byggskivor") || !strings.Contains(text, "inomhus") {
+		t.Fatalf("embedding text=%q", text)
+	}
+	if strings.Contains(text, "0.12") {
+		t.Fatal("A1A3 must not appear in embedding text")
+	}
+}
+
+func TestDocID(t *testing.T) {
+	if DocID("", "6000000000") != "boverket:6000000000" {
+		t.Fatal(DocID("", "6000000000"))
+	}
+	cat, id := SplitDocID("boverket:6000000000")
+	if cat != "boverket" || id != "6000000000" {
+		t.Fatalf("%s %s", cat, id)
+	}
+	cat, id = SplitDocID("6000000000")
+	if cat != "" || id != "6000000000" {
+		t.Fatalf("bare: %s %s", cat, id)
 	}
 }

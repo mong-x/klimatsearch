@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -55,12 +56,22 @@ func TestGetByIDAndList(t *testing.T) {
 	if got.NameSV != "Betong" || got.NameEN != "Concrete" {
 		t.Fatalf("got %+v", got)
 	}
-	list, err := st.List(ctx)
+	list, err := st.List(ctx, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(list) != 1 {
 		t.Fatalf("list %d", len(list))
+	}
+	if list[0].CatalogID != "boverket" {
+		t.Fatalf("catalog=%s", list[0].CatalogID)
+	}
+	gotPrefixed, err := st.Get(ctx, "boverket:"+r.ResourceID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if gotPrefixed.NameSV != "Betong" {
+		t.Fatalf("prefixed get %+v", gotPrefixed)
 	}
 	_, err = st.Get(ctx, "missing")
 	if err != ErrNotFound {
@@ -72,7 +83,7 @@ func TestFTSSwedishName(t *testing.T) {
 	st := testStore(t)
 	ctx := context.Background()
 	seed(t, st, fixtureBetong(), fixtureSteel())
-	hits, err := st.SearchFTS(ctx, "Betong", "sv", 10)
+	hits, err := st.SearchFTS(ctx, "Betong", "sv", 10, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -94,7 +105,7 @@ func TestVectorExactText(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	hits, err := st.SearchVector(ctx, q, "sv", 5)
+	hits, err := st.SearchVector(ctx, q, "sv", 5, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -146,6 +157,45 @@ func fixtureBetong() model.Resource {
 		Conversions:   map[string]float64{"kg/m³": 2400},
 		Category:      "Betong",
 		Version:       "02.07.000-fixture",
+	}
+}
+
+func TestAmbiguousGetAndCatalogFilter(t *testing.T) {
+	st := testStore(t)
+	ctx := context.Background()
+	a := fixtureBetong()
+	a.CatalogID = model.CatalogBoverket
+	b := fixtureBetong()
+	b.CatalogID = model.CatalogBR25
+	b.NameSV = "BR25 Betong"
+	seed(t, st, a, b)
+
+	_, err := st.Get(ctx, a.ResourceID)
+	if !errors.Is(err, ErrAmbiguous) {
+		t.Fatalf("want ErrAmbiguous, got %v", err)
+	}
+	got, err := st.Get(ctx, "br25:"+a.ResourceID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.NameSV != "BR25 Betong" {
+		t.Fatalf("%+v", got)
+	}
+
+	onlyBR, err := st.List(ctx, []string{model.CatalogBR25})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(onlyBR) != 1 || onlyBR[0].CatalogID != model.CatalogBR25 {
+		t.Fatalf("%+v", onlyBR)
+	}
+
+	hits, err := st.SearchFTS(ctx, "Betong", "sv", 10, []string{model.CatalogBR25})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(hits) != 1 || hits[0].Resource.CatalogID != model.CatalogBR25 {
+		t.Fatalf("fts filter %+v", hits)
 	}
 }
 

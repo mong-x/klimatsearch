@@ -10,11 +10,17 @@ import (
 	"time"
 
 	"github.com/mong-x/klimatsearch/internal/config"
+	"github.com/mong-x/klimatsearch/internal/model"
 )
 
 const maxBody = 32 << 20
 
-// HTTPFetcher probes the Boverket JSON API then falls back to Excel.
+const (
+	resourcesSV = "/api/Klimat/v2/GetAllResources/latest/sv/json"
+	resourcesEN = "/api/Klimat/v2/GetAllResources/latest/en/json"
+)
+
+// HTTPFetcher is the Boverket Ingester: OpenAPI v2 JSON, then Excel fallback.
 type HTTPFetcher struct {
 	Client          *http.Client
 	APIBase         string
@@ -37,6 +43,8 @@ func NewHTTPFetcher(cfg config.Config) *HTTPFetcher {
 	}
 }
 
+func (f *HTTPFetcher) CatalogID() string { return model.CatalogBoverket }
+
 func (f *HTTPFetcher) client() *http.Client {
 	if f.Client != nil {
 		return f.Client
@@ -54,37 +62,44 @@ func (f *HTTPFetcher) Fetch(ctx context.Context) (Batch, error) {
 }
 
 func (f *HTTPFetcher) fetchJSON(ctx context.Context) (Batch, error) {
-	paths := []string{
-		"/klimatdatabas/v1/resources",
-		"/klimatdatabas/v1/resources?lang=sv",
-		"/klimatdatabas/resources",
-		"/api/klimatdatabas/v1/resources",
-		"/klimatdatabas/v1/Resources",
+	svURL := f.APIBase + resourcesSV
+	enURL := f.APIBase + resourcesEN
+	svBody, svErr := f.get(ctx, svURL)
+	enBody, enErr := f.get(ctx, enURL)
+
+	var sv, en Batch
+	if svErr == nil {
+		sv, svErr = ParseJSON(svBody)
 	}
-	var last error
-	for _, p := range paths {
-		u := f.APIBase + p
-		body, err := f.get(ctx, u)
-		if err != nil {
-			last = err
-			continue
-		}
-		batch, err := ParseJSON(body)
-		if err != nil {
-			last = fmt.Errorf("%s: %w", u, err)
-			continue
-		}
-		if len(batch.Resources) == 0 {
-			last = fmt.Errorf("%s: empty resources", u)
-			continue
-		}
-		batch.Origin = "json"
-		return batch, nil
+	if enErr == nil {
+		en, enErr = ParseJSON(enBody)
 	}
-	if last == nil {
-		last = fmt.Errorf("json api returned no resources")
+	if svErr != nil && enErr != nil {
+		return Batch{}, fmt.Errorf("json sv: %v; json en: %v", svErr, enErr)
 	}
-	return Batch{}, last
+	if svErr != nil {
+		if len(en.Resources) == 0 {
+			return Batch{}, fmt.Errorf("%s: empty resources (%v)", enURL, svErr)
+		}
+		stampBoverket(&en)
+		en.Origin = "json"
+		return en, nil
+	}
+	if enErr != nil {
+		if len(sv.Resources) == 0 {
+			return Batch{}, fmt.Errorf("%s: empty resources (%v)", svURL, enErr)
+		}
+		stampBoverket(&sv)
+		sv.Origin = "json"
+		return sv, nil
+	}
+	if len(sv.Resources) == 0 && len(en.Resources) == 0 {
+		return Batch{}, fmt.Errorf("json api returned no resources")
+	}
+	merged := MergeLang(sv, en)
+	merged.Origin = "json"
+	stampBoverket(&merged)
+	return merged, nil
 }
 
 func (f *HTTPFetcher) fetchExcel(ctx context.Context) (Batch, error) {
@@ -98,13 +113,26 @@ func (f *HTTPFetcher) fetchExcel(ctx context.Context) (Batch, error) {
 	}
 	enBody, err := f.get(ctx, f.ExcelEN)
 	if err != nil {
+		stampBoverket(&sv)
 		return sv, nil
 	}
 	en, err := ParseExcel(enBody, "en")
 	if err != nil {
+		stampBoverket(&sv)
 		return sv, nil
 	}
-	return MergeLang(sv, en), nil
+	merged := MergeLang(sv, en)
+	stampBoverket(&merged)
+	return merged, nil
+}
+
+func stampBoverket(b *Batch) {
+	b.CatalogID = model.CatalogBoverket
+	for i := range b.Resources {
+		if b.Resources[i].CatalogID == "" {
+			b.Resources[i].CatalogID = model.CatalogBoverket
+		}
+	}
 }
 
 func (f *HTTPFetcher) get(ctx context.Context, url string) ([]byte, error) {
@@ -137,6 +165,8 @@ type FixtureFetcher struct {
 	Path string
 }
 
+func (f FixtureFetcher) CatalogID() string { return model.CatalogBoverket }
+
 func (f FixtureFetcher) Fetch(context.Context) (Batch, error) {
 	return LoadFixtureJSON(f.Path)
 }
@@ -145,6 +175,13 @@ func (f FixtureFetcher) Fetch(context.Context) (Batch, error) {
 type StaticFetcher struct {
 	Batch Batch
 	Err   error
+}
+
+func (f StaticFetcher) CatalogID() string {
+	if f.Batch.CatalogID != "" {
+		return f.Batch.CatalogID
+	}
+	return model.CatalogBoverket
 }
 
 func (f StaticFetcher) Fetch(context.Context) (Batch, error) {

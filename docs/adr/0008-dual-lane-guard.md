@@ -1,0 +1,3 @@
+# Dual-lane Guard: ZeroClick then Unkey
+
+Paid endpoints (`/api/search`, resource read/compare, MCP, admin ingest) go through one Guard: if a ZeroClick signature is present, verify with the ZeroClick sellers Go SDK (`Guard` / `Verify`); else if `Authorization: Bearer` is present, verify with Unkey `github.com/unkeyed/sdks/api/go/v2` `Keys.VerifyKey`; else 401, or 402 with the ZeroClick storefront URL when that lane is configured. Healthz stays public. When neither ZeroClick nor Unkey credentials are configured, the Guard allows all traffic so `make run` and kind e2e keep working; the moment either secret is set, the Guard is fail-closed. No payment math in-process — ZeroClick signs and settles, Unkey meters to Stripe.

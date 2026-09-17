@@ -22,7 +22,7 @@ Software that calculates climate declarations, and MCP clients that need structu
 
 ## Ingest
 
-1. Probe configurable Boverket JSON API (`BOVERKET_API_BASE`, default `https://api.boverket.se`, optional `BOVERKET_SUBSCRIPTION_KEY`).
+1. Boverket Ingester: `GET {BOVERKET_API_BASE}/api/Klimat/v2/GetAllResources/latest/{sv|en}/json` on default base `https://api.boverket.se/klimatdatabas`. Optional `BOVERKET_SUBSCRIPTION_KEY` as `Ocp-Apim-Subscription-Key`.
 2. On JSON failure, download the public Swedish and English Excel files and merge by Resource ID.
 3. Canonical-JSON hash of key fields. New or changed Resources are embedded (SV+EN text) and upserted.
 4. Run on start when `--ingest-on-start` (default true) and on a weekly ticker (`--ingest-interval`, default `168h`).
@@ -39,12 +39,13 @@ Hybrid SearchEngine: FTS5 BM25 on the requested language columns, optional sqlit
 | Method | Path | Notes |
 | --- | --- | --- |
 | GET | `/healthz` | `{"status":"ok"}` |
-| GET | `/api/search?q=&vector=&rerank=&lang=` | lang default `sv`; empty q or unknown lang → 400 |
-| GET | `/api/resources?lang=` | list |
-| GET | `/api/resources/{id}?lang=` | 404 if missing |
+| GET | `/api/search?q=&vector=&rerank=&lang=&databases=` | lang default `sv`; `databases` is Catalog IDs (`boverket,br25`); empty q or unknown lang → 400 |
+| GET | `/api/resources?lang=&databases=` | list |
+| GET | `/api/resources/{id}?lang=` | 404 if missing; `{id}` may be prefixed `boverket:6000000000` or bare Resource ID when only one Catalog matches |
 | GET | `/api/resources/compare?a=&b=&unit=` | unit optional; 404 if a Resource ID is missing; 400 if explicit unit cannot apply |
+| POST | `/admin/ingest/file?catalog=` | multipart file for file-only Catalogs (BR25); Guard + admin |
 
-JSON includes `source: "Boverket Klimatdatabas"`.
+JSON includes Attribution `source: "Boverket Klimatdatabas"` and Catalog ID `catalog`.
 
 ## MCP tools
 
@@ -55,6 +56,34 @@ JSON includes `source: "Boverket Klimatdatabas"`.
 ## Non-goals (v1)
 
 - Hosting ONNX weights in git
-- Multi-tenant auth
 - Write-back to Boverket
 - Alternative routers or CGO-free SQLite
+- Implementing BR25 file mapping until a sample workbook exists (Ingester + admin route ship; parser can reject unknown Catalogs)
+
+## 5. Monetization & authentication (dual-lane Guard)
+
+Same binary serves AI agents and human/SaaS developers.
+
+### 5.1 Agent lane (ZeroClick / x402 & MPP)
+
+ZeroClick is the agent-facing storefront and proxy. Agents pay via x402 or MPP; ZeroClick forwards a signed request. klimatsearch verifies with the ZeroClick sellers Go SDK (`Guard` / `Verify`) and reports usage. No in-process payment math.
+
+### 5.2 Developer lane (Unkey + Stripe)
+
+`Authorization: Bearer <KEY>` verified with `github.com/unkeyed/sdks/api/go/v2` `Keys.VerifyKey`. Unkey meters; Stripe bills. Do not use the archived `github.com/unkeyed/unkey-go` module.
+
+### 5.3 Guard order
+
+On `/api/search`, resource routes, MCP, and admin ingest:
+
+1. ZeroClick signature present → verify; invalid → 401/402 as the SDK dictates.
+2. Else Bearer token → Unkey; invalid → 401.
+3. Else 401, or 402 pointing at the ZeroClick storefront URL when that lane is configured.
+
+`GET /healthz` is public. If neither ZeroClick nor Unkey credentials are configured, the Guard allows all traffic (local/kind). If either is configured, fail-closed.
+
+## 6. Multi-Catalog extensibility
+
+Resource identity is `(catalog_id, resource_id)`. sqlite-vec document id is `{catalog_id}:{resource_id}`. REST/MCP accept optional Catalog filters (`databases=`).
+
+Boverket Ingester uses the OpenAPI v2 JSON API. File-only Catalogs (BR25) use `POST /admin/ingest/file?catalog=br25`. Weekly poll stays Boverket-only until a Catalog has an HTTP Ingester.

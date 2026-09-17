@@ -12,6 +12,7 @@ import (
 	"github.com/mong-x/klimatsearch/internal/api"
 	"github.com/mong-x/klimatsearch/internal/config"
 	"github.com/mong-x/klimatsearch/internal/embedder"
+	"github.com/mong-x/klimatsearch/internal/guard"
 	"github.com/mong-x/klimatsearch/internal/ingest"
 	mcpserver "github.com/mong-x/klimatsearch/internal/mcp"
 	"github.com/mong-x/klimatsearch/internal/reranker"
@@ -49,9 +50,19 @@ func main() {
 		os.Exit(1)
 	}
 
+	g, err := guard.New(cfg)
+	if err != nil {
+		log.Error("guard", "err", err)
+		os.Exit(1)
+	}
+
 	eng := search.New(st, st, emb, rr)
 	mux := http.NewServeMux()
-	api.New(eng, st, cfg.Source).Register(mux)
+	runner := &ingest.Runner{Store: st, Embedder: emb, Log: log}
+	h := api.New(eng, st, cfg.Source)
+	h.Runner = runner
+	h.AdminToken = cfg.AdminToken
+	h.Register(mux)
 
 	useVector := st.VectorEnabled()
 	useRerank := cfg.Reranker != "none"
@@ -60,7 +71,6 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	runner := &ingest.Runner{Store: st, Embedder: emb, Log: log}
 	var fetcher ingest.Fetcher
 	if cfg.DemoFixture {
 		fetcher = ingest.FixtureFetcher{Path: cfg.FixturePath}
@@ -79,7 +89,7 @@ func main() {
 
 	srv := &http.Server{
 		Addr:              cfg.Listen,
-		Handler:           mux,
+		Handler:           g.Wrap(mux),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 	go func() {
@@ -89,7 +99,7 @@ func main() {
 		_ = srv.Shutdown(shctx)
 	}()
 
-	log.Info("listening", "addr", cfg.Listen, "embedder", cfg.Embedder, "reranker", cfg.Reranker, "db", cfg.DB)
+	log.Info("listening", "addr", cfg.Listen, "embedder", cfg.Embedder, "reranker", cfg.Reranker, "db", cfg.DB, "guard_allow_all", g.AllowAll)
 	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		log.Error("http", "err", err)
 		os.Exit(1)
