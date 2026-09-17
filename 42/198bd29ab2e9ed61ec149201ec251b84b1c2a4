@@ -1,0 +1,31 @@
+scripts/export-bge-reranker-onnx.py
+  s_546f0a9ec1bffd::t_8d6a2e937cd807 1-41
+internal/reranker/onnx_test.go
+  s_546f0a9ec1bffd::t_8d059f0aabfdfa 1-47
+internal/reranker/pair_stub.go
+  s_546f0a9ec1bffd::t_442258078c48a6 1-15
+internal/reranker/pair_daulet.go
+  s_546f0a9ec1bffd::t_b96e8debb3086c 1-54
+internal/reranker/onnx.go
+  s_546f0a9ec1bffd::t_a4307aa60aecd4 1-130,133
+  s_546f0a9ec1bffd::t_4bdc760fb3ef02 131-132
+  s_546f0a9ec1bffd::t_773616bad223ee 134-136
+internal/reranker/pair.go
+  s_546f0a9ec1bffd::t_dacea9c1635717 1-7
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "42198bd29ab2e9ed61ec149201ec251b84b1c2a4",
+  "prompts": {},
+  "sessions": {
+    "s_546f0a9ec1bffd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "01a0af4f-5c78-7b63-b802-9a718213d37a",
+        "model": "unknown"
+      },
+      "human_author": "mjnong <marcusnagy@icloud.com>"
+    }
+  }
+}
