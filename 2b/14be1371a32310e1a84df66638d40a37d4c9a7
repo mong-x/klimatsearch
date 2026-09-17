@@ -1,0 +1,27 @@
+internal/api/api_test.go
+  s_7b1d254e7dc4d6::t_7138a4ce065cc8 1-123
+cmd/klimatsearch/main.go
+  s_7b1d254e7dc4d6::t_e0fa9a9ebd1627 1-89
+internal/api/api.go
+  s_7b1d254e7dc4d6::t_f4735b8bb20d41 1-179
+internal/mcp/server_test.go
+  s_7b1d254e7dc4d6::t_55fa73635fb9e9 1-89
+internal/mcp/server.go
+  s_7b1d254e7dc4d6::t_c6aea379f047bd 1-205
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "2b14be1371a32310e1a84df66638d40a37d4c9a7",
+  "prompts": {},
+  "sessions": {
+    "s_7b1d254e7dc4d6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "01a0af5a-c16b-7bd0-879e-eec39da655a8",
+        "model": "unknown"
+      },
+      "human_author": "mjnong <marcusnagy@icloud.com>"
+    }
+  }
+}
