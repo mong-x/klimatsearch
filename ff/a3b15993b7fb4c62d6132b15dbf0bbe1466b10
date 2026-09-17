@@ -1,0 +1,50 @@
+cmd/klimatsearch/main.go
+  h_af7161f060dc1e 78
+docs/adr/0006-rrf-k60-hybrid-hits.md
+  h_af7161f060dc1e 1-3
+internal/api/api.go
+  h_af7161f060dc1e 34,61,72,112,139,143-163,165-187
+internal/api/api_test.go
+  h_af7161f060dc1e 33-34,84-103,133-161
+internal/ingest/http.go
+  h_af7161f060dc1e 7,48-49,52
+internal/ingest/ingest.go
+  h_af7161f060dc1e 64,68,113-115
+internal/ingest/ingest_test.go
+  h_af7161f060dc1e 5-6,9,84-92,190-295
+internal/mcp/server.go
+  h_af7161f060dc1e 21,65,88-91,99,104,127,132-134,141,144,148,155,164-176
+internal/mcp/server_test.go
+  h_af7161f060dc1e 30,32-33,78,88-106
+internal/model/compare.go
+  h_af7161f060dc1e 1-130
+internal/model/compare_test.go
+  h_af7161f060dc1e 1-115
+internal/model/resource.go
+  h_af7161f060dc1e 3-15,25,28-29,45-92
+internal/model/resource_test.go
+  h_af7161f060dc1e 1,3,5-13,18-20,22-26,30,40,42-47,50,57,59-66,75-126,133-140
+internal/reranker/reranker.go
+  h_af7161f060dc1e 32,39,42,85
+internal/search/engine.go
+  h_af7161f060dc1e 7,9-10,49,51,56,70,74,84,89,104,111-116,130-146,149-163,166-175,177,179-184
+internal/search/engine_test.go
+  h_af7161f060dc1e 44-45,52,60,68,72-154
+internal/search/types.go
+  h_af7161f060dc1e 3-10,20-35,43,45,50
+internal/store/store.go
+  h_af7161f060dc1e 203,272-276,282,286,292,295-296,308,318-323,325-327,329-330,357
+internal/store/store_test.go
+  h_af7161f060dc1e 38,42,82-83,104-105,122,126
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "ffa3b15993b7fb4c62d6132b15dbf0bbe1466b10",
+  "prompts": {},
+  "humans": {
+    "h_af7161f060dc1e": {
+      "author": "mjnong <marcusnagy@icloud.com>"
+    }
+  }
+}
