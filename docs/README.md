@@ -27,3 +27,4 @@ Task-oriented index. Start at the [README](../README.md) or the [GitHub Pages si
 | [0008](adr/0008-dual-lane-guard.md) | MPP Payment then Unkey Bearer |
 | [0009](adr/0009-ingester-per-catalog.md) | Ingester per Catalog |
 | [0010](adr/0010-f2llm-query-prefix.md) | Asymmetric Instruct/Query prefix |
+| [0011](adr/0011-webhook-on-content-change.md) | POST catalog.changed when ContentHash changes |

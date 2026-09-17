@@ -16,6 +16,9 @@ info:
     `/api/*`, `/mcp`, and `/admin/*` go through the Guard: MPP `Authorization: Payment`
     (HTTP 402 challenge) or Unkey `Authorization: Bearer`. When both secrets are unset,
     the Guard allows all traffic (local / kind).
+
+    Outbound: when ingest upserts a changed Resource, klimatsearch POSTs `catalog.changed`
+    to `KLIMAT_WEBHOOK_URL` (see ADR-0011). That is not an inbound path on this API.
   license:
     name: Apache-2.0
     url: https://www.apache.org/licenses/LICENSE-2.0.html

@@ -25,8 +25,9 @@ Software that calculates climate declarations, and MCP clients that need structu
 1. Boverket Ingester: `GET {BOVERKET_API_BASE}/api/Klimat/v2/GetAllResources/latest/{sv|en}/json` on default base `https://api.boverket.se/klimatdatabas`. Optional `BOVERKET_SUBSCRIPTION_KEY` as `Ocp-Apim-Subscription-Key`.
 2. On JSON failure, download the public Swedish and English Excel files and merge by Resource ID.
 3. Canonical-JSON hash of key fields. New or changed Resources are embedded (SV+EN text) and upserted.
-4. Run on start when `--ingest-on-start` (default true) and on a weekly ticker (`--ingest-interval`, default `168h`).
-5. `--demo-fixture` loads `testdata/fixtures` with no network (kind/e2e and local demo).
+4. If any Resource was upserted, POST `catalog.changed` to `KLIMAT_WEBHOOK_URL` (optional, HMAC if `KLIMAT_WEBHOOK_SECRET` is set). Unchanged ingest does not fire. Webhook failure does not fail ingest.
+5. Run on start when `--ingest-on-start` (default true) and on a weekly ticker (`--ingest-interval`, default `168h`).
+6. `--demo-fixture` loads `testdata/fixtures` with no network (kind/e2e and local demo).
 
 Live API 404 must not fail boot. Tests never hit the network.
 

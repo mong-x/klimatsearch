@@ -45,6 +45,8 @@ type Config struct {
 	MPPRPCURL               string
 	MPPRealm                string
 	MPPAmount               string
+	WebhookURL              string
+	WebhookSecret           string
 }
 
 // Parse reads flags and env. Flag values win over env over defaults.
@@ -73,6 +75,8 @@ func Parse(args []string) (Config, error) {
 		MPPRPCURL:               env("MPP_RPC_URL", "https://rpc.moderato.tempo.xyz"),
 		MPPRealm:                env("MPP_REALM", "klimatsearch"),
 		MPPAmount:               env("MPP_AMOUNT", "0.01"),
+		WebhookURL:              env("KLIMAT_WEBHOOK_URL", ""),
+		WebhookSecret:           env("KLIMAT_WEBHOOK_SECRET", ""),
 	}
 	if v := os.Getenv("KLIMAT_INGEST_INTERVAL"); v != "" {
 		d, err := time.ParseDuration(v)

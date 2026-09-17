@@ -154,7 +154,7 @@ Optional `BOVERKET_SUBSCRIPTION_KEY` as `Ocp-Apim-Subscription-Key`. Live v2 JSO
 
 File-only Catalogs (Denmark BR25) use `POST /admin/ingest/file?catalog=br25`. Mapping returns not-implemented until a sample workbook exists ([LAUNCH.md](docs/LAUNCH.md) §3).
 
-Changed rows are detected with a canonical **ContentHash** of names, descriptions, applicability, synonyms, A1A3, Declared unit, Conversions, Category, and DatasetVersion — not Resource ID or Catalog ID — and re-embedded.
+Changed rows are detected with a canonical **ContentHash** of names, descriptions, applicability, synonyms, A1A3, Declared unit, Conversions, Category, Category Code, and DatasetVersion — not Resource ID or Catalog ID — and re-embedded. If any row was upserted, klimatsearch POSTs `catalog.changed` to `KLIMAT_WEBHOOK_URL` (optional HMAC). Unchanged ingest does not fire ([ADR-0011](docs/adr/0011-webhook-on-content-change.md)).
 
 ## Guard
 
@@ -208,6 +208,8 @@ Flags win over env over defaults. A gitignored `.env` next to `go.mod` is loaded
 | `--ingest-on-start` | true | Run ingest once before listen |
 | `--ingest-interval` | `168h` | Repeat ingest; `0` disables |
 | `--demo-fixture` | false | Load testdata JSON, no network |
+| `KLIMAT_WEBHOOK_URL` | empty | Comma-separated URLs; POST `catalog.changed` when ingest upserts |
+| `KLIMAT_WEBHOOK_SECRET` | empty | HMAC-SHA256 of the JSON body (`X-Klimat-Signature`) |
 | `--boverket-api-base` | `https://api.boverket.se/klimatdatabas` | APIM base |
 
 ## Docker and kind

@@ -46,12 +46,15 @@ type Result struct {
 	Origin   string
 	Version  string
 	Catalog  string
+	Changed  []string // DocIDs whose ContentHash changed
 }
 
 // Runner hashes, embeds changed Resources, and upserts.
 type Runner struct {
 	Store    Store
 	Embedder search.Embedder
+	Notify   Notifier
+	Source   string
 	Log      *slog.Logger
 }
 
@@ -109,6 +112,10 @@ func (r *Runner) Apply(ctx context.Context, batch Batch) (Result, error) {
 			return res, err
 		}
 		res.Upserted++
+		res.Changed = append(res.Changed, item.DocID())
+		if res.Catalog == "" {
+			res.Catalog = item.CatalogID
+		}
 	}
 	if batch.Version != "" {
 		if err := r.Store.SetMeta(ctx, "dataset_version", batch.Version); err != nil {
@@ -116,7 +123,33 @@ func (r *Runner) Apply(ctx context.Context, batch Batch) (Result, error) {
 		}
 	}
 	r.log().Info("ingest complete", "origin", batch.Origin, "catalog", res.Catalog, "version", batch.Version, "seen", res.Seen, "upserted", res.Upserted, "skipped", res.Skipped)
+	r.notifyChanged(ctx, res)
 	return res, nil
+}
+
+func (r *Runner) notifyChanged(ctx context.Context, res Result) {
+	if r.Notify == nil || res.Upserted == 0 {
+		return
+	}
+	src := r.Source
+	if src == "" {
+		src = "Boverket Klimatdatabas"
+	}
+	ev := Event{
+		Event:        EventCatalogChanged,
+		Catalog:      res.Catalog,
+		Version:      res.Version,
+		IngestOrigin: res.Origin,
+		Seen:         res.Seen,
+		Upserted:     res.Upserted,
+		Skipped:      res.Skipped,
+		IDs:          res.Changed,
+		Source:       src,
+		At:           time.Now().UTC(),
+	}
+	if err := r.Notify.Notify(ctx, ev); err != nil {
+		r.log().Error("webhook catalog.changed failed", "err", err, "catalog", res.Catalog, "upserted", res.Upserted)
+	}
 }
 
 func (r *Runner) Run(ctx context.Context, f Fetcher) (Result, error) {

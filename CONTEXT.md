@@ -78,6 +78,10 @@ _Avoid_: auth middleware, billing proxy
 
 **Ingester**:
 The fetch-and-map of one Catalog into Resources (JSON API, Excel, or an uploaded file).
+
+**Webhook**:
+The outbound POST klimatsearch sends after ingest upserts a Resource whose ContentHash changed (`catalog.changed`).
+_Avoid_: listener, callback, inbound Boverket hook
 _Avoid_: crawler, importer, connector
 
 **Comparison**:

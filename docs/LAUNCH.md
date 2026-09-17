@@ -149,6 +149,8 @@ Stripe metered billing is configured in the Unkey dashboard, not in this repo. S
 
 **The moment Unkey or MPP secret is set, the Guard is fail-closed.** `/healthz` stays public. Paid: `/api/*`, `/mcp`, `/admin/*`.
 
+**Content-change webhook** — optional. Set `KLIMAT_WEBHOOK_URL` (and `KLIMAT_WEBHOOK_SECRET` to HMAC the body). klimatsearch POSTs `catalog.changed` only when ingest upserts a Resource whose ContentHash changed ([ADR-0011](adr/0011-webhook-on-content-change.md)). Boverket has no inbound hook; this is klimatsearch notifying your tools.
+
 Optional: `KLIMAT_ADMIN_TOKEN` as header `X-Admin-Token` on `POST /admin/ingest/file`.
 
 ---

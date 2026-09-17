@@ -58,7 +58,10 @@ func main() {
 
 	eng := search.New(st, st, emb, rr)
 	mux := http.NewServeMux()
-	runner := &ingest.Runner{Store: st, Embedder: emb, Log: log}
+	runner := &ingest.Runner{Store: st, Embedder: emb, Log: log, Source: cfg.Source}
+	if wh := ingest.NewHTTPWebhook(cfg.WebhookURL, cfg.WebhookSecret); wh != nil {
+		runner.Notify = wh
+	}
 	h := api.New(eng, st, cfg.Source)
 	h.Runner = runner
 	h.AdminToken = cfg.AdminToken
