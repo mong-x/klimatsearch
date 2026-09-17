@@ -1,0 +1,16 @@
+docs/SELFHOST.md
+  h_af7161f060dc1e 33-34
+scripts/check-models.sh
+  h_af7161f060dc1e 57-59
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "a6ba43cef265bf865ff30345533ea079fdff6ce3",
+  "prompts": {},
+  "humans": {
+    "h_af7161f060dc1e": {
+      "author": "mjnong <marcusnagy@icloud.com>"
+    }
+  }
+}
