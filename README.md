@@ -26,7 +26,7 @@
 
 **klimatsearch is a distributed search engine and [MCP](https://modelcontextprotocol.io) server for [Boverket Klimatdatabas](https://www.boverket.se/sv/klimatdeklaration/klimatdatabas/)** — the Swedish National Board of Housing, Building and Planning's generic construction climate database (~230 bilingual resources, typical A1–A3).
 
-It is a single statically compiled Go binary: stdlib `net/http.ServeMux`, SQLite with FTS5 + [sqlite-vec](https://github.com/asg017/sqlite-vec), optional ONNX embeddings, REST, and MCP. Agents and BIM tools search by Swedish or English name, compare A1–A3 in a shared unit, and cite **Boverket Klimatdatabas**.
+It is a single statically compiled Go binary: stdlib `net/http.ServeMux`, SQLite with FTS5 + [sqlite-vec](https://github.com/asg017/sqlite-vec), optional ONNX embeddings, REST, and MCP. Coding agents and klimatdeklaration software search by Swedish or English name, compare A1–A3 in a shared unit, and cite **Boverket Klimatdatabas**.
 
 This project is **not affiliated with Boverket**. Klimatdatabas content remains Boverket's; you must cite Boverket when you use it.
 

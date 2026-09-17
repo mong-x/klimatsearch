@@ -89,7 +89,7 @@ You created a **keyspace**. klimatsearch needs two different kinds of Unkey mate
 | What | Where in Unkey | Where in klimatsearch | Who uses it |
 | --- | --- | --- | --- |
 | **Root key** | Dashboard → Settings → Root Keys (starts with `unkey_`) | Server env `UNKEY_ROOT_KEY` | Only the klimatsearch process, to call VerifyKey |
-| **API keys** | Your keyspace → Create key (often `sk_…`) | **Not** in server env. Callers send `Authorization: Bearer <api key>` | Apps, curl, BIM tools |
+| **API keys** | Your keyspace → Create key (often `sk_…`) | **Not** in server env. Callers send `Authorization: Bearer <api key>` | Apps, curl, klimatdeklaration software |
 
 A keyspace alone is not enough: create at least one **root key** for the server and one **API key** in that keyspace to test.
 
