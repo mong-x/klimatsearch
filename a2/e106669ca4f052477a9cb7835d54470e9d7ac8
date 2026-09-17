@@ -1,0 +1,25 @@
+deploy/compose.onnx.yml
+  s_546f0a9ec1bffd::t_03d1c839a82453 1-27
+scripts/check-models.sh
+  s_546f0a9ec1bffd::t_901272bcc35817 1-66
+scripts/fetch-onnxruntime.sh
+  s_546f0a9ec1bffd::t_c80d9e9be2efc4 1-39
+docs/SELFHOST.md
+  s_546f0a9ec1bffd::t_e67245ec55f568 1-104
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "a2e106669ca4f052477a9cb7835d54470e9d7ac8",
+  "prompts": {},
+  "sessions": {
+    "s_546f0a9ec1bffd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "01a0af4f-5c78-7b63-b802-9a718213d37a",
+        "model": "unknown"
+      },
+      "human_author": "mjnong <marcusnagy@icloud.com>"
+    }
+  }
+}
