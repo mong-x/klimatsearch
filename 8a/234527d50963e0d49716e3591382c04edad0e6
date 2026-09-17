@@ -1,0 +1,38 @@
+Dockerfile
+  s_7b1d254e7dc4d6::t_1fc31452130f83 1-23
+deploy/k8s/kustomization.yaml
+  s_7b1d254e7dc4d6::t_ef368f0433a94f 1-10
+scripts/download-models.sh
+  s_7b1d254e7dc4d6::t_6b93497f7846c7 1-44
+deploy/k8s/ingress.yaml
+  s_7b1d254e7dc4d6::t_546a3f943878aa 1-20
+scripts/e2e-kind.sh
+  s_7b1d254e7dc4d6::t_cdf52ea497c4a4 1-64
+.github/workflows/ci.yml
+  s_7b1d254e7dc4d6::t_5a14cdb09a1fbc 1-25
+.github/workflows/e2e-kind.yml
+  s_7b1d254e7dc4d6::t_fc672edc1a6d08 1-40
+deploy/k8s/deployment.yaml
+  s_7b1d254e7dc4d6::t_ba6ce0cc463a7a 1-52
+Makefile
+  s_7b1d254e7dc4d6::t_7cddf5a45f6342 1-19
+  s_7b1d254e7dc4d6::t_9b7a2079603e41 20-22
+deploy/k8s/service.yaml
+  s_7b1d254e7dc4d6::t_df61b7e6ee2c5d 1-13
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "8a234527d50963e0d49716e3591382c04edad0e6",
+  "prompts": {},
+  "sessions": {
+    "s_7b1d254e7dc4d6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "01a0af5a-c16b-7bd0-879e-eec39da655a8",
+        "model": "unknown"
+      },
+      "human_author": "mjnong <marcusnagy@icloud.com>"
+    }
+  }
+}
