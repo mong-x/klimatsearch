@@ -47,7 +47,7 @@ Software is ready for a laptop demo. Accounts, ONNX weights, and production host
 - [MCP](#mcp)
 - [Search](#search)
 - [Catalogs and ingest](#catalogs-and-ingest)
-- [Guard](#guard)
+- [Self-hosted vs hosted](#self-hosted-vs-hosted)
 - [Embeddings](#embeddings)
 - [Configuration](#configuration)
 - [Docker and kind](#docker-and-kind)
@@ -108,7 +108,7 @@ Resource `{id}` may be prefixed (`boverket:6000000000`) or a bare Resource ID wh
 
 JSON includes Attribution `"source": "Boverket Klimatdatabas"` and `"catalog"` (Catalog ID). Each **search hit is the full Resource** (names, descriptions, applicability, synonyms, conversions, A1A3, category, version) plus `score`, `match_source` (`fts` \| `vector` \| `both` \| `rerank`), `details` (`/api/resources/{catalog}:{id}`), and — for Boverket rows — `origin` (the official product sheet on [klimatdatabasen.boverket.se](https://klimatdatabasen.boverket.se)). Boverket's OpenAPI has no per-id GET; `origin` is `https://klimatdatabasen.boverket.se/detaljer/{category_code}/{resource_id}`. `GET {details}/origin` **302**s there. Follow `details` (or MCP `get_resource_details`) for klimatsearch's copy. Do not confuse `match_source` with the citation `source`.
 
-Admin file ingest is multipart field `file`, Guard-protected. Optional `KLIMAT_ADMIN_TOKEN` as `X-Admin-Token`. Unknown Catalog → 400.
+Admin file ingest is multipart field `file`. Optional `KLIMAT_ADMIN_TOKEN` as `X-Admin-Token`. Unknown Catalog → 400. Self-hosted does not require Unkey or MPP.
 
 ```bash
 curl -sS 'http://127.0.0.1:8081/api/search?q=spånskiva&lang=sv'
@@ -127,7 +127,7 @@ curl -sS 'http://127.0.0.1:8081/api/resources/compare?a=6000000000&b=6000000001&
 | `get_resource_details` | Resource ID (prefixed or bare); same as `GET {hit.details}` |
 | `compare_resources` | `id_a`, `id_b`, optional `unit` |
 
-Point Claude / Cursor / Codex at the streamable endpoint. Paid MCP routes go through the same Guard as REST.
+Point Claude / Cursor / Codex at the streamable endpoint. The hosted build gates MCP the same way as REST; self-hosted does not.
 
 ## Search
 
