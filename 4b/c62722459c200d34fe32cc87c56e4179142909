@@ -1,0 +1,19 @@
+CONTEXT.md
+  s_546f0a9ec1bffd::t_ca9b13336f27ad 3,11-13,15-21,24,27-58,60-61,64-65
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "4bc62722459c200d34fe32cc87c56e4179142909",
+  "prompts": {},
+  "sessions": {
+    "s_546f0a9ec1bffd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "01a0af4f-5c78-7b63-b802-9a718213d37a",
+        "model": "unknown"
+      },
+      "human_author": "mjnong <marcusnagy@icloud.com>"
+    }
+  }
+}
