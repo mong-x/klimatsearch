@@ -4,7 +4,10 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"sort"
 	"strings"
+
+	"github.com/mong-x/klimatsearch/internal/model"
 )
 
 // LangSV and LangEN are the only accepted language codes.
@@ -43,14 +46,14 @@ type Engine struct {
 	limit    int
 }
 
-// FTS is BM25 search.
+// FTS is BM25 search. Store implements this and returns Ranked, not Hits.
 type FTS interface {
-	SearchFTS(ctx context.Context, query, lang string, limit int) ([]SearchResult, error)
+	SearchFTS(ctx context.Context, query, lang string, limit int) ([]model.Ranked, error)
 }
 
 // Vector is KNN search.
 type Vector interface {
-	SearchVector(ctx context.Context, embedding []float32, lang string, limit int) ([]SearchResult, error)
+	SearchVector(ctx context.Context, embedding []float32, lang string, limit int) ([]model.Ranked, error)
 	VectorEnabled() bool
 	VectorSkipReason() string
 }
@@ -64,15 +67,11 @@ func New(fts FTS, vec Vector, emb Embedder, rr Reranker) *Engine {
 
 type nopReranker struct{}
 
-func (nopReranker) Rerank(_ string, docs []SearchResult) ([]SearchResult, error) {
+func (nopReranker) Rerank(_ string, docs []Hit) ([]Hit, error) {
 	return docs, nil
 }
 
-func (e *Engine) Search(query string, useVector bool, useRerank bool, lang string) ([]SearchResult, error) {
-	return e.SearchContext(context.Background(), query, useVector, useRerank, lang)
-}
-
-func (e *Engine) SearchContext(ctx context.Context, query string, useVector bool, useRerank bool, lang string) ([]SearchResult, error) {
+func (e *Engine) Search(ctx context.Context, query string, useVector bool, useRerank bool, lang string) ([]Hit, error) {
 	lang, err := NormalizeLang(lang)
 	if err != nil {
 		return nil, err
@@ -82,12 +81,12 @@ func (e *Engine) SearchContext(ctx context.Context, query string, useVector bool
 		return nil, fmt.Errorf("empty query")
 	}
 
-	ftsHits, err := e.fts.SearchFTS(ctx, query, lang, e.limit)
+	ftsRanked, err := e.fts.SearchFTS(ctx, query, lang, e.limit)
 	if err != nil {
 		return nil, err
 	}
 
-	var vecHits []SearchResult
+	var vecRanked []model.Ranked
 	if useVector {
 		if e.vec == nil || !e.vec.VectorEnabled() {
 			reason := "vector backend unavailable"
@@ -102,14 +101,19 @@ func (e *Engine) SearchContext(ctx context.Context, query string, useVector bool
 			if err != nil {
 				return nil, fmt.Errorf("embed query: %w", err)
 			}
-			vecHits, err = e.vec.SearchVector(ctx, emb, lang, e.limit)
+			vecRanked, err = e.vec.SearchVector(ctx, emb, lang, e.limit)
 			if err != nil {
 				return nil, err
 			}
 		}
 	}
 
-	merged := merge(ftsHits, vecHits, e.limit)
+	var merged []Hit
+	if useVector && len(vecRanked) > 0 {
+		merged = rrf(ftsRanked, vecRanked, lang, e.limit)
+	} else {
+		merged = ftsHits(ftsRanked, lang)
+	}
 	if useRerank && e.reranker != nil && len(merged) > 0 {
 		merged, err = e.reranker.Rerank(query, merged)
 		if err != nil {
@@ -123,46 +127,61 @@ func (e *Engine) SearchContext(ctx context.Context, query string, useVector bool
 	return merged, nil
 }
 
-func merge(fts, vec []SearchResult, limit int) []SearchResult {
-	type scored struct {
-		res   SearchResult
-		best  float64
+const rrfK = 60
+
+func ftsHits(fts []model.Ranked, lang string) []Hit {
+	out := make([]Hit, 0, len(fts))
+	for _, r := range fts {
+		out = append(out, HitFrom(r.Resource, lang, "fts", 1.0/(rrfK+float64(r.Rank))))
+	}
+	return out
+}
+
+// rrf fuses FTS and KNN with Reciprocal Rank Fusion, k=60, equal weights.
+// Missing list contributes 0. BM25 and cosine are not mixed as raw scores.
+func rrf(fts, knn []model.Ranked, lang string, limit int) []Hit {
+	type acc struct {
+		res   model.Resource
+		score float64
+		fromF bool
 		fromV bool
 	}
-	order := make([]string, 0, len(fts)+len(vec))
-	byID := map[string]*scored{}
-	add := func(r SearchResult, fromV bool) {
-		s, ok := byID[r.ID]
-		if !ok {
-			cp := r
-			byID[r.ID] = &scored{res: cp, best: r.Score, fromV: fromV}
-			order = append(order, r.ID)
-			return
-		}
-		if r.Score > s.best {
-			s.best = r.Score
-			s.res.Score = r.Score
-		}
-		if fromV {
-			s.fromV = true
-			s.res.Source = "vector"
+	byID := map[string]*acc{}
+	add := func(list []model.Ranked, fromV bool) {
+		for _, r := range list {
+			id := r.Resource.ResourceID
+			s, ok := byID[id]
+			if !ok {
+				s = &acc{res: r.Resource}
+				byID[id] = s
+			}
+			s.score += 1.0 / (rrfK + float64(r.Rank))
+			if fromV {
+				s.fromV = true
+			} else {
+				s.fromF = true
+			}
 		}
 	}
-	for _, r := range fts {
-		add(r, false)
-	}
-	for _, r := range vec {
-		add(r, true)
-	}
-	out := make([]SearchResult, 0, len(order))
-	for _, id := range order {
-		s := byID[id]
-		s.res.Score = s.best
-		if s.fromV {
-			s.res.Source = "vector"
+	add(fts, false)
+	add(knn, true)
+	out := make([]Hit, 0, len(byID))
+	for _, s := range byID {
+		src := "fts"
+		switch {
+		case s.fromF && s.fromV:
+			src = "both"
+		case s.fromV:
+			src = "vector"
 		}
-		out = append(out, s.res)
+		out = append(out, HitFrom(s.res, lang, src, s.score))
 	}
+	sort.SliceStable(out, func(i, j int) bool {
+		if out[i].Score != out[j].Score {
+			return out[i].Score > out[j].Score
+		}
+		return out[i].ID < out[j].ID
+	})
 	if limit > 0 && len(out) > limit {
 		out = out[:limit]
 	}

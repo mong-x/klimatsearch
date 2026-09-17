@@ -18,7 +18,7 @@ import (
 const (
 	ToolSearch  = "search_climate_data"
 	ToolGet     = "get_resource_details"
-	ToolCompare = "compare_materials"
+	ToolCompare = "compare_resources"
 )
 
 // Server wraps the official MCP SDK server and HTTP mounts.
@@ -62,7 +62,7 @@ func (s *Server) register() {
 	}, s.getTool)
 	mcpsdk.AddTool(s.MCP, &mcpsdk.Tool{
 		Name:        ToolCompare,
-		Description: "Compare A1-A3 typical climate impact and conversions for two resources",
+		Description: "Compare A1-A3 typical climate impact of two resources in a shared unit",
 	}, s.compareTool)
 	s.ToolNames = []string{ToolSearch, ToolGet, ToolCompare}
 }
@@ -85,10 +85,10 @@ type searchIn struct {
 }
 
 type searchOut struct {
-	Source  string                `json:"source"`
-	Query   string                `json:"query"`
-	Lang    string                `json:"lang"`
-	Results []search.SearchResult `json:"results"`
+	Source  string       `json:"source"`
+	Query   string       `json:"query"`
+	Lang    string       `json:"lang"`
+	Results []search.Hit `json:"results"`
 }
 
 func (s *Server) searchTool(ctx context.Context, _ *mcpsdk.CallToolRequest, in searchIn) (*mcpsdk.CallToolResult, searchOut, error) {
@@ -96,12 +96,12 @@ func (s *Server) searchTool(ctx context.Context, _ *mcpsdk.CallToolRequest, in s
 	if err != nil {
 		return nil, searchOut{}, err
 	}
-	hits, err := s.engine.Search(in.Query, s.useVector, s.useRerank, lang)
+	hits, err := s.engine.Search(ctx, in.Query, s.useVector, s.useRerank, lang)
 	if err != nil {
 		return nil, searchOut{}, err
 	}
 	if hits == nil {
-		hits = []search.SearchResult{}
+		hits = []search.Hit{}
 	}
 	out := searchOut{Source: s.source, Query: in.Query, Lang: lang, Results: hits}
 	return textResult(out), out, nil
@@ -124,33 +124,35 @@ func (s *Server) getTool(ctx context.Context, _ *mcpsdk.CallToolRequest, in getI
 	if err != nil {
 		return nil, getOut{}, err
 	}
-	out := getOut{Source: s.source, Resource: resourceMap(*r, s.source)}
+	out := getOut{Source: s.source, Resource: r.View(s.source)}
 	return textResult(out), out, nil
 }
 
 type compareIn struct {
-	IDA string `json:"id_a" jsonschema:"First resource ID"`
-	IDB string `json:"id_b" jsonschema:"Second resource ID"`
+	IDA  string `json:"id_a" jsonschema:"First resource ID"`
+	IDB  string `json:"id_b" jsonschema:"Second resource ID"`
+	Unit string `json:"unit,omitempty" jsonschema:"Optional unit to compare in"`
 }
 
 type compareOut struct {
 	Source        string         `json:"source"`
 	A             map[string]any `json:"a"`
 	B             map[string]any `json:"b"`
+	Unit          string         `json:"unit"`
 	DeltaA1A3     float64        `json:"delta_a1a3"`
 	LowerImpactID string         `json:"lower_impact_id"`
-	SameUnit      bool           `json:"same_unit"`
+	Incomparable  bool           `json:"incomparable"`
 }
 
 func (s *Server) compareTool(ctx context.Context, _ *mcpsdk.CallToolRequest, in compareIn) (*mcpsdk.CallToolResult, compareOut, error) {
-	out, err := Compare(ctx, s.st, in.IDA, in.IDB, s.source)
+	out, err := Compare(ctx, s.st, in.IDA, in.IDB, s.source, in.Unit)
 	if err != nil {
 		return nil, compareOut{}, err
 	}
 	return textResult(out), out, nil
 }
 
-func Compare(ctx context.Context, st *store.Store, idA, idB, source string) (compareOut, error) {
+func Compare(ctx context.Context, st *store.Store, idA, idB, source, unit string) (compareOut, error) {
 	a, err := st.Get(ctx, idA)
 	if err != nil {
 		return compareOut{}, fmt.Errorf("id_a: %w", err)
@@ -159,39 +161,19 @@ func Compare(ctx context.Context, st *store.Store, idA, idB, source string) (com
 	if err != nil {
 		return compareOut{}, fmt.Errorf("id_b: %w", err)
 	}
-	lower := a.ResourceID
-	if b.A1A3 < a.A1A3 {
-		lower = b.ResourceID
+	cmp, err := model.Compare(*a, *b, source, unit)
+	if err != nil {
+		return compareOut{}, err
 	}
-	out := compareOut{
-		Source:        source,
-		A:             resourceMap(*a, source),
-		B:             resourceMap(*b, source),
-		DeltaA1A3:     a.A1A3 - b.A1A3,
-		LowerImpactID: lower,
-		SameUnit:      a.Unit == b.Unit,
-	}
-	return out, nil
-}
-
-func resourceMap(r model.Resource, source string) map[string]any {
-	conv := r.Conversions
-	if conv == nil {
-		conv = map[string]float64{}
-	}
-	return map[string]any{
-		"id":             r.ResourceID,
-		"name_sv":        r.NameSV,
-		"name_en":        r.NameEN,
-		"description_sv": r.DescriptionSV,
-		"description_en": r.DescriptionEN,
-		"a1a3":           r.A1A3,
-		"unit":           r.Unit,
-		"conversions":    conv,
-		"category":       r.Category,
-		"version":        r.Version,
-		"source":         source,
-	}
+	return compareOut{
+		Source:        cmp.Attribution,
+		A:             cmp.A,
+		B:             cmp.B,
+		Unit:          cmp.Unit,
+		DeltaA1A3:     cmp.DeltaA1A3,
+		LowerImpactID: cmp.LowerImpactID,
+		Incomparable:  cmp.Incomparable,
+	}, nil
 }
 
 func textResult(v any) *mcpsdk.CallToolResult {

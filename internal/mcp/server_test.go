@@ -8,7 +8,6 @@ import (
 	mcpsdk "github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/mong-x/klimatsearch/internal/embedder"
-	"github.com/mong-x/klimatsearch/internal/hash"
 	"github.com/mong-x/klimatsearch/internal/mcp"
 	"github.com/mong-x/klimatsearch/internal/model"
 	"github.com/mong-x/klimatsearch/internal/reranker"
@@ -28,10 +27,10 @@ func TestToolsRegistered(t *testing.T) {
 	var fake embedder.Fake
 	st.ConfigureVector(fake.Dim())
 	a := model.Resource{ResourceID: "a", NameSV: "Betong", NameEN: "Concrete", A1A3: 0.12, Unit: "kg", Conversions: map[string]float64{"kg/m³": 2400}}
-	b := model.Resource{ResourceID: "b", NameSV: "Stål", NameEN: "Steel", A1A3: 1.5, Unit: "kg"}
+	b := model.Resource{ResourceID: "b", NameSV: "Stål", NameEN: "Steel", A1A3: 1.5, Unit: "kg", Conversions: map[string]float64{"kg/m³": 7800}}
 	for _, r := range []model.Resource{a, b} {
-		h, _ := hash.Content(r)
-		r.ContentHash = h
+		h, _ := r.ContentHash()
+		r.Hash = h
 		vec, _ := fake.Embed(r.EmbeddingText())
 		if err := st.Upsert(t.Context(), r, vec); err != nil {
 			t.Fatal(err)
@@ -76,7 +75,7 @@ func TestToolsRegistered(t *testing.T) {
 		}
 	}
 
-	cmp, err := mcp.Compare(ctx, st, "a", "b", "Boverket Klimatdatabas")
+	cmp, err := mcp.Compare(ctx, st, "a", "b", "Boverket Klimatdatabas", "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -85,5 +84,24 @@ func TestToolsRegistered(t *testing.T) {
 	}
 	if cmp.DeltaA1A3 != 0.12-1.5 {
 		t.Fatalf("delta=%v", cmp.DeltaA1A3)
+	}
+	if cmp.Incomparable {
+		t.Fatal("same kg unit should be comparable")
+	}
+	if cmp.Unit != "kg" {
+		t.Fatalf("unit=%s", cmp.Unit)
+	}
+
+	_, err = mcp.Compare(ctx, st, "a", "b", "Boverket Klimatdatabas", "m²")
+	if err == nil {
+		t.Fatal("explicit missing unit should error")
+	}
+
+	cmp, err = mcp.Compare(ctx, st, "a", "b", "Boverket Klimatdatabas", "m³")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cmp.Unit != "m³" {
+		t.Fatalf("unit=%s", cmp.Unit)
 	}
 }

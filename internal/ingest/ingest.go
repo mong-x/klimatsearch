@@ -8,7 +8,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/mong-x/klimatsearch/internal/hash"
 	"github.com/mong-x/klimatsearch/internal/model"
 	"github.com/mong-x/klimatsearch/internal/search"
 )
@@ -62,11 +61,11 @@ func (r *Runner) Apply(ctx context.Context, batch Batch) (Result, error) {
 			res.Skipped++
 			continue
 		}
-		h, err := hash.Content(item)
+		h, err := item.ContentHash()
 		if err != nil {
 			return res, fmt.Errorf("hash %s: %w", item.ResourceID, err)
 		}
-		item.ContentHash = h
+		item.Hash = h
 		prev, err := r.Store.Hash(ctx, item.ResourceID)
 		if err != nil {
 			return res, err
@@ -111,13 +110,9 @@ func (r *Runner) Run(ctx context.Context, f Fetcher) (Result, error) {
 	return r.Apply(ctx, batch)
 }
 
-// Loop runs ingest on start and on interval. interval 0 means no ticker.
-func Loop(ctx context.Context, r *Runner, f Fetcher, onStart bool, interval time.Duration) {
-	if onStart {
-		if _, err := r.Run(ctx, f); err != nil {
-			r.log().Error("ingest on start failed", "err", err)
-		}
-	}
+// Loop runs ingest on interval. interval 0 means no ticker.
+// Boot ingest is owned by main (--ingest-on-start), not Loop, so ingest is not run twice.
+func Loop(ctx context.Context, r *Runner, f Fetcher, interval time.Duration) {
 	if interval <= 0 {
 		return
 	}

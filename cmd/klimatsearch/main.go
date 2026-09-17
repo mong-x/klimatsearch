@@ -75,7 +75,7 @@ func main() {
 			}
 		}
 	}
-	go ingest.Loop(ctx, runner, fetcher, false, cfg.IngestInterval)
+	go ingest.Loop(ctx, runner, fetcher, cfg.IngestInterval)
 
 	srv := &http.Server{
 		Addr:              cfg.Listen,

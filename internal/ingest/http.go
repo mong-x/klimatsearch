@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -44,12 +45,11 @@ func (f *HTTPFetcher) client() *http.Client {
 }
 
 func (f *HTTPFetcher) Fetch(ctx context.Context) (Batch, error) {
-	if batch, err := f.fetchJSON(ctx); err == nil && len(batch.Resources) > 0 {
+	batch, err := f.fetchJSON(ctx)
+	if err == nil && len(batch.Resources) > 0 {
 		return batch, nil
-	} else if err != nil {
-		// continue to Excel
-		_ = err
 	}
+	slog.Warn("json ingest failed, falling back to excel", "err", err, "resources", len(batch.Resources))
 	return f.fetchExcel(ctx)
 }
 

@@ -10,7 +10,6 @@ import (
 
 	"github.com/mong-x/klimatsearch/internal/api"
 	"github.com/mong-x/klimatsearch/internal/embedder"
-	"github.com/mong-x/klimatsearch/internal/hash"
 	"github.com/mong-x/klimatsearch/internal/model"
 	"github.com/mong-x/klimatsearch/internal/reranker"
 	"github.com/mong-x/klimatsearch/internal/search"
@@ -31,8 +30,8 @@ func TestHTTP(t *testing.T) {
 	a := model.Resource{ResourceID: "6000000991", NameSV: "Betong", NameEN: "Concrete", A1A3: 0.12, Unit: "kg", Version: "t"}
 	b := model.Resource{ResourceID: "6000000992", NameSV: "Konstruktionsstål", NameEN: "Structural steel", A1A3: 1.55, Unit: "kg", Version: "t"}
 	for _, r := range []model.Resource{a, b} {
-		h, _ := hash.Content(r)
-		r.ContentHash = h
+		h, _ := r.ContentHash()
+		r.Hash = h
 		vec, _ := fake.Embed(r.EmbeddingText())
 		if err := st.Upsert(t.Context(), r, vec); err != nil {
 			t.Fatal(err)
@@ -82,6 +81,26 @@ func TestHTTP(t *testing.T) {
 			t.Fatalf("source=%v", body["source"])
 		}
 	})
+	t.Run("vector true 200", func(t *testing.T) {
+		resp := get(t, srv.URL+"/api/search?q=Betong&vector=true")
+		defer resp.Body.Close()
+		if resp.StatusCode != 200 {
+			t.Fatal(resp.Status)
+		}
+		var body struct {
+			Results []struct {
+				ID          string  `json:"id"`
+				MatchSource string  `json:"match_source"`
+				Score       float64 `json:"score"`
+			} `json:"results"`
+		}
+		if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+			t.Fatal(err)
+		}
+		if len(body.Results) == 0 {
+			t.Fatal("expected hits")
+		}
+	})
 	t.Run("list and get", func(t *testing.T) {
 		resp := get(t, srv.URL+"/api/resources?lang=sv")
 		defer resp.Body.Close()
@@ -109,6 +128,35 @@ func TestHTTP(t *testing.T) {
 		defer missing.Body.Close()
 		if missing.StatusCode != 404 {
 			t.Fatalf("want 404 got %d", missing.StatusCode)
+		}
+	})
+	t.Run("compare", func(t *testing.T) {
+		resp := get(t, srv.URL+"/api/resources/compare?a=6000000991&b=6000000992")
+		defer resp.Body.Close()
+		if resp.StatusCode != 200 {
+			t.Fatal(resp.Status)
+		}
+		var body map[string]any
+		if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+			t.Fatal(err)
+		}
+		if body["lower_impact_id"] != "6000000991" {
+			t.Fatalf("%v", body)
+		}
+		if body["incomparable"] != false {
+			t.Fatalf("incomparable=%v", body["incomparable"])
+		}
+
+		missing := get(t, srv.URL+"/api/resources/compare?a=6000000991&b=missing")
+		defer missing.Body.Close()
+		if missing.StatusCode != 404 {
+			t.Fatalf("want 404 got %d", missing.StatusCode)
+		}
+
+		bad := get(t, srv.URL+"/api/resources/compare?a=6000000991&b=6000000992&unit=m2")
+		defer bad.Body.Close()
+		if bad.StatusCode != 400 {
+			t.Fatalf("want 400 got %d", bad.StatusCode)
 		}
 	})
 }

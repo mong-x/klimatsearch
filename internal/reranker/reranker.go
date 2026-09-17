@@ -29,17 +29,17 @@ func New(kind, modelsDir, modelName string) (search.Reranker, error) {
 // None leaves ranking unchanged.
 type None struct{}
 
-func (None) Rerank(_ string, docs []search.SearchResult) ([]search.SearchResult, error) {
+func (None) Rerank(_ string, docs []search.Hit) ([]search.Hit, error) {
 	return docs, nil
 }
 
 // Fake reorders by case-insensitive overlap of query tokens with names.
 type Fake struct{}
 
-func (Fake) Rerank(query string, docs []search.SearchResult) ([]search.SearchResult, error) {
+func (Fake) Rerank(query string, docs []search.Hit) ([]search.Hit, error) {
 	q := strings.ToLower(strings.TrimSpace(query))
 	tokens := strings.Fields(q)
-	out := append([]search.SearchResult(nil), docs...)
+	out := append([]search.Hit(nil), docs...)
 	type scored struct {
 		idx   int
 		boost float64
@@ -82,7 +82,7 @@ func NewONNX(modelPath string) *ONNX {
 	return &ONNX{modelPath: modelPath}
 }
 
-func (o *ONNX) Rerank(query string, docs []search.SearchResult) ([]search.SearchResult, error) {
+func (o *ONNX) Rerank(query string, docs []search.Hit) ([]search.Hit, error) {
 	o.mu.Lock()
 	defer o.mu.Unlock()
 	if !o.inited {

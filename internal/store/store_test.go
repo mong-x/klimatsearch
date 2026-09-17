@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/mong-x/klimatsearch/internal/embedder"
-	"github.com/mong-x/klimatsearch/internal/hash"
 	"github.com/mong-x/klimatsearch/internal/model"
 )
 
@@ -36,11 +35,11 @@ func TestGetByIDAndList(t *testing.T) {
 	st := testStore(t)
 	ctx := context.Background()
 	r := fixtureBetong()
-	h, err := hash.Content(r)
+	h, err := r.ContentHash()
 	if err != nil {
 		t.Fatal(err)
 	}
-	r.ContentHash = h
+	r.Hash = h
 	var f embedder.Fake
 	vec, err := f.Embed(r.EmbeddingText())
 	if err != nil {
@@ -80,8 +79,8 @@ func TestFTSSwedishName(t *testing.T) {
 	if len(hits) == 0 {
 		t.Fatal("expected FTS hit for Betong")
 	}
-	if hits[0].ID != "6000000991" {
-		t.Fatalf("want betong id, got %+v", hits)
+	if hits[0].Resource.ResourceID != "6000000991" || hits[0].Rank != 1 {
+		t.Fatalf("want betong id rank 1, got %+v", hits)
 	}
 }
 
@@ -102,8 +101,8 @@ func TestVectorExactText(t *testing.T) {
 	if len(hits) == 0 {
 		t.Fatal("expected vector hit")
 	}
-	if hits[0].ID != r.ResourceID {
-		t.Fatalf("want %s first, got %+v", r.ResourceID, hits)
+	if hits[0].Resource.ResourceID != r.ResourceID || hits[0].Rank != 1 {
+		t.Fatalf("want %s first rank 1, got %+v", r.ResourceID, hits)
 	}
 }
 
@@ -120,11 +119,11 @@ func seed(t *testing.T, st *Store, rs ...model.Resource) {
 	ctx := context.Background()
 	var f embedder.Fake
 	for _, r := range rs {
-		h, err := hash.Content(r)
+		h, err := r.ContentHash()
 		if err != nil {
 			t.Fatal(err)
 		}
-		r.ContentHash = h
+		r.Hash = h
 		vec, err := f.Embed(r.EmbeddingText())
 		if err != nil {
 			t.Fatal(err)

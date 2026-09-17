@@ -31,6 +31,7 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	mux.HandleFunc("GET /healthz", h.healthz)
 	mux.HandleFunc("GET /api/search", h.search)
 	mux.HandleFunc("GET /api/resources", h.list)
+	mux.HandleFunc("GET /api/resources/compare", h.compare)
 	mux.HandleFunc("GET /api/resources/{id}", h.get)
 }
 
@@ -57,7 +58,7 @@ func (h *Handler) search(w http.ResponseWriter, r *http.Request) {
 	}
 	useVector := parseBool(r.URL.Query().Get("vector"), false)
 	useRerank := parseBool(r.URL.Query().Get("rerank"), false)
-	hits, err := h.Engine.Search(q, useVector, useRerank, lang)
+	hits, err := h.Engine.Search(r.Context(), q, useVector, useRerank, lang)
 	if err != nil {
 		var bad search.ErrBadLang
 		if errors.As(err, &bad) {
@@ -68,7 +69,7 @@ func (h *Handler) search(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if hits == nil {
-		hits = []search.SearchResult{}
+		hits = []search.Hit{}
 	}
 	results := make([]map[string]any, 0, len(hits))
 	for _, hit := range hits {
@@ -108,7 +109,7 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 	}
 	out := make([]map[string]any, 0, len(items))
 	for _, it := range items {
-		out = append(out, resourceJSON(it, h.Source))
+		out = append(out, it.View(h.Source))
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
 		"source":    h.Source,
@@ -135,29 +136,55 @@ func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return
 	}
-	body := resourceJSON(*it, h.Source)
-	body["source"] = h.Source
+	body := it.View(h.Source)
 	writeJSON(w, http.StatusOK, body)
 }
 
-func resourceJSON(r model.Resource, source string) map[string]any {
-	conv := r.Conversions
-	if conv == nil {
-		conv = map[string]float64{}
+func (h *Handler) compare(w http.ResponseWriter, r *http.Request) {
+	idA := strings.TrimSpace(r.URL.Query().Get("a"))
+	idB := strings.TrimSpace(r.URL.Query().Get("b"))
+	if idA == "" || idB == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "query a and b are required"})
+		return
 	}
-	return map[string]any{
-		"id":             r.ResourceID,
-		"name_sv":        r.NameSV,
-		"name_en":        r.NameEN,
-		"description_sv": r.DescriptionSV,
-		"description_en": r.DescriptionEN,
-		"a1a3":           r.A1A3,
-		"unit":           r.Unit,
-		"conversions":    conv,
-		"category":       r.Category,
-		"version":        r.Version,
-		"source":         source,
+	unit := strings.TrimSpace(r.URL.Query().Get("unit"))
+	ra, err := h.Store.Get(r.Context(), idA)
+	if errors.Is(err, store.ErrNotFound) {
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "not found"})
+		return
 	}
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+	rb, err := h.Store.Get(r.Context(), idB)
+	if errors.Is(err, store.ErrNotFound) {
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "not found"})
+		return
+	}
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+	cmp, err := model.Compare(*ra, *rb, h.Source, unit)
+	if err != nil {
+		var uerr model.ErrUnitUnavailable
+		if errors.As(err, &uerr) {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+			return
+		}
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"source":          cmp.Attribution,
+		"a":               cmp.A,
+		"b":               cmp.B,
+		"unit":            cmp.Unit,
+		"delta_a1a3":      cmp.DeltaA1A3,
+		"lower_impact_id": cmp.LowerImpactID,
+		"incomparable":    cmp.Incomparable,
+	})
 }
 
 func parseBool(v string, def bool) bool {

@@ -2,8 +2,11 @@ package ingest
 
 import (
 	"bytes"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/xuri/excelize/v2"
@@ -77,6 +80,15 @@ func TestHashDiffUpsert(t *testing.T) {
 	}
 	if res.Upserted != 1 {
 		t.Fatalf("changed hash should upsert, got %+v", res)
+	}
+
+	batch.Resources[0].DescriptionSV = "Ny beskrivning"
+	res, err = r.Apply(t.Context(), batch)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Upserted != 1 {
+		t.Fatalf("description-only edit should upsert, got %+v", res)
 	}
 }
 
@@ -173,5 +185,111 @@ func TestStaticFetcherNoNetwork(t *testing.T) {
 	b, err := f.Fetch(t.Context())
 	if err != nil || len(b.Resources) != 1 {
 		t.Fatalf("%+v %v", b, err)
+	}
+}
+
+func miniExcel(t *testing.T) []byte {
+	t.Helper()
+	return writeXLSX(t, []string{
+		"Resurs-ID", "Produktnamn", "Kategori", "Version",
+		"Enhet för klimatpåverkan",
+		"A1-A3 byggproduktens klimatpåverkan GWP-GHG, typiskt värde",
+		"Omräkningsfaktor", "Enhet för omräkningsfaktor", "Teknisk beskrivning",
+	}, [][]string{
+		{"6000000991", "Betong", "Betong", "02.07.000", "kg CO₂e/kg", "0.12", "2400", "kg/m³", "Generisk betong"},
+	})
+}
+
+func TestHTTPFetcherJSON404FallsBackToExcel(t *testing.T) {
+	xlsx := miniExcel(t)
+	var excelGets int
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, ".xlsx") {
+			excelGets++
+			_, _ = w.Write(xlsx)
+			return
+		}
+		http.NotFound(w, r)
+	}))
+	t.Cleanup(srv.Close)
+	f := &HTTPFetcher{
+		Client:  srv.Client(),
+		APIBase: srv.URL,
+		ExcelSV: srv.URL + "/sv.xlsx",
+		ExcelEN: srv.URL + "/en.xlsx",
+	}
+	batch, err := f.Fetch(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if excelGets == 0 {
+		t.Fatal("excel path not invoked after JSON 404")
+	}
+	if len(batch.Resources) == 0 {
+		t.Fatal("expected excel resources")
+	}
+}
+
+func TestHTTPFetcherEmptyJSONFallsBackToExcel(t *testing.T) {
+	xlsx := miniExcel(t)
+	var excelGets int
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, ".xlsx") {
+			excelGets++
+			_, _ = w.Write(xlsx)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`[]`))
+	}))
+	t.Cleanup(srv.Close)
+	f := &HTTPFetcher{
+		Client:  srv.Client(),
+		APIBase: srv.URL,
+		ExcelSV: srv.URL + "/sv.xlsx",
+		ExcelEN: srv.URL + "/en.xlsx",
+	}
+	batch, err := f.Fetch(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if excelGets == 0 {
+		t.Fatal("excel path not invoked after empty JSON")
+	}
+	if len(batch.Resources) == 0 {
+		t.Fatal("expected excel resources")
+	}
+}
+
+func TestHTTPFetcherZeroA1A3KeepsJSON(t *testing.T) {
+	var excelGets int
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, ".xlsx") {
+			excelGets++
+			http.Error(w, "excel should not be fetched", http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`[{"id":"1","name_sv":"x","a1a3":0,"unit":"kg"}]`))
+	}))
+	t.Cleanup(srv.Close)
+	f := &HTTPFetcher{
+		Client:  srv.Client(),
+		APIBase: srv.URL,
+		ExcelSV: srv.URL + "/sv.xlsx",
+		ExcelEN: srv.URL + "/en.xlsx",
+	}
+	batch, err := f.Fetch(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if excelGets != 0 {
+		t.Fatal("A1A3==0 must not fall back to excel")
+	}
+	if len(batch.Resources) != 1 || batch.Resources[0].A1A3 != 0 {
+		t.Fatalf("%+v", batch.Resources)
+	}
+	if batch.Origin != "json" {
+		t.Fatalf("origin=%s", batch.Origin)
 	}
 }
