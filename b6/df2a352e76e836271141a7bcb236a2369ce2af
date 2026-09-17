@@ -1,0 +1,21 @@
+scripts/export-f2llm-onnx.py
+  s_546f0a9ec1bffd::t_e79763dd6d4818 1-42
+docs/LAUNCH.md
+  s_546f0a9ec1bffd::t_fb58c738f4a0ed 1-173
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "b6df2a352e76e836271141a7bcb236a2369ce2af",
+  "prompts": {},
+  "sessions": {
+    "s_546f0a9ec1bffd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "01a0af4f-5c78-7b63-b802-9a718213d37a",
+        "model": "unknown"
+      },
+      "human_author": "mjnong <marcusnagy@icloud.com>"
+    }
+  }
+}
