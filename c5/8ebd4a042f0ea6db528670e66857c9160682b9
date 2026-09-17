@@ -1,0 +1,102 @@
+internal/guard/unkey.go
+  s_c9240697dd2297::t_d039b08b354faf 1-36
+internal/store/store.go
+  s_c9240697dd2297::t_724e71b615be23 31,164-167,169,174,180-182,192-193,196-197,202-204,213-214,217,220,227,232-234,236-237,243-279,281-282,288,293-303,327-328,332,337-338,341-347,349-351,360,371-372,374,376-384,392-408,444-445,458-485
+  s_c9240697dd2297::t_a063efd34a5c56 28-30
+docs/reference/boverket-klimatdatabas-openapi.json
+  s_546f0a9ec1bffd::t_ec3ffcdefa1478 1-80
+internal/ingest/ingest.go
+  s_c9240697dd2297::t_f734c58d973d95 17,27-32,37-38,48,66-75,86,118,127-129,164
+internal/api/api.go
+  s_c9240697dd2297::t_489775a9758906 6,12,20-24,40,66-67,84,109-110,143-146,163,165,168,170,194-263,265
+  s_2c29a5f33eb839::t_2ff210aa58e998 264,266
+internal/guard/zeroclick.go
+  s_c9240697dd2297::t_e2aa020e3d9c9b 1-80
+internal/ingest/file.go
+  s_c9240697dd2297::t_af3f6c24e123e3 1-97
+migrations/00002_catalog.sql
+  s_c9240697dd2297::t_f24fa48654bc67 1-190
+internal/guard/guard.go
+  s_c9240697dd2297::t_0b427e0971d29d 1-151
+  s_09b137d783a537::t_0626590ffa8f57 152
+internal/guard/guard_test.go
+  s_c9240697dd2297::t_30c6d584d7ce2b 1-135
+internal/model/resource.go
+  s_c9240697dd2297::t_a7b53ae1ae302a 11-15,22,24-62,66,68,80,88-99,116-130
+cmd/klimatsearch/main.go
+  s_c9240697dd2297::t_ced00bea7341f2 15,53-58,61-65,92,102
+internal/ingest/http.go
+  s_c9240697dd2297::t_013c9a4f627d94 13,18-23,46-47,65-82,84-90,92-94,96-97,99-102,116,121,124-135,168-169,180-184
+  s_c9240697dd2297::t_98260b79eecf15 185-186
+docs/research/2026-09-17-boverket-embedding-optimization.md
+  s_a04dc0937e9e1f::t_362347d491c20e 1,3-6,8,10-11,13,15-26,29,31,33-35,37-42,44-73,75,77,79-92,94,96,98-131,133-174,176-260,262-287,290-300,302-415,417-492,494-500
+  s_546f0a9ec1bffd::t_0dd7216b1fd437 2,7,9,12,14,27-28,30,32,36,43,74,76,78,93,95,97,132,175,261,288-289,301,416,493
+internal/ingest/json.go
+  s_c9240697dd2297::t_d27ccb44d3e2e0 13-14,21,25-110,112-137,141-183,186-193,195,205,211,217-229,252-289,314-315
+internal/search/types.go
+  s_c9240697dd2297::t_3224d9853781e5 12,27,52
+internal/config/config_test.go
+  s_c9240697dd2297::t_c0ba050aef4309 1-16
+README.md
+  s_09b137d783a537::t_ed162548dd5724 50-51,54,56-60,69,73
+internal/api/api_test.go
+  s_2c29a5f33eb839::t_e5e61db83643cd 4,6,15-16,46-48,168-307
+internal/config/config.go
+  s_09b137d783a537::t_ecdb60c7b886fd 18,41-45,64-68
+internal/ingest/excel.go
+  s_09b137d783a537::t_4b1ec9a08bdc62 16,34-43,45,52-60,67-69,73-75,94-103,122-124,132-137,151-153,168-174,178-180,191,195,221-224
+internal/mcp/server.go
+  s_09b137d783a537::t_3d56c66d3e33e8 83-85,100,125-127
+internal/search/engine.go
+  s_09b137d783a537::t_de09179143c5d5 51,56,74,84,104,152,183-185
+internal/search/engine_test.go
+  s_09b137d783a537::t_64dc171634f763 52,60,68,104,117,141
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "c58ebd4a042f0ea6db528670e66857c9160682b9",
+  "prompts": {},
+  "sessions": {
+    "s_09b137d783a537": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ce946da6-62ad-4451-ad01-90ec172d6053",
+        "model": "claude-opus-5"
+      },
+      "human_author": "mjnong <marcusnagy@icloud.com>"
+    },
+    "s_2c29a5f33eb839": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "53c7b46f-cb10-48e6-a8bf-882aef18185c",
+        "model": "claude-fable-5-1"
+      },
+      "human_author": "mjnong <marcusnagy@icloud.com>"
+    },
+    "s_546f0a9ec1bffd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "01a0af4f-5c78-7b63-b802-9a718213d37a",
+        "model": "unknown"
+      },
+      "human_author": "mjnong <marcusnagy@icloud.com>"
+    },
+    "s_a04dc0937e9e1f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "01a0afa4-23c3-7903-becf-0f2e051833f3",
+        "model": "unknown"
+      },
+      "human_author": "mjnong <marcusnagy@icloud.com>"
+    },
+    "s_c9240697dd2297": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "01a0afd9-c373-7383-a213-24f4fb5a9e04",
+        "model": "unknown"
+      },
+      "human_author": "mjnong <marcusnagy@icloud.com>"
+    }
+  }
+}
