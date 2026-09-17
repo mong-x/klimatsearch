@@ -57,7 +57,7 @@ The identity of a Resource's names, descriptions, Applicability, Synonyms, A1A3,
 _Avoid_: checksum, etag, fingerprint, SHA-256
 
 **Query**:
-A natural-language request for Resources, in Swedish or English.
+A request for Hits: text, Language, optional Catalogs, and whether vector retrieval and the Reranker run.
 _Avoid_: search string, prompt, q
 
 **Hit**:

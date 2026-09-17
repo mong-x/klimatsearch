@@ -9,8 +9,7 @@ import (
 	ort "github.com/yalue/onnxruntime_go"
 )
 
-// ONNX is a lazy-init production Embedder. Tests must not construct this
-// without a model file; Embed fails clearly if weights or runtime are missing.
+// ONNX is the production Embedder. NewONNX loads the session or returns an error.
 type ONNX struct {
 	mu         sync.Mutex
 	modelPath  string
@@ -29,13 +28,14 @@ func NewONNX(modelPath string, tok Tokenizer, dim int) (*ONNX, error) {
 	if tok == nil {
 		tok = StubTokenizer{}
 	}
-	return &ONNX{modelPath: modelPath, tokenizer: tok, dim: dim}, nil
+	o := &ONNX{modelPath: modelPath, tokenizer: tok, dim: dim}
+	if err := o.init(); err != nil {
+		return nil, err
+	}
+	return o, nil
 }
 
 func (o *ONNX) Dim() int { return o.dim }
-
-// Warm loads ONNX Runtime and the session so a missing library fails at process start.
-func (o *ONNX) Warm() error { return o.init() }
 
 // QueryPrefix is the F2LLM-v2 Instruct wrapper. Documents must not use it.
 const QueryPrefix = "Instruct: Given a search query, retrieve the matching generic construction product or energy carrier from Boverket Klimatdatabas.\nQuery: "

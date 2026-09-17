@@ -31,8 +31,12 @@ func TestOriginBoverketSheet(t *testing.T) {
 	if got != want {
 		t.Fatalf("got %s", got)
 	}
-	if r.View("Boverket Klimatdatabas")["origin"] != want {
+	v := r.View("Boverket Klimatdatabas")
+	if v["origin"] != want {
 		t.Fatal("view must include origin")
+	}
+	if v["category_code"] != "10" {
+		t.Fatalf("category_code=%v", v["category_code"])
 	}
 }
 

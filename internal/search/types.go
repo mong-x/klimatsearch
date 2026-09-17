@@ -6,102 +6,67 @@ import (
 	"github.com/mong-x/klimatsearch/internal/model"
 )
 
-// Hit is one Resource returned for a Query, including the stored row.
+// Query is a request for Hits from Klimatdatabas.
+type Query struct {
+	Text     string
+	Lang     string
+	Catalogs []string
+	Vector   bool
+	Rerank   bool
+}
+
+// Hit is a Resource returned for a Query, plus retrieval fields.
 type Hit struct {
-	ID              string
-	CatalogID       string
-	NameSV          string
-	NameEN          string
-	DescriptionSV   string
-	DescriptionEN   string
-	ApplicabilitySV string
-	ApplicabilityEN string
-	Synonyms        string
-	A1A3            float64
-	Unit            string
-	Conversions     map[string]float64
-	Category        string
-	CategoryCode    string
-	Version         string
-	Lang            string
-	Score           float64
-	Source          string // "fts" | "vector" | "both" | "rerank"
-	Details         string // GET path for this Resource
-	Origin          string // Catalog's own page, if known
+	model.Resource
+	Lang    string
+	Score   float64
+	Source  string // "fts" | "vector" | "both" | "rerank"
+	Details string
 }
 
 func HitFrom(r model.Resource, lang, source string, score float64) Hit {
-	conv := r.Conversions
-	if conv == nil {
-		conv = map[string]float64{}
-	} else {
-		cp := make(map[string]float64, len(conv))
-		for k, v := range conv {
-			cp[k] = v
-		}
-		conv = cp
-	}
 	return Hit{
-		ID:              r.ResourceID,
-		CatalogID:       r.CatalogID,
-		NameSV:          r.NameSV,
-		NameEN:          r.NameEN,
-		DescriptionSV:   r.DescriptionSV,
-		DescriptionEN:   r.DescriptionEN,
-		ApplicabilitySV: r.ApplicabilitySV,
-		ApplicabilityEN: r.ApplicabilityEN,
-		Synonyms:        r.Synonyms,
-		A1A3:            r.A1A3,
-		Unit:            r.Unit,
-		Conversions:     conv,
-		Category:        r.Category,
-		CategoryCode:    r.CategoryCode,
-		Version:         r.Version,
-		Lang:            lang,
-		Score:           score,
-		Source:          source,
-		Details:         "/api/resources/" + r.DocID(),
-		Origin:          r.Origin(),
+		Resource: r,
+		Lang:     lang,
+		Score:    score,
+		Source:   source,
+		Details:  "/api/resources/" + r.DocID(),
 	}
 }
 
-// View is the search-hit JSON: full Resource plus score, match_source, details.
+// View is Resource JSON plus score, match_source, and details.
 func (h Hit) View(attribution string) map[string]any {
-	r := model.Resource{
-		CatalogID:       h.CatalogID,
-		ResourceID:      h.ID,
-		NameSV:          h.NameSV,
-		NameEN:          h.NameEN,
-		DescriptionSV:   h.DescriptionSV,
-		DescriptionEN:   h.DescriptionEN,
-		ApplicabilitySV: h.ApplicabilitySV,
-		ApplicabilityEN: h.ApplicabilityEN,
-		Synonyms:        h.Synonyms,
-		A1A3:            h.A1A3,
-		Unit:            h.Unit,
-		Conversions:     h.Conversions,
-		Category:        h.Category,
-		CategoryCode:    h.CategoryCode,
-		Version:         h.Version,
-	}
-	m := r.View(attribution)
+	m := h.Resource.View(attribution)
 	m["lang"] = h.Lang
 	m["score"] = h.Score
 	m["match_source"] = h.Source
 	m["details"] = h.Details
-	if h.Origin != "" {
-		m["origin"] = h.Origin
-	}
 	return m
 }
 
-// Embedder turns document text into a fixed-dimension vector.
+// Envelope is the shared search JSON for REST and MCP.
+func Envelope(attribution string, q Query, hits []Hit) map[string]any {
+	if hits == nil {
+		hits = []Hit{}
+	}
+	results := make([]map[string]any, 0, len(hits))
+	for _, h := range hits {
+		results = append(results, h.View(attribution))
+	}
+	return map[string]any{
+		"source":  attribution,
+		"query":   q.Text,
+		"lang":    q.Lang,
+		"results": results,
+	}
+}
+
+// Embedder maps Resource text or a Query to a vector.
 type Embedder interface {
 	Embed(text string) ([]float32, error)
 }
 
-// QueryEmbedder embeds a Query. F2LLM applies an Instruct prefix on Queries only.
-// Fake embedders omit this method so tests hash the raw Query.
+// QueryEmbedder applies the F2LLM Instruct prefix. Fake does not implement it.
 type QueryEmbedder interface {
 	EmbedQuery(query string) ([]float32, error)
 }
@@ -113,7 +78,7 @@ type Reranker interface {
 
 // SearchEngine is hybrid retrieval over Klimatdatabas.
 type SearchEngine interface {
-	Search(ctx context.Context, query string, useVector bool, useRerank bool, lang string, catalogs []string) ([]Hit, error)
+	Search(ctx context.Context, q Query) ([]Hit, error)
 }
 
 // Dimensional is implemented by embedders that know their output width.

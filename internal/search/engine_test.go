@@ -49,23 +49,23 @@ func TestEngineFTSAndVector(t *testing.T) {
 	}
 	eng := search.New(st, st, fake, reranker.None{})
 
-	hits, err := eng.Search(t.Context(), "Betong", false, false, "sv", nil)
+	hits, err := eng.Search(t.Context(), search.Query{Text: "Betong", Lang: "sv"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(hits) == 0 || hits[0].ID != r.ResourceID {
+	if len(hits) == 0 || hits[0].ResourceID != r.ResourceID {
 		t.Fatalf("fts: %+v", hits)
 	}
 
-	hits, err = eng.Search(t.Context(), r.EmbeddingText(), true, false, "sv", nil)
+	hits, err = eng.Search(t.Context(), search.Query{Text: r.EmbeddingText(), Lang: "sv", Vector: true})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(hits) == 0 || hits[0].ID != r.ResourceID {
+	if len(hits) == 0 || hits[0].ResourceID != r.ResourceID {
 		t.Fatalf("vector: %+v", hits)
 	}
 
-	if _, err := eng.Search(t.Context(), "x", false, false, "xx", nil); err == nil {
+	if _, err := eng.Search(t.Context(), search.Query{Text: "x", Lang: "xx"}); err == nil {
 		t.Fatal("expected bad lang")
 	}
 }
@@ -101,26 +101,26 @@ func TestEngineRRF(t *testing.T) {
 
 	eng := search.New(st, st, fake, reranker.None{})
 
-	ftsHits, err := eng.Search(t.Context(), "Betong", false, false, "sv", nil)
+	ftsHits, err := eng.Search(t.Context(), search.Query{Text: "Betong", Lang: "sv"})
 	if err != nil {
 		t.Fatal(err)
 	}
 	for _, hit := range ftsHits {
 		if hit.Source != "fts" {
-			t.Fatalf("fts-only search source=%s id=%s", hit.Source, hit.ID)
+			t.Fatalf("fts-only search source=%s id=%s", hit.Source, hit.ResourceID)
 		}
-		if hit.ID == "vec" {
+		if hit.ResourceID == "vec" {
 			t.Fatal("vector-only resource should not appear in FTS search")
 		}
 	}
 
-	hits, err := eng.Search(t.Context(), "Betong", true, false, "sv", nil)
+	hits, err := eng.Search(t.Context(), search.Query{Text: "Betong", Lang: "sv", Vector: true})
 	if err != nil {
 		t.Fatal(err)
 	}
 	byID := map[string]search.Hit{}
 	for _, hit := range hits {
-		byID[hit.ID] = hit
+		byID[hit.ResourceID] = hit
 	}
 	b, ok := byID["both"]
 	if !ok || b.Source != "both" {
@@ -138,7 +138,7 @@ func TestEngineRRF(t *testing.T) {
 		t.Fatalf("both RRF %v should beat vec %v and fts %v", b.Score, v.Score, f.Score)
 	}
 
-	reranked, err := eng.Search(t.Context(), "Betong", true, true, "sv", nil)
+	reranked, err := eng.Search(t.Context(), search.Query{Text: "Betong", Lang: "sv", Vector: true, Rerank: true})
 	if err != nil {
 		t.Fatal(err)
 	}

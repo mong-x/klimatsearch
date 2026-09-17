@@ -59,35 +59,27 @@ type Vector interface {
 }
 
 func New(fts FTS, vec Vector, emb Embedder, rr Reranker) *Engine {
-	if rr == nil {
-		rr = nopReranker{}
-	}
 	return &Engine{fts: fts, vec: vec, embedder: emb, reranker: rr, log: slog.Default(), limit: 20}
 }
 
-type nopReranker struct{}
-
-func (nopReranker) Rerank(_ string, docs []Hit) ([]Hit, error) {
-	return docs, nil
-}
-
-func (e *Engine) Search(ctx context.Context, query string, useVector bool, useRerank bool, lang string, catalogs []string) ([]Hit, error) {
-	lang, err := NormalizeLang(lang)
+func (e *Engine) Search(ctx context.Context, q Query) ([]Hit, error) {
+	lang, err := NormalizeLang(q.Lang)
 	if err != nil {
 		return nil, err
 	}
-	query = strings.TrimSpace(query)
-	if query == "" {
+	q.Lang = lang
+	q.Text = strings.TrimSpace(q.Text)
+	if q.Text == "" {
 		return nil, fmt.Errorf("empty query")
 	}
 
-	ftsRanked, err := e.fts.SearchFTS(ctx, query, lang, e.limit, catalogs)
+	ftsRanked, err := e.fts.SearchFTS(ctx, q.Text, q.Lang, e.limit, q.Catalogs)
 	if err != nil {
 		return nil, err
 	}
 
 	var vecRanked []model.Ranked
-	if useVector {
+	if q.Vector {
 		if e.vec == nil || !e.vec.VectorEnabled() {
 			reason := "vector backend unavailable"
 			if e.vec != nil {
@@ -97,11 +89,11 @@ func (e *Engine) Search(ctx context.Context, query string, useVector bool, useRe
 		} else if e.embedder == nil {
 			e.log.Warn("skipping vector search", "reason", "no embedder")
 		} else {
-			emb, err := embedQuery(e.embedder, query)
+			emb, err := embedQuery(e.embedder, q.Text)
 			if err != nil {
 				return nil, fmt.Errorf("embed query: %w", err)
 			}
-			vecRanked, err = e.vec.SearchVector(ctx, emb, lang, e.limit, catalogs)
+			vecRanked, err = e.vec.SearchVector(ctx, emb, q.Lang, e.limit, q.Catalogs)
 			if err != nil {
 				return nil, err
 			}
@@ -109,19 +101,19 @@ func (e *Engine) Search(ctx context.Context, query string, useVector bool, useRe
 	}
 
 	var merged []Hit
-	if useVector && len(vecRanked) > 0 {
-		merged = rrf(ftsRanked, vecRanked, lang, e.limit)
+	if q.Vector && len(vecRanked) > 0 {
+		merged = rrf(ftsRanked, vecRanked, q.Lang, e.limit)
 	} else {
-		merged = ftsHits(ftsRanked, lang)
+		merged = ftsHits(ftsRanked, q.Lang)
 	}
-	if useRerank && e.reranker != nil && len(merged) > 0 {
-		merged, err = e.reranker.Rerank(query, merged)
+	if q.Rerank && e.reranker != nil && len(merged) > 0 {
+		merged, err = e.reranker.Rerank(q.Text, merged)
 		if err != nil {
 			return nil, fmt.Errorf("rerank: %w", err)
 		}
 		for i := range merged {
 			merged[i].Source = "rerank"
-			merged[i].Lang = lang
+			merged[i].Lang = q.Lang
 		}
 	}
 	return merged, nil
@@ -183,7 +175,7 @@ func rrf(fts, knn []model.Ranked, lang string, limit int) []Hit {
 		if out[i].CatalogID != out[j].CatalogID {
 			return out[i].CatalogID < out[j].CatalogID
 		}
-		return out[i].ID < out[j].ID
+		return out[i].ResourceID < out[j].ResourceID
 	})
 	if limit > 0 && len(out) > limit {
 		out = out[:limit]

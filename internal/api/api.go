@@ -64,10 +64,14 @@ func (h *Handler) search(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
 		return
 	}
-	useVector := parseBool(r.URL.Query().Get("vector"), false)
-	useRerank := parseBool(r.URL.Query().Get("rerank"), false)
-	catalogs := store.ParseCatalogs(r.URL.Query().Get("databases"))
-	hits, err := h.Engine.Search(r.Context(), q, useVector, useRerank, lang, catalogs)
+	qreq := search.Query{
+		Text:     q,
+		Lang:     lang,
+		Catalogs: store.ParseCatalogs(r.URL.Query().Get("databases")),
+		Vector:   parseBool(r.URL.Query().Get("vector"), false),
+		Rerank:   parseBool(r.URL.Query().Get("rerank"), false),
+	}
+	hits, err := h.Engine.Search(r.Context(), qreq)
 	if err != nil {
 		var bad search.ErrBadLang
 		if errors.As(err, &bad) {
@@ -77,19 +81,7 @@ func (h *Handler) search(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return
 	}
-	if hits == nil {
-		hits = []search.Hit{}
-	}
-	results := make([]map[string]any, 0, len(hits))
-	for _, hit := range hits {
-		results = append(results, hit.View(h.Source))
-	}
-	writeJSON(w, http.StatusOK, map[string]any{
-		"source":  h.Source,
-		"query":   q,
-		"lang":    lang,
-		"results": results,
-	})
+	writeJSON(w, http.StatusOK, search.Envelope(h.Source, qreq, hits))
 }
 
 func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
@@ -149,17 +141,9 @@ func (h *Handler) origin(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "id is required"})
 		return
 	}
-	it, err := h.Store.Get(r.Context(), id)
-	if errors.Is(err, store.ErrNotFound) {
-		writeJSON(w, http.StatusNotFound, map[string]string{"error": "not found"})
-		return
-	}
-	if errors.Is(err, store.ErrAmbiguous) {
-		writeJSON(w, http.StatusConflict, map[string]string{"error": err.Error()})
-		return
-	}
+	it, status, err := h.loadResource(r, id)
 	if err != nil {
-		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		writeJSON(w, status, map[string]string{"error": err.Error()})
 		return
 	}
 	loc := it.Origin()
@@ -199,15 +183,7 @@ func (h *Handler) compare(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{
-		"source":          cmp.Attribution,
-		"a":               cmp.A,
-		"b":               cmp.B,
-		"unit":            cmp.Unit,
-		"delta_a1a3":      cmp.DeltaA1A3,
-		"lower_impact_id": cmp.LowerImpactID,
-		"incomparable":    cmp.Incomparable,
-	})
+	writeJSON(w, http.StatusOK, cmp.View())
 }
 
 func (h *Handler) loadResource(r *http.Request, id string) (*model.Resource, int, error) {

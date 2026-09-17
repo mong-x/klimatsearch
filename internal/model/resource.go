@@ -180,6 +180,9 @@ func (r Resource) View(attribution string) map[string]any {
 		"version":          r.Version,
 		"source":           attribution,
 	}
+	if r.CategoryCode != "" {
+		m["category_code"] = r.CategoryCode
+	}
 	if o := r.Origin(); o != "" {
 		m["origin"] = o
 	}

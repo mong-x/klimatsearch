@@ -97,15 +97,18 @@ func (s *Server) searchTool(ctx context.Context, _ *mcpsdk.CallToolRequest, in s
 	if err != nil {
 		return nil, searchOut{}, err
 	}
-	hits, err := s.engine.Search(ctx, in.Query, s.useVector, s.useRerank, lang, in.Databases)
+	q := search.Query{Text: in.Query, Lang: lang, Catalogs: in.Databases, Vector: s.useVector, Rerank: s.useRerank}
+	hits, err := s.engine.Search(ctx, q)
 	if err != nil {
 		return nil, searchOut{}, err
 	}
-	results := make([]map[string]any, 0, len(hits))
-	for _, hit := range hits {
-		results = append(results, hit.View(s.source))
+	env := search.Envelope(s.source, q, hits)
+	out := searchOut{
+		Source:  s.source,
+		Query:   in.Query,
+		Lang:    lang,
+		Results: env["results"].([]map[string]any),
 	}
-	out := searchOut{Source: s.source, Query: in.Query, Lang: lang, Results: results}
 	return textResult(out), out, nil
 }
 

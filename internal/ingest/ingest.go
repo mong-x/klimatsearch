@@ -19,11 +19,6 @@ type Store interface {
 	SetMeta(ctx context.Context, key, value string) error
 }
 
-// Fetcher loads Resources from JSON API, Excel, or a fixture. Tests inject fakes.
-type Fetcher interface {
-	Fetch(ctx context.Context) (Batch, error)
-}
-
 // Ingester is fetch-and-map for one Catalog.
 type Ingester interface {
 	CatalogID() string
@@ -152,20 +147,20 @@ func (r *Runner) notifyChanged(ctx context.Context, res Result) {
 	}
 }
 
-func (r *Runner) Run(ctx context.Context, f Fetcher) (Result, error) {
+func (r *Runner) Run(ctx context.Context, f Ingester) (Result, error) {
 	batch, err := f.Fetch(ctx)
 	if err != nil {
 		return Result{}, err
 	}
-	if ing, ok := f.(Ingester); ok && batch.CatalogID == "" {
-		batch.CatalogID = ing.CatalogID()
+	if batch.CatalogID == "" {
+		batch.CatalogID = f.CatalogID()
 	}
 	return r.Apply(ctx, batch)
 }
 
 // Loop runs ingest on interval. interval 0 means no ticker.
 // Boot ingest is owned by main (--ingest-on-start), not Loop, so ingest is not run twice.
-func Loop(ctx context.Context, r *Runner, f Fetcher, interval time.Duration) {
+func Loop(ctx context.Context, r *Runner, f Ingester, interval time.Duration) {
 	if interval <= 0 {
 		return
 	}

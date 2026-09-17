@@ -74,7 +74,7 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	var fetcher ingest.Fetcher
+	var fetcher ingest.Ingester
 	if cfg.DemoFixture {
 		fetcher = ingest.FixtureFetcher{Path: cfg.FixturePath}
 	} else {

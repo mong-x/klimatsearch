@@ -3,7 +3,6 @@ package reranker
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
@@ -12,15 +11,14 @@ import (
 )
 
 // New builds a Reranker. kind is none|fake|onnx.
-func New(kind, modelsDir, modelName string) (search.Reranker, error) {
+func New(kind, _, _ string) (search.Reranker, error) {
 	switch strings.ToLower(kind) {
 	case "", "none":
 		return None{}, nil
 	case "fake":
 		return Fake{}, nil
 	case "onnx":
-		p := filepath.Join(modelsDir, modelName, "reranker.onnx")
-		return NewONNX(p), nil
+		return nil, fmt.Errorf("onnx reranker is not wired; use --reranker=none or fake (see docs/SELFHOST.md)")
 	default:
 		return nil, fmt.Errorf("unknown reranker %q", kind)
 	}

@@ -36,14 +36,7 @@ func New(kind, modelsDir, modelName string) (search.Embedder, error) {
 		if !fileExists(tokPath) {
 			return nil, fmt.Errorf("embedder onnx: missing %s (Hugging Face tokenizer.json is required)", tokPath)
 		}
-		o, err := NewONNX(onnxPath, FileTokenizer{Path: tokPath}, Dim)
-		if err != nil {
-			return nil, err
-		}
-		if err := o.Warm(); err != nil {
-			return nil, err
-		}
-		return o, nil
+		return NewONNX(onnxPath, FileTokenizer{Path: tokPath}, Dim)
 	default:
 		return nil, fmt.Errorf("unknown embedder %q", kind)
 	}

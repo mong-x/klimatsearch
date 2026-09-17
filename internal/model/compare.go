@@ -78,6 +78,19 @@ func Compare(a, b Resource, attribution, unit string) (Comparison, error) {
 	return out, nil
 }
 
+// View is the Comparison JSON used by REST and MCP.
+func (c Comparison) View() map[string]any {
+	return map[string]any{
+		"source":          c.Attribution,
+		"a":               c.A,
+		"b":               c.B,
+		"unit":            c.Unit,
+		"delta_a1a3":      c.DeltaA1A3,
+		"lower_impact_id": c.LowerImpactID,
+		"incomparable":    c.Incomparable,
+	}
+}
+
 func finishCompare(out Comparison, a, b Resource, unit string, va, vb float64) Comparison {
 	out.Unit = unit
 	out.DeltaA1A3 = va - vb
