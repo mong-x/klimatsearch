@@ -1,0 +1,33 @@
+testdata/golden-queries.json
+  s_546f0a9ec1bffd::t_92168dac17a280 1-13
+.github/workflows/e2e-kind.yml
+  s_2c29a5f33eb839::t_1dd24c699e343a 24-29
+Dockerfile
+  s_2c29a5f33eb839::t_d891f10d07809f 21,23-24
+deploy/k8s/deployment.yaml
+  s_2c29a5f33eb839::t_e6128454eb8740 21
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "11f50019c66c65471c2baa22d6f0c23bd36b5021",
+  "prompts": {},
+  "sessions": {
+    "s_2c29a5f33eb839": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "53c7b46f-cb10-48e6-a8bf-882aef18185c",
+        "model": "claude-fable-5-1"
+      },
+      "human_author": "mjnong <marcusnagy@icloud.com>"
+    },
+    "s_546f0a9ec1bffd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "01a0af4f-5c78-7b63-b802-9a718213d37a",
+        "model": "unknown"
+      },
+      "human_author": "mjnong <marcusnagy@icloud.com>"
+    }
+  }
+}
