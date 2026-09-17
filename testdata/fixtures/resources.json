@@ -1,0 +1,65 @@
+{
+  "version": "02.07.000-fixture",
+  "resources": [
+    {
+      "resourceId": "6000000991",
+      "nameSV": "Betong",
+      "nameEN": "Concrete",
+      "descriptionSV": "Generisk betong för stomme och grund.",
+      "descriptionEN": "Generic concrete for structure and foundations.",
+      "a1a3": 0.12,
+      "unit": "kg",
+      "category": "Betong",
+      "version": "02.07.000-fixture",
+      "conversions": { "kg/m³": 2400 }
+    },
+    {
+      "resourceId": "6000000992",
+      "nameSV": "Konstruktionsstål",
+      "nameEN": "Structural steel",
+      "descriptionSV": "Stål för bärande konstruktioner.",
+      "descriptionEN": "Steel for load-bearing structures.",
+      "a1a3": 1.55,
+      "unit": "kg",
+      "category": "Stål",
+      "version": "02.07.000-fixture",
+      "conversions": { "kg": 1 }
+    },
+    {
+      "resourceId": "6000000993",
+      "nameSV": "Konstruktionsvirke",
+      "nameEN": "Structural timber",
+      "descriptionSV": "Sågat virke av furu eller gran.",
+      "descriptionEN": "Sawn timber of pine or spruce.",
+      "a1a3": 0.08,
+      "unit": "kg",
+      "category": "Trä",
+      "version": "02.07.000-fixture",
+      "conversions": { "kg/m³": 500 }
+    },
+    {
+      "resourceId": "6000000994",
+      "nameSV": "Gipsskiva",
+      "nameEN": "Gypsum board",
+      "descriptionSV": "Standardgipsskiva för innerväggar.",
+      "descriptionEN": "Standard gypsum board for interior walls.",
+      "a1a3": 0.24,
+      "unit": "kg",
+      "category": "Byggskivor",
+      "version": "02.07.000-fixture",
+      "conversions": { "kg/m²": 9 }
+    },
+    {
+      "resourceId": "6000000995",
+      "nameSV": "Mineralull",
+      "nameEN": "Mineral wool",
+      "descriptionSV": "Isolering av mineralull i skivor.",
+      "descriptionEN": "Mineral wool insulation boards.",
+      "a1a3": 0.89,
+      "unit": "kg",
+      "category": "Isolering",
+      "version": "02.07.000-fixture",
+      "conversions": { "kg/m³": 18.7 }
+    }
+  ]
+}

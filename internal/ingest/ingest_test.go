@@ -1,0 +1,177 @@
+package ingest
+
+import (
+	"bytes"
+	"os"
+	"path/filepath"
+	"testing"
+
+	"github.com/xuri/excelize/v2"
+
+	"github.com/mong-x/klimatsearch/internal/embedder"
+	"github.com/mong-x/klimatsearch/internal/model"
+	"github.com/mong-x/klimatsearch/internal/store"
+)
+
+func TestParseJSONFixture(t *testing.T) {
+	path := filepath.Join("..", "..", "testdata", "fixtures", "resources.json")
+	b, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	batch, err := ParseJSON(b)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(batch.Resources) != 5 {
+		t.Fatalf("got %d", len(batch.Resources))
+	}
+	var found bool
+	for _, r := range batch.Resources {
+		if r.NameSV == "Betong" && r.NameEN == "Concrete" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal("missing Betong/Concrete")
+	}
+}
+
+func TestHashDiffUpsert(t *testing.T) {
+	if os.Getenv("CGO_ENABLED") == "0" {
+		t.Skip("CGO is disabled; sqlite store tests require CGO_ENABLED=1")
+	}
+	st, err := store.Open(filepath.Join(t.TempDir(), "in.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = st.Close() })
+	var fake embedder.Fake
+	st.ConfigureVector(fake.Dim())
+	r := &Runner{Store: st, Embedder: fake}
+	batch := Batch{
+		Origin:  "fixture",
+		Version: "1",
+		Resources: []model.Resource{{
+			ResourceID: "1", NameSV: "Betong", NameEN: "Concrete", A1A3: 0.1, Unit: "kg",
+		}},
+	}
+	res, err := r.Apply(t.Context(), batch)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Upserted != 1 {
+		t.Fatalf("upserted %d", res.Upserted)
+	}
+	res, err = r.Apply(t.Context(), batch)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Skipped != 1 || res.Upserted != 0 {
+		t.Fatalf("expected skip, got %+v", res)
+	}
+	batch.Resources[0].A1A3 = 0.2
+	res, err = r.Apply(t.Context(), batch)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Upserted != 1 {
+		t.Fatalf("changed hash should upsert, got %+v", res)
+	}
+}
+
+func TestExcelParseAndMerge(t *testing.T) {
+	sv := writeXLSX(t, []string{
+		"Resurs-ID", "Produktnamn", "Kategori", "Version",
+		"Enhet för klimatpåverkan",
+		"A1-A3 byggproduktens klimatpåverkan GWP-GHG, typiskt värde",
+		"Omräkningsfaktor", "Enhet för omräkningsfaktor", "Teknisk beskrivning",
+	}, [][]string{
+		{"6000000991", "Betong", "Betong", "02.07.000", "kg CO₂e/kg", "0.12", "2400", "kg/m³", "Generisk betong"},
+		{"6000000992", "Stål", "Stål", "02.07.000", "kg CO₂e/kg", "1.55", "1", "kg", "Stål"},
+	})
+	en := writeXLSX(t, []string{
+		"Resource ID", "Product name", "Category", "Version",
+		"Unit for climate impact",
+		"A1-A3 building product's climate impact GWP-GHG, typical value",
+		"Conversion factor", "Unit for conversion factor", "Technical description",
+	}, [][]string{
+		{"6000000991", "Concrete", "Concrete", "02.07.000", "kg CO₂e/kg", "0.12", "2400", "kg/m³", "Generic concrete"},
+		{"6000000992", "Steel", "Steel", "02.07.000", "kg CO₂e/kg", "1.55", "1", "kg", "Steel"},
+	})
+	svb, err := ParseExcel(sv, "sv")
+	if err != nil {
+		t.Fatal(err)
+	}
+	enb, err := ParseExcel(en, "en")
+	if err != nil {
+		t.Fatal(err)
+	}
+	merged := MergeLang(svb, enb)
+	if len(merged.Resources) != 2 {
+		t.Fatalf("merged %d", len(merged.Resources))
+	}
+	var betong model.Resource
+	for _, r := range merged.Resources {
+		if r.ResourceID == "6000000991" {
+			betong = r
+		}
+	}
+	if betong.NameSV != "Betong" || betong.NameEN != "Concrete" {
+		t.Fatalf("%+v", betong)
+	}
+	if betong.A1A3 != 0.12 || betong.Unit != "kg" {
+		t.Fatalf("a1a3/unit %+v", betong)
+	}
+	if betong.Conversions["kg/m³"] != 2400 {
+		t.Fatalf("conv %+v", betong.Conversions)
+	}
+}
+
+func writeXLSX(t *testing.T, headers []string, rows [][]string) []byte {
+	t.Helper()
+	f := excelize.NewFile()
+	defer func() { _ = f.Close() }()
+	for i, h := range headers {
+		cell, _ := excelize.CoordinatesToCellName(i+1, 1)
+		if err := f.SetCellValue("Sheet1", cell, h); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for r, row := range rows {
+		for c, v := range row {
+			cell, _ := excelize.CoordinatesToCellName(c+1, r+2)
+			if err := f.SetCellValue("Sheet1", cell, v); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	var buf bytes.Buffer
+	if err := f.Write(&buf); err != nil {
+		t.Fatal(err)
+	}
+	return buf.Bytes()
+}
+
+func TestCommittedExcelFixture(t *testing.T) {
+	path := filepath.Join("..", "..", "testdata", "fixtures", "resources.xlsx")
+	b, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	batch, err := ParseExcel(b, "sv")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(batch.Resources) != 5 {
+		t.Fatalf("got %d", len(batch.Resources))
+	}
+}
+
+func TestStaticFetcherNoNetwork(t *testing.T) {
+	f := StaticFetcher{Batch: Batch{Resources: []model.Resource{{ResourceID: "1"}}, Origin: "fixture"}}
+	b, err := f.Fetch(t.Context())
+	if err != nil || len(b.Resources) != 1 {
+		t.Fatalf("%+v %v", b, err)
+	}
+}
