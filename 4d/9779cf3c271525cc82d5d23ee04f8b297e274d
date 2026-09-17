@@ -1,0 +1,53 @@
+internal/config/config.go
+  s_7b1d254e7dc4d6::t_50376dfb220223 1-117
+migrations/embed.go
+  s_7b1d254e7dc4d6::t_1a0e9c945bc336 1-6
+internal/store/store.go
+  s_7b1d254e7dc4d6::t_9a42bf7807ddd8 1-373
+  s_7b1d254e7dc4d6::t_7999efe56786b1 374-376
+internal/model/resource.go
+  s_7b1d254e7dc4d6::t_46c17750851815 1-32
+migrations/00001_init.sql
+  s_7b1d254e7dc4d6::t_c21106fd8b1841 1-74
+internal/embedder/fake.go
+  s_7b1d254e7dc4d6::t_e01972417df795 1-50
+internal/embedder/tokenizer.go
+  s_7b1d254e7dc4d6::t_b9cd21f38b12d9 1-33
+internal/embedder/embedder.go
+  s_7b1d254e7dc4d6::t_ea222b3a7ed879 1-48
+internal/search/types.go
+  s_7b1d254e7dc4d6::t_6108f98a044dfc 1-35
+internal/search/engine_test.go
+  s_7b1d254e7dc4d6::t_c9930fcc3c5f5b 1-72
+internal/search/engine.go
+  s_7b1d254e7dc4d6::t_cade6068b0c51a 1-170
+internal/store/store_test.go
+  s_7b1d254e7dc4d6::t_5be988b1c6b33c 1-166
+internal/hash/hash_test.go
+  s_7b1d254e7dc4d6::t_92958c67281a2c 1-67
+internal/embedder/fake_test.go
+  s_7b1d254e7dc4d6::t_bb96e375f1a9cb 1-50
+internal/hash/hash.go
+  s_7b1d254e7dc4d6::t_d899456b42a0d1 1-34
+internal/embedder/onnx.go
+  s_7b1d254e7dc4d6::t_965564a2a827a3 1-107
+  s_7b1d254e7dc4d6::t_e77794ff56ad7b 108-110
+internal/reranker/reranker.go
+  s_7b1d254e7dc4d6::t_a06e852d411a07 1-101
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "4d9779cf3c271525cc82d5d23ee04f8b297e274d",
+  "prompts": {},
+  "sessions": {
+    "s_7b1d254e7dc4d6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "01a0af5a-c16b-7bd0-879e-eec39da655a8",
+        "model": "unknown"
+      },
+      "human_author": "mjnong <marcusnagy@icloud.com>"
+    }
+  }
+}
