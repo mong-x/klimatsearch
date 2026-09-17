@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>klimatsearch — hybrid search + MCP for Boverket Klimatdatabas</title>
+  <meta name="description" content="Single Go binary: SQLite FTS5 + sqlite-vec, REST and MCP over Boverket Klimatdatabas. Cite Boverket. Apache-2.0." />
+  <link rel="canonical" href="https://mong-x.github.io/klimatsearch/" />
+  <meta property="og:title" content="klimatsearch" />
+  <meta property="og:description" content="Hybrid search and MCP server for Boverket Klimatdatabas." />
+  <meta property="og:image" content="https://mong-x.github.io/klimatsearch/assets/og.jpg" />
+  <meta property="og:type" content="website" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="icon" href="assets/mark.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <nav>
+    <div class="wrap" style="display:flex;align-items:center;gap:20px;width:100%">
+      <a class="brand" href="./"><img src="assets/mark.svg" alt="" />klimatsearch</a>
+      <div class="links">
+        <a href="https://github.com/mong-x/klimatsearch#rest">REST</a>
+        <a href="https://github.com/mong-x/klimatsearch#mcp">MCP</a>
+        <a href="https://github.com/mong-x/klimatsearch/blob/main/docs/LAUNCH.md">Launch</a>
+        <a href="https://github.com/mong-x/klimatsearch">GitHub</a>
+        <a class="btn" href="https://github.com/mong-x/klimatsearch#quick-start">Clone</a>
+      </div>
+    </div>
+  </nav>
+
+  <header class="wrap hero">
+    <div>
+      <h1>Search Klimatdatabas inside one process. <span>FTS, vectors, REST, and MCP in a binary you run.</span></h1>
+      <p class="lead">Generic Swedish construction resources, bilingual, with typical A1–A3. Agents and tools query it; every response cites Boverket. Not affiliated with Boverket.</p>
+      <div class="hero-actions">
+        <a class="btn-primary" href="https://github.com/mong-x/klimatsearch">github.com/mong-x/klimatsearch</a>
+        <a class="btn-ghost" href="https://github.com/mong-x/klimatsearch/blob/main/docs/LAUNCH.md">Human launch checklist</a>
+      </div>
+      <div class="install" id="install">
+        <span class="prompt">$</span>
+        <code>git clone https://github.com/mong-x/klimatsearch.git &amp;&amp; cd klimatsearch &amp;&amp; make run</code>
+        <button class="copy" type="button" data-copy="git clone https://github.com/mong-x/klimatsearch.git && cd klimatsearch && make run" aria-label="Copy install command">copy</button>
+      </div>
+    </div>
+    <div class="frame" aria-label="Example search">
+      <div class="frame-inner">
+        <div class="chrome">
+          <span>GET /api/search</span>
+          <span class="lang">http</span>
+          <button class="copy" type="button" data-copy="curl -sS 'http://127.0.0.1:8080/api/search?q=spånskiva&amp;lang=sv'" aria-label="Copy curl">copy</button>
+        </div>
+        <pre><span class="ln">1</span><span class="c">$</span> curl -sS <span class="s">'http://127.0.0.1:8080/api/search?q=spånskiva&amp;lang=sv'</span>
+<span class="ln">2</span>{
+<span class="ln">3</span>  <span class="s">"source"</span>: <span class="s">"Boverket Klimatdatabas"</span>,
+<span class="ln">4</span>  <span class="s">"catalog"</span>: <span class="s">"boverket"</span>,
+<span class="ln">5</span>  <span class="s">"hits"</span>: [{
+<span class="ln">6</span>    <span class="s">"id"</span>: <span class="s">"boverket:6000000000"</span>,
+<span class="ln">7</span>    <span class="s">"name_sv"</span>: <span class="s">"Spånskiva"</span>,
+<span class="ln">8</span>    <span class="s">"name_en"</span>: <span class="s">"Particle board"</span>,
+<span class="ln">9</span>    <span class="s">"a1a3"</span>: <span class="n">0.39</span>,
+<span class="ln">10</span>    <span class="s">"unit"</span>: <span class="s">"kg"</span>,
+<span class="ln">11</span>    <span class="s">"match_source"</span>: <span class="s">"fts"</span>
+<span class="ln">12</span>  }]
+<span class="ln">13</span>}</pre>
+      </div>
+    </div>
+  </header>
+
+  <section class="wrap sec">
+    <div class="head">
+      <h2>One binary. <span>Search, compare, and serve agents.</span></h2>
+      <p class="desc">stdlib ServeMux, CGO SQLite, goose migrations, official MCP Go SDK. Kind e2e on every main push.
+        <span class="idx">1.0 How it works →</span>
+      </p>
+    </div>
+    <dl class="defs">
+      <div>
+        <dt>Hybrid Hits</dt>
+        <dd>FTS5 BM25 always. sqlite-vec KNN when vectors exist. Reciprocal Rank Fusion <code>k=60</code>. <code>match_source</code> is <code>fts | vector | both | rerank</code>.</dd>
+      </div>
+      <div>
+        <dt>Catalog identity</dt>
+        <dd>Primary key is <code>(catalog_id, resource_id)</code>. vec0 id is <code>boverket:6000000000</code>. REST <code>databases=</code> filters Catalogs — not a citation.</dd>
+      </div>
+      <div>
+        <dt>MCP tools</dt>
+        <dd><code>search_climate_data</code>, <code>get_resource_details</code>, <code>compare_resources</code> on <code>/mcp</code> (streamable) and <code>/mcp/sse</code>.</dd>
+      </div>
+      <div>
+        <dt>Guard</dt>
+        <dd>MPP <code>Authorization: Payment</code> → HTTP 402. Unkey Bearer for developers. <code>/healthz</code> stays public. AllowAll until secrets are set.</dd>
+      </div>
+    </dl>
+  </section>
+
+  <section class="wrap sec" id="api">
+    <div class="head">
+      <h2>The surface agents actually call. <span>REST, MCP, then payment.</span></h2>
+      <p class="desc">Same Guard on <code>/api/*</code>, <code>/mcp</code>, and <code>/admin/*</code>.
+        <span class="idx">2.0 API →</span>
+      </p>
+    </div>
+    <div class="tabs" role="tablist">
+      <button type="button" role="tab" aria-selected="true" data-tab="rest">REST</button>
+      <button type="button" role="tab" aria-selected="false" data-tab="mcp">MCP</button>
+      <button type="button" role="tab" aria-selected="false" data-tab="guard">Guard</button>
+    </div>
+    <div class="panel active" id="tab-rest" role="tabpanel">
+      <table class="specs">
+        <thead><tr><th>Method</th><th>Path</th></tr></thead>
+        <tbody>
+          <tr><td>GET</td><td>/healthz</td></tr>
+          <tr><td>GET</td><td>/api/search?q=&amp;vector=&amp;rerank=&amp;lang=sv|en&amp;databases=</td></tr>
+          <tr><td>GET</td><td>/api/resources/{id}?lang=</td></tr>
+          <tr><td>GET</td><td>/api/resources/compare?a=&amp;b=&amp;unit=</td></tr>
+          <tr><td>POST</td><td>/admin/ingest/file?catalog=</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="panel" id="tab-mcp" role="tabpanel">
+      <table class="specs">
+        <thead><tr><th>Tool</th><th>Does</th></tr></thead>
+        <tbody>
+          <tr><td>search_climate_data</td><td>Query names and descriptions; optional databases[]</td></tr>
+          <tr><td>get_resource_details</td><td>One Resource by prefixed or bare id</td></tr>
+          <tr><td>compare_resources</td><td>A1–A3 of two Resources in one unit</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="panel" id="tab-guard" role="tabpanel">
+      <table class="specs">
+        <thead><tr><th>Credential</th><th>Result</th></tr></thead>
+        <tbody>
+          <tr><td>Authorization: Payment</td><td>mpp-go Charge; else 402 + WWW-Authenticate</td></tr>
+          <tr><td>Authorization: Bearer</td><td>Unkey Keys.VerifyKey</td></tr>
+          <tr><td>none, MPP configured</td><td>HTTP 402 challenge (no RPC)</td></tr>
+          <tr><td>UNKEY_ROOT_KEY and MPP_SECRET_KEY unset</td><td>AllowAll (local / kind)</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="wrap sec">
+    <div class="head">
+      <h2>Numbers you can check. <span>Not a dashboard mockup.</span></h2>
+      <p class="desc">From the official Klimatdatabas 02.07.000 JSON view and this repo’s tests.
+        <span class="idx">3.0 Specs →</span>
+      </p>
+    </div>
+    <table class="specs">
+      <thead><tr><th>Fact</th><th>Value</th></tr></thead>
+      <tbody>
+        <tr><td>Resources in 02.07.000</td><td>~230 bilingual rows (208 products with typical A1–A3, 22 energy/fuel)</td></tr>
+        <tr><td>Embedding</td><td>F2LLM-v2-80M, 320-d, last-token pool, L2; Fake in CI</td></tr>
+        <tr><td>RRF k</td><td>60</td></tr>
+        <tr><td>Go</td><td>1.27, CGO, -tags fts5</td></tr>
+        <tr><td>License</td><td>Apache-2.0 for software; cite Boverket for data</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <p class="wrap cite">Data is from <strong>Boverket Klimatdatabas</strong>. You must cite Boverket as the source. This project is not affiliated with Boverket. Production weights, Unkey, and Tempo recipient are documented in <a href="https://github.com/mong-x/klimatsearch/blob/main/docs/LAUNCH.md">docs/LAUNCH.md</a> — they are not in git.</p>
+
+  <footer class="wrap">
+    <span>klimatsearch · Apache-2.0 · mong-x.github.io/klimatsearch</span>
+    <span><a href="https://github.com/mong-x/klimatsearch">source</a> · <a href="https://github.com/mong-x/klimatsearch/blob/main/docs/README.md">docs</a></span>
+  </footer>
+
+  <script>
+    document.querySelectorAll("[data-copy]").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const text = btn.getAttribute("data-copy") || "";
+        try {
+          await navigator.clipboard.writeText(text);
+          const prev = btn.textContent;
+          btn.textContent = "copied";
+          btn.setAttribute("aria-live", "polite");
+          setTimeout(() => { btn.textContent = prev; }, 1200);
+        } catch (_) {}
+      });
+    });
+    const tabs = document.querySelectorAll('[role="tab"]');
+    tabs.forEach((tab) => {
+      tab.addEventListener("click", () => {
+        const id = tab.getAttribute("data-tab");
+        tabs.forEach((t) => t.setAttribute("aria-selected", t === tab ? "true" : "false"));
+        document.querySelectorAll(".panel").forEach((p) => {
+          p.classList.toggle("active", p.id === "tab-" + id);
+        });
+      });
+    });
+  </script>
+</body>
+</html>
