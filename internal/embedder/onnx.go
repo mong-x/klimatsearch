@@ -139,16 +139,9 @@ func (o *ONNX) init() error {
 		o.initErr = fmt.Errorf("onnx model %s: %w (run scripts/download-models.sh)", o.modelPath, err)
 		return o.initErr
 	}
-	if !ort.IsInitialized() {
-		if p := os.Getenv("ONNXRUNTIME_LIB"); p != "" {
-			ort.SetSharedLibraryPath(p)
-		} else if p := defaultORTPath(); p != "" {
-			ort.SetSharedLibraryPath(p)
-		}
-		if err := ort.InitializeEnvironment(); err != nil {
-			o.initErr = fmt.Errorf("onnxruntime init: %w (install libonnxruntime and set ONNXRUNTIME_LIB)", err)
-			return o.initErr
-		}
+	if err := EnsureRuntime(); err != nil {
+		o.initErr = err
+		return o.initErr
 	}
 	inInfo, outInfo, err := ort.GetInputOutputInfo(o.modelPath)
 	if err != nil {
@@ -170,6 +163,22 @@ func (o *ONNX) init() error {
 	}
 	o.session = sess
 	o.inputNames = in
+	return nil
+}
+
+// EnsureRuntime loads libonnxruntime once for embedder and reranker.
+func EnsureRuntime() error {
+	if ort.IsInitialized() {
+		return nil
+	}
+	if p := os.Getenv("ONNXRUNTIME_LIB"); p != "" {
+		ort.SetSharedLibraryPath(p)
+	} else if p := defaultORTPath(); p != "" {
+		ort.SetSharedLibraryPath(p)
+	}
+	if err := ort.InitializeEnvironment(); err != nil {
+		return fmt.Errorf("onnxruntime init: %w (install libonnxruntime and set ONNXRUNTIME_LIB)", err)
+	}
 	return nil
 }
 

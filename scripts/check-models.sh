@@ -49,10 +49,11 @@ else
 fi
 
 rerank="${KLIMAT_RERANKER:-none}"
-echo "reranker: ${rerank}"
+RDIR="${MODELS}/${KLIMAT_RERANKER_MODEL:-bge-reranker-v2-m3}"
+echo "reranker: ${rerank} (${RDIR})"
 if [[ "${rerank}" == "onnx" ]]; then
-  echo "FAIL  KLIMAT_RERANKER=onnx is a compile stub. Use none (or fake in tests). See docs/SELFHOST.md" >&2
-  ok=1
+  need "${RDIR}/model.onnx"
+  need "${RDIR}/tokenizer.json"
 fi
 
 echo
@@ -62,5 +63,5 @@ if [[ "$ok" -ne 0 ]]; then
   exit 1
 fi
 echo "layout ok. Start with:"
-echo "  KLIMAT_EMBEDDER=onnx KLIMAT_RERANKER=none ONNXRUNTIME_LIB=${ort} ./bin/klimatsearch"
-echo "Search with vector=true after ingest. Do not enable the ONNX reranker."
+echo "  KLIMAT_EMBEDDER=onnx KLIMAT_RERANKER=${rerank} ONNXRUNTIME_LIB=${ort} ./bin/klimatsearch"
+echo "Search with vector=true (and rerank=true if ONNX reranker is loaded)."

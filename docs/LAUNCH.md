@@ -32,7 +32,7 @@ Cite **Boverket Klimatdatabas** in any UI or paper that shows these numbers.
 
 ## 1. Production embeddings (F2LLM-v2-80M ONNX)
 
-Self-hosters (AWS, Docker, a VM): follow **[SELFHOST.md](SELFHOST.md)** — canonical files, `check-models.sh`, Linux ONNX Runtime, compose. The reranker is not wired; keep `KLIMAT_RERANKER=none`.
+Self-hosters (AWS, Docker, a VM): follow **[SELFHOST.md](SELFHOST.md)** — F2LLM embedder, optional BGE reranker, `check-models.sh`, Linux ONNX Runtime.
 
 **Code is wired:** `FileTokenizer` uses `github.com/daulet/tokenizers` when you build `-tags tokenizers` (Makefile does this automatically if `third_party/tokenizers/libtokenizers.a` exists). `ONNX.Embed` runs the session, pools the last non-pad token (EOS), L2-normalizes. `EmbedQuery` adds the Instruct prefix. Tests skip if `models/f2llm-v2-80m/model.onnx` is missing (gitignored).
 
@@ -200,7 +200,7 @@ Kind e2e uses `klimatsearch:e2e`, `imagePullPolicy: Never`, fake embedder, fixtu
 
 | Item | Notes |
 | --- | --- |
-| Reranker ONNX (`BAAI/bge-reranker-v2-m3`) | `--reranker=onnx` is a compile stub; leave `none` until embeddings work. |
+| Reranker ONNX (`BAAI/bge-reranker-v2-m3`) | `python scripts/export-bge-reranker-onnx.py` then `KLIMAT_RERANKER=onnx` and `rerank=true`. Optional; needs extra RAM. |
 | Subscription key | Live Boverket v2 JSON worked without `BOVERKET_SUBSCRIPTION_KEY`; keep the header if APIM starts requiring it. |
 | MCP client config | Point Claude/Cursor at `/mcp` (streamable) or `/mcp/sse`. |
 | Golden set expansion | Add Fabriksbetong C-class Queries after ONNX works. |

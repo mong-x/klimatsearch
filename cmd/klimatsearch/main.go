@@ -44,7 +44,7 @@ func main() {
 	}
 	st.ConfigureVector(embedder.DimOf(emb))
 
-	rr, err := reranker.New(cfg.Reranker, cfg.Models, cfg.EmbeddingModel)
+	rr, err := reranker.New(cfg.Reranker, cfg.Models, cfg.RerankerModel)
 	if err != nil {
 		log.Error("reranker", "err", err)
 		os.Exit(1)

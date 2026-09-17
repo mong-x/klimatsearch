@@ -7,9 +7,9 @@ This is the layout klimatsearch expects on a laptop, a VM, ECS, or EKS. Weights 
 | Role | Model | Files klimatsearch reads | Env |
 | --- | --- | --- | --- |
 | **Embedder** | [codefuse-ai/F2LLM-v2-80M](https://huggingface.co/codefuse-ai/F2LLM-v2-80M), hidden size **320** | `models/f2llm-v2-80m/model.onnx` and `tokenizer.json` | `KLIMAT_EMBEDDER=onnx` |
-| **Reranker** | not wired | — | `KLIMAT_RERANKER=none` |
+| **Reranker** | [BAAI/bge-reranker-v2-m3](https://huggingface.co/BAAI/bge-reranker-v2-m3) (multilingual cross-encoder) | `models/bge-reranker-v2-m3/model.onnx` and `tokenizer.json` | `KLIMAT_RERANKER=onnx` plus search `rerank=true` |
 
-Do **not** set `KLIMAT_RERANKER=onnx`. That path looks for `models/<embedding-model>/reranker.onnx` and then errors: inference is a stub. Hybrid search is FTS + sqlite-vec; leave rerank off until we ship a real session.
+Reranker is optional. Default `KLIMAT_RERANKER=none` keeps FTS + sqlite-vec only. `onnx` loads the session at process start (same fail-closed rule as the embedder). Memory: F2LLM ~80M plus BGE-m3 reranker ~0.6B — start at **4 GiB** if both are on.
 
 A different embedding model is a new directory under `--models` plus a re-ingest (dimension is stored in SQLite `meta`; a mismatch disables vector search).
 
@@ -18,8 +18,9 @@ A different embedding model is a new directory under `--models` plus a re-ingest
 ```bash
 ./scripts/fetch-libtokenizers.sh
 make models
-python scripts/export-f2llm-onnx.py   # or: uv run --with 'optimum[onnxruntime]' --with transformers --with torch python scripts/export-f2llm-onnx.py
-./scripts/check-models.sh
+python scripts/export-f2llm-onnx.py
+python scripts/export-bge-reranker-onnx.py
+KLIMAT_RERANKER=onnx ./scripts/check-models.sh
 ```
 
 macOS ONNX Runtime: `brew install onnxruntime`. Linux/AWS: `./scripts/fetch-onnxruntime.sh` then export the printed `ONNXRUNTIME_LIB`.
@@ -27,8 +28,10 @@ macOS ONNX Runtime: `brew install onnxruntime`. Linux/AWS: `./scripts/fetch-onnx
 Expected tree:
 
 ```
-models/f2llm-v2-80m/model.onnx      # ~300 MB, gitignored
+models/f2llm-v2-80m/model.onnx           # ~300 MB, gitignored
 models/f2llm-v2-80m/tokenizer.json
+models/bge-reranker-v2-m3/model.onnx     # ~1 GB, gitignored
+models/bge-reranker-v2-m3/tokenizer.json
 third_party/tokenizers/libtokenizers.a
 # Linux:
 third_party/onnxruntime/libonnxruntime.so
@@ -39,7 +42,7 @@ Build with tokenizers (Makefile adds the tag when the `.a` exists):
 ```bash
 make build
 export KLIMAT_EMBEDDER=onnx
-export KLIMAT_RERANKER=none
+export KLIMAT_RERANKER=onnx          # optional; default none
 export ONNXRUNTIME_LIB=...          # if not in /usr/lib or Homebrew
 rm -f data/klimat.db                # once, so vectors match this ONNX
 ./bin/klimatsearch --listen=:8080
@@ -50,7 +53,7 @@ rm -f data/klimat.db                # once, so vectors match this ONNX
 After ingest, search with vectors:
 
 ```bash
-curl -sS 'http://127.0.0.1:8080/api/search?q=spånskiva&lang=sv&vector=true'
+curl -sS 'http://127.0.0.1:8080/api/search?q=spånskiva&lang=sv&vector=true&rerank=true'
 ```
 
 `vector` defaults to false (FTS only).
@@ -60,7 +63,7 @@ curl -sS 'http://127.0.0.1:8080/api/search?q=spånskiva&lang=sv&vector=true'
 1. Prepare `models/` on a build machine (or CI with Hugging Face access). Do not download 300 MB on every task start.
 2. Build a linux-amd64 binary with `fts5` and `tokenizers` (`./scripts/fetch-libtokenizers.sh` on Linux, then `make build`).
 3. Put `libonnxruntime.so` next to the process or in the image (`./scripts/fetch-onnxruntime.sh`).
-4. Mount models read-only. Give the process **1–2 GiB RAM**. Kind e2e’s `512Mi` is fake-embedder only.
+4. Mount models read-only. Embedder-only: **1–2 GiB**. Embedder + reranker: **4 GiB**. Kind e2e’s `512Mi` is fake-embedder only.
 
 Compose (models directory next to the compose file):
 
@@ -74,13 +77,14 @@ ECS/EKS sketch:
 | --- | --- |
 | Command | `klimatsearch` (no `--demo-fixture`) |
 | `KLIMAT_EMBEDDER` | `onnx` |
-| `KLIMAT_RERANKER` | `none` |
+| `KLIMAT_RERANKER` | `onnx` (or `none`) |
+| `KLIMAT_RERANKER_MODEL` | `bge-reranker-v2-m3` |
 | `KLIMAT_MODELS` | `/models` |
 | `KLIMAT_EMBEDDING_MODEL` | `f2llm-v2-80m` |
 | `ONNXRUNTIME_LIB` | `/usr/local/lib/libonnxruntime.so` |
-| Volume | EFS / EBS / image layer with `models/f2llm-v2-80m/` |
-| Memory | 2 GiB starting point |
-| Search | clients pass `vector=true` |
+| Volume | EFS / EBS / image layer with `models/f2llm-v2-80m/` and optionally `models/bge-reranker-v2-m3/` |
+| Memory | 2 GiB embedder; 4 GiB with reranker |
+| Search | clients pass `vector=true` and `rerank=true` |
 
 PVC for `data/klimat.db` if you do not want to re-embed ~230 rows on every cold start.
 

@@ -14,6 +14,7 @@ const (
 	DefaultDB             = "./data/klimat.db"
 	DefaultModels         = "./models"
 	DefaultEmbeddingModel = "f2llm-v2-80m"
+	DefaultRerankerModel  = "bge-reranker-v2-m3"
 	DefaultSource         = "Boverket Klimatdatabas"
 	DefaultAPIBase        = "https://api.boverket.se/klimatdatabas"
 	DefaultIngestInterval = 168 * time.Hour
@@ -31,6 +32,7 @@ type Config struct {
 	Embedder                string
 	Reranker                string
 	EmbeddingModel          string
+	RerankerModel           string
 	IngestOnStart           bool
 	IngestInterval          time.Duration
 	BoverketAPIBase         string
@@ -56,6 +58,7 @@ func Parse(args []string) (Config, error) {
 		Embedder:                env("KLIMAT_EMBEDDER", "auto"),
 		Reranker:                env("KLIMAT_RERANKER", "none"),
 		EmbeddingModel:          env("KLIMAT_EMBEDDING_MODEL", DefaultEmbeddingModel),
+		RerankerModel:           env("KLIMAT_RERANKER_MODEL", DefaultRerankerModel),
 		IngestOnStart:           envBool("KLIMAT_INGEST_ON_START", true),
 		IngestInterval:          DefaultIngestInterval,
 		BoverketAPIBase:         env("BOVERKET_API_BASE", env("KLIMAT_BOVERKET_API_BASE", DefaultAPIBase)),
@@ -82,7 +85,8 @@ func Parse(args []string) (Config, error) {
 	fs.StringVar(&c.Models, "models", c.Models, "ONNX models directory (`KLIMAT_MODELS`)")
 	fs.StringVar(&c.Embedder, "embedder", c.Embedder, "embedder: auto|fake|onnx (`KLIMAT_EMBEDDER`)")
 	fs.StringVar(&c.Reranker, "reranker", c.Reranker, "reranker: none|fake|onnx (`KLIMAT_RERANKER`)")
-	fs.StringVar(&c.EmbeddingModel, "embedding-model", c.EmbeddingModel, "model directory name under --models")
+	fs.StringVar(&c.EmbeddingModel, "embedding-model", c.EmbeddingModel, "embedder directory under --models")
+	fs.StringVar(&c.RerankerModel, "reranker-model", c.RerankerModel, "reranker directory under --models (`KLIMAT_RERANKER_MODEL`)")
 	fs.BoolVar(&c.IngestOnStart, "ingest-on-start", c.IngestOnStart, "run ingest once at boot")
 	fs.DurationVar(&c.IngestInterval, "ingest-interval", c.IngestInterval, "repeat ingest interval (0 disables ticker)")
 	fs.StringVar(&c.BoverketAPIBase, "boverket-api-base", c.BoverketAPIBase, "Boverket APIM base URL")

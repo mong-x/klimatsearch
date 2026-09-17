@@ -2,23 +2,21 @@ package reranker
 
 import (
 	"fmt"
-	"os"
 	"sort"
 	"strings"
-	"sync"
 
 	"github.com/mong-x/klimatsearch/internal/search"
 )
 
 // New builds a Reranker. kind is none|fake|onnx.
-func New(kind, _, _ string) (search.Reranker, error) {
+func New(kind, modelsDir, modelName string) (search.Reranker, error) {
 	switch strings.ToLower(kind) {
 	case "", "none":
 		return None{}, nil
 	case "fake":
 		return Fake{}, nil
 	case "onnx":
-		return nil, fmt.Errorf("onnx reranker is not wired; use --reranker=none or fake (see docs/SELFHOST.md)")
+		return newONNX(modelsDir, modelName)
 	default:
 		return nil, fmt.Errorf("unknown reranker %q", kind)
 	}
@@ -65,35 +63,4 @@ func (Fake) Rerank(query string, docs []search.Hit) ([]search.Hit, error) {
 		return out[i].Score > out[j].Score
 	})
 	return out, nil
-}
-
-// ONNX is a compile-ready stub that fails until a reranker.onnx is present
-// and wired. Tests must not select kind=onnx.
-type ONNX struct {
-	mu        sync.Mutex
-	modelPath string
-	inited    bool
-	initErr   error
-}
-
-func NewONNX(modelPath string) *ONNX {
-	return &ONNX{modelPath: modelPath}
-}
-
-func (o *ONNX) Rerank(query string, docs []search.Hit) ([]search.Hit, error) {
-	o.mu.Lock()
-	defer o.mu.Unlock()
-	if !o.inited {
-		o.inited = true
-		if _, err := os.Stat(o.modelPath); err != nil {
-			o.initErr = fmt.Errorf("onnx reranker %s: %w", o.modelPath, err)
-		} else {
-			o.initErr = fmt.Errorf("onnx reranker found at %s but inference is not wired in this build; use --reranker=none or fake", o.modelPath)
-		}
-	}
-	if o.initErr != nil {
-		return nil, o.initErr
-	}
-	_ = query
-	return docs, nil
 }

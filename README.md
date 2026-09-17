@@ -136,7 +136,7 @@ Hybrid retrieval:
 1. **FTS5** BM25 always runs on names, descriptions, applicability, synonyms.
 2. **sqlite-vec** KNN runs when the store has vectors and `vector=true`.
 3. **RRF** (`k=60`, equal weights) fuses the two ranked lists.
-4. Optional ONNX reranker is a compile stub (`--reranker=none` until embeddings are trusted).
+4. Optional ONNX reranker (`KLIMAT_RERANKER=onnx`, `rerank=true`) after F2LLM is trusted.
 
 Vector off → FTS only. A stored `meta.embedding_dim` mismatch disables vector search rather than mixing dimensions.
 
@@ -166,7 +166,7 @@ Copy `.env.example` to a gitignored `.env`. Existing shell exports win over `.en
 
 ## Embeddings
 
-Default production model is [codefuse-ai/F2LLM-v2-80M](https://huggingface.co/codefuse-ai/F2LLM-v2-80M) (hidden size 320, last-token/EOS pool, L2). Weights are **not** in git. Leave `--reranker=none`: the ONNX reranker is a stub. Full layout, Linux/AWS, and `./scripts/check-models.sh`: **[docs/SELFHOST.md](docs/SELFHOST.md)**.
+Default production model is [codefuse-ai/F2LLM-v2-80M](https://huggingface.co/codefuse-ai/F2LLM-v2-80M) (hidden size 320, last-token/EOS pool, L2). Weights are **not** in git. Optional reranker is [BAAI/bge-reranker-v2-m3](https://huggingface.co/BAAI/bge-reranker-v2-m3) (`KLIMAT_RERANKER=onnx`, search `rerank=true`). Full layout: **[docs/SELFHOST.md](docs/SELFHOST.md)**.
 
 ```bash
 brew install onnxruntime          # macOS; or set ONNXRUNTIME_LIB
