@@ -1,0 +1,23 @@
+internal/ingest/webhook_test.go
+  s_546f0a9ec1bffd::t_74f5f50f9740c9 1-134
+docs/adr/0011-webhook-on-content-change.md
+  s_546f0a9ec1bffd::t_d5b0610b20fb7b 1-9
+internal/ingest/webhook.go
+  s_546f0a9ec1bffd::t_2b7642379ff7f3 1-136
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "642f93d1eb8e96103011248994c00a295118491f",
+  "prompts": {},
+  "sessions": {
+    "s_546f0a9ec1bffd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "01a0af4f-5c78-7b63-b802-9a718213d37a",
+        "model": "unknown"
+      },
+      "human_author": "mjnong <marcusnagy@icloud.com>"
+    }
+  }
+}
