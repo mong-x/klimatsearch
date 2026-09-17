@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>klimatsearch — OpenAPI</title>
+  <meta name="description" content="OpenAPI 3 for klimatsearch REST: search, resources, compare, origin redirect, Guard." />
+  <link rel="canonical" href="https://mong-x.github.io/klimatsearch/swagger/" />
+  <link rel="icon" href="../assets/mark.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5.17.14/swagger-ui.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0a0b0d; --border: #1e2127; --text: #e6e8eb; --muted: #9ba1ac; --fn: #82aaff;
+    }
+    html, body { margin: 0; background: var(--bg); color: var(--text); font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
+    nav {
+      display: flex; align-items: center; gap: 20px; height: 60px;
+      border-bottom: 1px solid var(--border); padding: 0 24px;
+    }
+    nav .brand { display: flex; align-items: center; gap: 10px; color: var(--text); font-weight: 600; text-decoration: none; }
+    nav .brand img { width: 28px; height: 28px; }
+    nav .links { margin-left: auto; display: flex; gap: 18px; font-size: 14px; }
+    nav .links a { color: var(--muted); text-decoration: none; }
+    nav .links a:hover { color: var(--text); }
+    .note { max-width: 1120px; margin: 0 auto; padding: 16px 24px 0; color: var(--muted); font-size: 14px; line-height: 1.5; }
+    .note code { font-family: ui-monospace, monospace; color: var(--text); }
+    .swagger-ui .topbar { display: none; }
+    .swagger-ui { background: var(--bg); }
+    .swagger-ui .information-container.wrapper { padding-top: 12px; }
+    .swagger-ui .info .title, .swagger-ui .info p, .swagger-ui .info li,
+    .swagger-ui .opblock-tag, .swagger-ui .opblock-summary-path,
+    .swagger-ui .opblock-description-wrapper p, .swagger-ui table thead tr th,
+    .swagger-ui .parameter__name, .swagger-ui .response-col_status,
+    .swagger-ui .tab li { color: var(--text) !important; }
+    .swagger-ui .info a, .swagger-ui .info .base-url { color: var(--fn) !important; }
+    .swagger-ui .scheme-container { background: #101216; box-shadow: none; border: 1px solid var(--border); }
+    .swagger-ui .opblock { background: #101216; border-color: var(--border); }
+    .swagger-ui .opblock .opblock-summary { border-color: var(--border); }
+    .swagger-ui section.models { border-color: var(--border); }
+    .swagger-ui .model-box, .swagger-ui .model { background: #101216; }
+  </style>
+</head>
+<body>
+  <nav>
+    <a class="brand" href="../"><img src="../assets/mark.svg" alt="" />klimatsearch</a>
+    <div class="links">
+      <a href="../">Home</a>
+      <a href="./">Swagger</a>
+      <a href="../openapi.yaml">openapi.yaml</a>
+      <a href="https://github.com/mong-x/klimatsearch">GitHub</a>
+    </div>
+  </nav>
+  <p class="note">
+    Spec for the klimatsearch process, not Boverket’s bulk API.
+    <strong>Try it out</strong> talks to <code>http://127.0.0.1:8080</code> (or <code>:8081</code>) — run <code>make run</code> locally; GitHub Pages cannot call your laptop.
+    Live process also serves this UI at <code>GET /docs</code> and the spec at <code>GET /openapi.yaml</code>.
+  </p>
+  <div id="swagger-ui"></div>
+  <script src="https://unpkg.com/swagger-ui-dist@5.17.14/swagger-ui-bundle.js" crossorigin></script>
+  <script>
+    window.ui = SwaggerUIBundle({
+      url: "../openapi.yaml",
+      dom_id: "#swagger-ui",
+      deepLinking: true,
+      tryItOutEnabled: true,
+      persistAuthorization: true,
+      layout: "BaseLayout",
+      defaultModelsExpandDepth: 1
+    });
+  </script>
+</body>
+</html>

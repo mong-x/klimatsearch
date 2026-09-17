@@ -22,7 +22,7 @@
     <div class="wrap" style="display:flex;align-items:center;gap:20px;width:100%">
       <a class="brand" href="./"><img src="assets/mark.svg" alt="" />klimatsearch</a>
       <div class="links">
-        <a href="https://github.com/mong-x/klimatsearch#rest">REST</a>
+        <a href="./swagger/">Swagger</a>
         <a href="https://github.com/mong-x/klimatsearch#mcp">MCP</a>
         <a href="https://github.com/mong-x/klimatsearch/blob/main/docs/LAUNCH.md">Launch</a>
         <a href="https://github.com/mong-x/klimatsearch">GitHub</a>
@@ -37,7 +37,7 @@
       <p class="lead">Generic Swedish construction resources, bilingual, with typical A1–A3. Agents and tools query it; every response cites Boverket. Not affiliated with Boverket.</p>
       <div class="hero-actions">
         <a class="btn-primary" href="https://github.com/mong-x/klimatsearch">github.com/mong-x/klimatsearch</a>
-        <a class="btn-ghost" href="https://github.com/mong-x/klimatsearch/blob/main/docs/LAUNCH.md">Human launch checklist</a>
+        <a class="btn-ghost" href="./swagger/">OpenAPI / Swagger</a>
       </div>
       <div class="install" id="install">
         <span class="prompt">$</span>
@@ -127,6 +127,8 @@
         <thead><tr><th>Method</th><th>Path</th></tr></thead>
         <tbody>
           <tr><td>GET</td><td>/healthz</td></tr>
+          <tr><td>GET</td><td>/openapi.yaml</td></tr>
+          <tr><td>GET</td><td>/docs</td></tr>
           <tr><td>GET</td><td>/api/search?q=&amp;vector=&amp;rerank=&amp;lang=sv|en&amp;databases=</td></tr>
           <tr><td>GET</td><td>/api/resources/{id}?lang=</td></tr>
           <tr><td>GET</td><td>/api/resources/compare?a=&amp;b=&amp;unit=</td></tr>

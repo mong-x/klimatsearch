@@ -10,7 +10,8 @@ Task-oriented index. Start at the [README](../README.md) or the [GitHub Pages si
 | [AGENTS.md](../AGENTS.md) | Constraints for coding agents (ServeMux, CGO, fts5) |
 | [adr/](adr/) | Architecture Decision Records |
 | [research/](research/) | Embedding protocol, repo-profile notes |
-| [reference/boverket-klimatdatabas-openapi.json](reference/boverket-klimatdatabas-openapi.json) | Official Boverket OpenAPI |
+| [OpenAPI (klimatsearch)](https://mong-x.github.io/klimatsearch/swagger/) | Swagger UI for this process (`internal/api/openapi.yaml`, also `GET /docs`) |
+| [reference/boverket-klimatdatabas-openapi.json](reference/boverket-klimatdatabas-openapi.json) | Official Boverket bulk OpenAPI (no per-id GET) |
 
 ## ADRs
 

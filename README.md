@@ -8,10 +8,11 @@
 [![License](https://img.shields.io/badge/license-Apache_2.0-1F6F4A?style=for-the-badge&labelColor=0A0B0D)](./LICENSE)
 [![MCP](https://img.shields.io/badge/MCP-streamable%20HTTP-82AAFF?style=for-the-badge&labelColor=0A0B0D)](https://modelcontextprotocol.io)
 [![Pages](https://img.shields.io/badge/site-mong--x.github.io-1F6F4A?style=for-the-badge&logo=githubpages&logoColor=E6E8EB&labelColor=0A0B0D)](https://mong-x.github.io/klimatsearch/)
+[![OpenAPI](https://img.shields.io/badge/OpenAPI-Swagger_UI-82AAFF?style=for-the-badge&labelColor=0A0B0D)](https://mong-x.github.io/klimatsearch/swagger/)
 
 <sub>SQLite FTS5 · sqlite-vec · RRF k=60 · F2LLM-v2-80M · Unkey · MPP 402</sub>
 
-**[Live site →](https://mong-x.github.io/klimatsearch/)** — REST, MCP, Guard, and launch notes in one page.
+**[Live site →](https://mong-x.github.io/klimatsearch/)** · **[Swagger UI →](https://mong-x.github.io/klimatsearch/swagger/)** — REST spec (`GET /openapi.yaml`, `GET /docs` on a running process).
 
 **Get running in one line:** `make run` — then `GET http://127.0.0.1:8080/api/search?q=betong&lang=sv`
 
@@ -92,6 +93,8 @@ Optional for production embeddings: [ONNX Runtime](https://onnxruntime.ai) (`bre
 | Method | Path |
 | --- | --- |
 | GET | `/healthz` |
+| GET | `/openapi.yaml` |
+| GET | `/docs` |
 | GET | `/api/search?q=&vector=true\|false&rerank=true\|false&lang=sv\|en&databases=` |
 | GET | `/api/resources?lang=&databases=` |
 | GET | `/api/resources/{id}?lang=` |

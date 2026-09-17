@@ -85,6 +85,12 @@ func TestWrapFailClosed401AndHealthz(t *testing.T) {
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
+	mux.HandleFunc("GET /openapi.yaml", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+	mux.HandleFunc("GET /docs", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
 	g := &Guard{}
 	srv := httptest.NewServer(g.Wrap(mux))
 	t.Cleanup(srv.Close)
@@ -95,6 +101,16 @@ func TestWrapFailClosed401AndHealthz(t *testing.T) {
 	defer hz.Body.Close()
 	if hz.StatusCode != 200 {
 		t.Fatalf("healthz=%d", hz.StatusCode)
+	}
+	for _, path := range []string{"/openapi.yaml", "/docs"} {
+		resp, err := http.Get(srv.URL + path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		resp.Body.Close()
+		if resp.StatusCode != 200 {
+			t.Fatalf("%s=%d", path, resp.StatusCode)
+		}
 	}
 	denied, err := http.Get(srv.URL + "/api/search")
 	if err != nil {

@@ -33,6 +33,8 @@ func New(eng search.SearchEngine, st *store.Store, source string) *Handler {
 
 func (h *Handler) Register(mux *http.ServeMux) {
 	mux.HandleFunc("GET /healthz", h.healthz)
+	mux.HandleFunc("GET /openapi.yaml", h.openapiYAML)
+	mux.HandleFunc("GET /docs", h.docs)
 	mux.HandleFunc("GET /api/search", h.search)
 	mux.HandleFunc("GET /api/resources", h.list)
 	mux.HandleFunc("GET /api/resources/compare", h.compare)

@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>klimatsearch API</title>
+  <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5.17.14/swagger-ui.css" />
+  <style>
+    html { box-sizing: border-box; }
+    *, *:before, *:after { box-sizing: inherit; }
+    body { margin: 0; background: #0a0b0d; }
+    .top { height: 56px; display: flex; align-items: center; padding: 0 24px;
+      border-bottom: 1px solid #1e2127; font-family: ui-sans-serif, system-ui, sans-serif; }
+    .top a { color: #e6e8eb; text-decoration: none; font-weight: 600; }
+    .top span { color: #9ba1ac; margin-left: 12px; font-size: 14px; }
+    .swagger-ui .topbar { display: none; }
+    .swagger-ui { background: #0a0b0d; }
+    .swagger-ui .info .title, .swagger-ui .info p, .swagger-ui .info li,
+    .swagger-ui .scheme-container, .swagger-ui .opblock-tag { color: #e6e8eb; }
+    .swagger-ui .info a { color: #82aaff; }
+  </style>
+</head>
+<body>
+  <div class="top"><a href="/">klimatsearch</a><span>OpenAPI</span></div>
+  <div id="swagger-ui"></div>
+  <script src="https://unpkg.com/swagger-ui-dist@5.17.14/swagger-ui-bundle.js" crossorigin></script>
+  <script>
+    window.ui = SwaggerUIBundle({
+      url: "/openapi.yaml",
+      dom_id: "#swagger-ui",
+      deepLinking: true,
+      tryItOutEnabled: true,
+      persistAuthorization: true,
+      layout: "BaseLayout"
+    });
+  </script>
+</body>
+</html>

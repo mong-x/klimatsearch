@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/mong-x/klimatsearch/internal/api"
@@ -67,6 +68,33 @@ func TestHTTP(t *testing.T) {
 		defer resp.Body.Close()
 		if resp.StatusCode != 200 {
 			t.Fatal(resp.Status)
+		}
+	})
+	t.Run("openapi yaml", func(t *testing.T) {
+		resp := get(t, srv.URL+"/openapi.yaml")
+		defer resp.Body.Close()
+		if resp.StatusCode != 200 {
+			t.Fatal(resp.Status)
+		}
+		var buf bytes.Buffer
+		if _, err := buf.ReadFrom(resp.Body); err != nil {
+			t.Fatal(err)
+		}
+		if !bytes.Contains(buf.Bytes(), []byte("openapi: 3.0.3")) {
+			t.Fatal("missing openapi version")
+		}
+		if !bytes.Contains(buf.Bytes(), []byte("/api/resources/{id}/origin")) {
+			t.Fatal("missing origin path")
+		}
+	})
+	t.Run("docs swagger ui", func(t *testing.T) {
+		resp := get(t, srv.URL+"/docs")
+		defer resp.Body.Close()
+		if resp.StatusCode != 200 {
+			t.Fatal(resp.Status)
+		}
+		if ct := resp.Header.Get("Content-Type"); !strings.Contains(ct, "text/html") {
+			t.Fatalf("content-type=%s", ct)
 		}
 	})
 	t.Run("empty q 400", func(t *testing.T) {

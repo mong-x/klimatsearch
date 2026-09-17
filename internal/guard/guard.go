@@ -54,10 +54,11 @@ func New(cfg config.Config) (*Guard, error) {
 	return g, nil
 }
 
-// Wrap protects /api/*, /mcp, /mcp/sse, /mcp/messages, /admin/*. /healthz is public.
+// Wrap protects /api/*, /mcp, /mcp/sse, /mcp/messages, /admin/*.
+// /healthz, /openapi.yaml, and /docs are public.
 func (g *Guard) Wrap(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/healthz" {
+		if publicPath(r.URL.Path) {
 			next.ServeHTTP(w, r)
 			return
 		}
@@ -79,6 +80,15 @@ func (g *Guard) Wrap(next http.Handler) http.Handler {
 		}
 		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
 	})
+}
+
+func publicPath(path string) bool {
+	switch path {
+	case "/healthz", "/openapi.yaml", "/docs":
+		return true
+	default:
+		return false
+	}
 }
 
 func passOrDeny(w http.ResponseWriter, r *http.Request, d Decision, next http.Handler) {
