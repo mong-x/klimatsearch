@@ -1,0 +1,23 @@
+LICENSE
+  s_7b1d254e7dc4d6::t_3c6e299f3e10f6 1-201
+.gitignore
+  s_7b1d254e7dc4d6::t_6ecaff25ce2847 1-23
+.agentignore
+  s_7b1d254e7dc4d6::t_0aa878b216e1b9 1-9
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "53fed3865a411aa55921aa5f4c6d20a3fe7dc044",
+  "prompts": {},
+  "sessions": {
+    "s_7b1d254e7dc4d6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "01a0af5a-c16b-7bd0-879e-eec39da655a8",
+        "model": "unknown"
+      },
+      "human_author": "mjnong <marcusnagy@icloud.com>"
+    }
+  }
+}
