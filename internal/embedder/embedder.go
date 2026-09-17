@@ -29,12 +29,21 @@ func New(kind, modelsDir, modelName string) (search.Embedder, error) {
 	case "fake":
 		return Fake{}, nil
 	case "onnx":
-		tokPath := filepath.Join(modelsDir, modelName, "tokenizer.json")
-		var tok Tokenizer = StubTokenizer{Path: tokPath}
-		if fileExists(tokPath) {
-			tok = FileTokenizer{Path: tokPath}
+		if !fileExists(onnxPath) {
+			return nil, fmt.Errorf("embedder onnx: missing %s (see docs/SELFHOST.md)", onnxPath)
 		}
-		return NewONNX(onnxPath, tok, Dim)
+		tokPath := filepath.Join(modelsDir, modelName, "tokenizer.json")
+		if !fileExists(tokPath) {
+			return nil, fmt.Errorf("embedder onnx: missing %s (Hugging Face tokenizer.json is required)", tokPath)
+		}
+		o, err := NewONNX(onnxPath, FileTokenizer{Path: tokPath}, Dim)
+		if err != nil {
+			return nil, err
+		}
+		if err := o.Warm(); err != nil {
+			return nil, err
+		}
+		return o, nil
 	default:
 		return nil, fmt.Errorf("unknown embedder %q", kind)
 	}

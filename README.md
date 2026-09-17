@@ -166,7 +166,7 @@ Copy `.env.example` to a gitignored `.env`. Existing shell exports win over `.en
 
 ## Embeddings
 
-Default production model is [codefuse-ai/F2LLM-v2-80M](https://huggingface.co/codefuse-ai/F2LLM-v2-80M) (hidden size 320, last-token/EOS pool, L2). Weights are **not** in git.
+Default production model is [codefuse-ai/F2LLM-v2-80M](https://huggingface.co/codefuse-ai/F2LLM-v2-80M) (hidden size 320, last-token/EOS pool, L2). Weights are **not** in git. Leave `--reranker=none`: the ONNX reranker is a stub. Full layout, Linux/AWS, and `./scripts/check-models.sh`: **[docs/SELFHOST.md](docs/SELFHOST.md)**.
 
 ```bash
 brew install onnxruntime          # macOS; or set ONNXRUNTIME_LIB
@@ -216,6 +216,7 @@ Full index: **[docs/README.md](docs/README.md)**.
 | Doc | What's in it |
 | --- | --- |
 | [docs/LAUNCH.md](docs/LAUNCH.md) | ONNX, Unkey, MPP, webhook, BR25, production k8s — human-only steps |
+| [docs/SELFHOST.md](docs/SELFHOST.md) | F2LLM files, check-models, Docker/AWS; reranker off |
 | [Swagger UI](https://mong-x.github.io/klimatsearch/swagger/) | REST OpenAPI |
 | [CONTEXT.md](CONTEXT.md) | Glossary |
 

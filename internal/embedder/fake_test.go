@@ -7,6 +7,13 @@ import (
 	"github.com/mong-x/klimatsearch/internal/search"
 )
 
+func TestNewONNXMissingModel(t *testing.T) {
+	_, err := New("onnx", t.TempDir(), "missing")
+	if err == nil {
+		t.Fatal("expected error when model.onnx is absent")
+	}
+}
+
 func TestFakeIsNotQueryEmbedder(t *testing.T) {
 	var e search.Embedder = Fake{}
 	if _, ok := e.(search.QueryEmbedder); ok {

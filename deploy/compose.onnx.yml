@@ -1,0 +1,27 @@
+# Self-host with F2LLM ONNX. Prepare models/ first (docs/SELFHOST.md).
+# docker compose -f deploy/compose.onnx.yml up --build
+services:
+  klimatsearch:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      args:
+        GO_TAGS: fts5 tokenizers
+    environment:
+      KLIMAT_LISTEN: ":8080"
+      KLIMAT_DB: /app/data/klimat.db
+      KLIMAT_EMBEDDER: onnx
+      KLIMAT_RERANKER: none
+      KLIMAT_MODELS: /app/models
+      KLIMAT_EMBEDDING_MODEL: f2llm-v2-80m
+      ONNXRUNTIME_LIB: /usr/local/lib/libonnxruntime.so
+    volumes:
+      - ../models:/app/models:ro
+      - ../third_party/onnxruntime/libonnxruntime.so:/usr/local/lib/libonnxruntime.so:ro
+      - klimat-data:/app/data
+    ports:
+      - "8080:8080"
+    mem_limit: 2g
+
+volumes:
+  klimat-data:

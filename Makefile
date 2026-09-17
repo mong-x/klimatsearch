@@ -1,7 +1,7 @@
-.PHONY: test test-hosted build build-hosted run models e2e docker help tidy
+.PHONY: test test-hosted build build-hosted run models check-models e2e docker help tidy
 
 help:
-	@echo "make test | build | run | models | docker | e2e"
+	@echo "make test | build | run | models | check-models | docker | e2e"
 	@echo "make build-hosted | test-hosted  # Unkey + MPP Guard (the binary we run)"
 	@echo "Human launch steps: docs/LAUNCH.md"
 
@@ -34,6 +34,9 @@ run: build
 models:
 	./scripts/download-models.sh
 	./scripts/fetch-libtokenizers.sh
+
+check-models:
+	./scripts/check-models.sh
 
 docker:
 	docker build -t klimatsearch:local .

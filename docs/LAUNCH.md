@@ -32,6 +32,8 @@ Cite **Boverket Klimatdatabas** in any UI or paper that shows these numbers.
 
 ## 1. Production embeddings (F2LLM-v2-80M ONNX)
 
+Self-hosters (AWS, Docker, a VM): follow **[SELFHOST.md](SELFHOST.md)** — canonical files, `check-models.sh`, Linux ONNX Runtime, compose. The reranker is not wired; keep `KLIMAT_RERANKER=none`.
+
 **Code is wired:** `FileTokenizer` uses `github.com/daulet/tokenizers` when you build `-tags tokenizers` (Makefile does this automatically if `third_party/tokenizers/libtokenizers.a` exists). `ONNX.Embed` runs the session, pools the last non-pad token (EOS), L2-normalizes. `EmbedQuery` adds the Instruct prefix. Tests skip if `models/f2llm-v2-80m/model.onnx` is missing (gitignored).
 
 **Why you still do this on each machine:** ~160 MB safetensors + ~300 MB ONNX are not in git. `libonnxruntime` is a system package. `libtokenizers.a` is fetched per OS.
@@ -184,7 +186,7 @@ Kind e2e uses `klimatsearch:e2e`, `imagePullPolicy: Never`, fake embedder, fixtu
 
 **You:**
 
-1. Build and push a real image (include `models/` in the image or a volume; do not git LFS the weights unless you choose to).
+1. Follow [SELFHOST.md](SELFHOST.md). Build and push a real image (mount `models/` or a private layer; do not git the weights). `KLIMAT_EMBEDDER=onnx` and `KLIMAT_RERANKER=none`.
 2. Set `image:` + `imagePullPolicy: IfNotPresent` in `deploy/k8s/deployment.yaml`.
 3. Replace the Ingress stub (`deploy/k8s/ingress.yaml`) with your ALB / ingress class, host, TLS.
 4. Attach secrets: `UNKEY_ROOT_KEY`, `MPP_SECRET_KEY`, `MPP_RECIPIENT`, `ONNXRUNTIME_LIB`, `KLIMAT_EMBEDDER=onnx`.

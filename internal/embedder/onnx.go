@@ -34,6 +34,9 @@ func NewONNX(modelPath string, tok Tokenizer, dim int) (*ONNX, error) {
 
 func (o *ONNX) Dim() int { return o.dim }
 
+// Warm loads ONNX Runtime and the session so a missing library fails at process start.
+func (o *ONNX) Warm() error { return o.init() }
+
 // QueryPrefix is the F2LLM-v2 Instruct wrapper. Documents must not use it.
 const QueryPrefix = "Instruct: Given a search query, retrieve the matching generic construction product or energy carrier from Boverket Klimatdatabas.\nQuery: "
 
