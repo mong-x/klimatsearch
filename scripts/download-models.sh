@@ -19,8 +19,10 @@ if command -v huggingface-cli >/dev/null 2>&1; then
   huggingface-cli download "$HF_ID" --local-dir "$DEST"
 elif command -v hf >/dev/null 2>&1; then
   hf download "$HF_ID" --local-dir "$DEST"
+elif command -v uv >/dev/null 2>&1; then
+  uv run --with huggingface_hub python -c "from huggingface_hub import snapshot_download; snapshot_download('$HF_ID', local_dir='$DEST')"
 else
-  echo "Install huggingface_hub (huggingface-cli) or set files manually under ${DEST}/" >&2
+  echo "Install huggingface_hub (huggingface-cli) or uv, or copy files under ${DEST}/" >&2
   echo "Expected layout:" >&2
   echo "  ${DEST}/model.onnx" >&2
   echo "  ${DEST}/tokenizer.json" >&2

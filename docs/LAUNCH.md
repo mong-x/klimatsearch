@@ -32,47 +32,47 @@ Cite **Boverket Klimatdatabas** in any UI or paper that shows these numbers.
 
 ## 1. Production embeddings (F2LLM-v2-80M ONNX)
 
-**Why you:** weights are ~160 MB, not in git. Export and `libonnxruntime` are machine-local. The Go ONNX path compiles but **does not run inference** until a HuggingFace tokenizer is wired (`internal/embedder/tokenizer.go`). That CGO/Rust `daulet/tokenizers` (or equivalent) step is the remaining code hook; do it after the files below exist.
+**Code is wired:** `FileTokenizer` uses `github.com/daulet/tokenizers` when you build `-tags tokenizers` (Makefile does this automatically if `third_party/tokenizers/libtokenizers.a` exists). `ONNX.Embed` runs the session, pools the last non-pad token (EOS), L2-normalizes. `EmbedQuery` adds the Instruct prefix. Tests skip if `models/f2llm-v2-80m/model.onnx` is missing (gitignored).
+
+**Why you still do this on each machine:** ~160 MB safetensors + ~300 MB ONNX are not in git. `libonnxruntime` is a system package. `libtokenizers.a` is fetched per OS.
 
 **Do this:**
 
-1. Install Hugging Face CLI and ONNX Runtime for your OS.
-   - macOS: `brew install onnxruntime` (or download from [Microsoft ONNX Runtime releases](https://github.com/microsoft/onnxruntime/releases))
-   - Set `ONNXRUNTIME_LIB` to the `.dylib` / `.so` if it is not in the default paths (`/opt/homebrew/lib/libonnxruntime.dylib`, `/usr/lib/libonnxruntime.so`).
-2. Download the instruct model:
+1. ONNX Runtime:
+   - macOS: `brew install onnxruntime`
+   - Or set `ONNXRUNTIME_LIB` to the `.dylib` / `.so` ([releases](https://github.com/microsoft/onnxruntime/releases)).
+2. Tokenizers C lib:
+
+   ```bash
+   ./scripts/fetch-libtokenizers.sh
+   ```
+
+3. Weights + tokenizer + ONNX (Hugging Face; no `huggingface-cli` required if you have `uv`):
 
    ```bash
    make models
-   # → models/f2llm-v2-80m/  (safetensors + tokenizer.json)
+   python scripts/export-f2llm-onnx.py   # or: uv run --with 'optimum[onnxruntime]' --with transformers --with torch python scripts/export-f2llm-onnx.py
    ```
 
-3. Export **feature-extraction** ONNX (not sequence classification). From a Python env with `transformers` and `optimum[onnxruntime]`:
-
-   ```bash
-   python scripts/export-f2llm-onnx.py
-   ```
-
-   You want:
+   Expected:
 
    ```
    models/f2llm-v2-80m/model.onnx
    models/f2llm-v2-80m/tokenizer.json
+   third_party/tokenizers/libtokenizers.a
    ```
 
-   Pooling must be **last token / EOS**, dim **320**, then L2. Truncating MRL dims is optional; keep 320.
-
-4. Wire a real `Tokenizer` in `internal/embedder/tokenizer.go` (replace `FileTokenizer`) using `tokenizer.json`, adding EOS the way the [F2LLM-v2-80M card](https://huggingface.co/codefuse-ai/F2LLM-v2-80M) does. Then implement `ONNX.Embed` tensor run + EOS gather (the session is already opened in `init()`). Until that lands, `--embedder=onnx` errors on purpose.
-
-5. Run with documents unlabeled and Queries prefixed (`EmbedQuery` already adds `QueryPrefix` in `internal/embedder/onnx.go`). Re-ingest so vectors match the labeled `EmbeddingText()`:
+4. Re-ingest so vectors match labeled `EmbeddingText()`:
 
    ```bash
    rm -f data/klimat.db
-   KLIMAT_EMBEDDER=onnx go run -tags fts5 ./cmd/klimatsearch
+   make build
+   KLIMAT_EMBEDDER=onnx ./bin/klimatsearch
    ```
 
-6. Score `testdata/golden-queries.json` (hit@1 / sibling inversions). Do **not** use the Fake embedder for that table.
+5. Score `testdata/golden-queries.json` (hit@1 / sibling inversions). Do **not** use the Fake embedder for that table.
 
-Protocol details: [ADR-0010](adr/0010-f2llm-query-prefix.md), [research note](research/2026-09-17-boverket-embedding-optimization.md).
+Protocol: [ADR-0010](adr/0010-f2llm-query-prefix.md), [research note](research/2026-09-17-boverket-embedding-optimization.md).
 
 ---
 
@@ -159,10 +159,11 @@ Kind e2e uses `klimatsearch:e2e`, `imagePullPolicy: Never`, fake embedder, fixtu
 ```
 [ ] make test && make run
 [ ] Live ingest from api.boverket.se (no --demo-fixture)
-[ ] HF download + ONNX export into models/f2llm-v2-80m/
-[ ] libonnxruntime on the host
-[ ] Tokenizer + ONNX.Embed inference (code in tokenizer.go / onnx.go)
-[ ] Re-ingest with KLIMAT_EMBEDDER=onnx
+[ ] brew install onnxruntime (or ONNXRUNTIME_LIB)
+[ ] ./scripts/fetch-libtokenizers.sh
+[ ] make models && python scripts/export-f2llm-onnx.py
+[ ] rm data/klimat.db && KLIMAT_EMBEDDER=onnx make build && ./bin/klimatsearch
+[ ] Score testdata/golden-queries.json with ONNX (not Fake)
 [ ] Score testdata/golden-queries.json
 [ ] Unkey root key + Stripe
 [ ] ZeroClick seller + storefront URL

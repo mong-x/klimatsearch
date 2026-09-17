@@ -4,6 +4,9 @@
 /data/*.db-shm
 /models/**
 !/models/.gitkeep
+/third_party/tokenizers/*.a
+/third_party/tokenizers/*.so
+/third_party/tokenizers/*.dylib
 /bin/
 /dist/
 .env

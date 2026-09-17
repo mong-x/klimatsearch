@@ -12,13 +12,14 @@ import (
 // ONNX is a lazy-init production Embedder. Tests must not construct this
 // without a model file; Embed fails clearly if weights or runtime are missing.
 type ONNX struct {
-	mu        sync.Mutex
-	modelPath string
-	tokenizer Tokenizer
-	dim       int
-	inited    bool
-	initErr   error
-	session   *ort.DynamicAdvancedSession
+	mu         sync.Mutex
+	modelPath  string
+	tokenizer  Tokenizer
+	dim        int
+	inited     bool
+	initErr    error
+	session    *ort.DynamicAdvancedSession
+	inputNames []string
 }
 
 func NewONNX(modelPath string, tok Tokenizer, dim int) (*ONNX, error) {
@@ -48,9 +49,80 @@ func (o *ONNX) Embed(text string) ([]float32, error) {
 	if err != nil {
 		return nil, fmt.Errorf("tokenize: %w", err)
 	}
-	_ = ids
-	_ = mask
-	return nil, fmt.Errorf("onnx session is up but Embed inference is not wired (EOS pool + L2); see docs/LAUNCH.md §1 or use --embedder=fake")
+	if len(ids) == 0 || len(ids) != len(mask) {
+		return nil, fmt.Errorf("tokenizer returned empty or mismatched ids/mask")
+	}
+	seq := int64(len(ids))
+	pos := make([]int64, seq)
+	for i := range pos {
+		pos[i] = int64(i)
+	}
+	idT, err := ort.NewTensor(ort.NewShape(1, seq), ids)
+	if err != nil {
+		return nil, fmt.Errorf("input_ids tensor: %w", err)
+	}
+	defer idT.Destroy()
+	maskT, err := ort.NewTensor(ort.NewShape(1, seq), mask)
+	if err != nil {
+		return nil, fmt.Errorf("attention_mask tensor: %w", err)
+	}
+	defer maskT.Destroy()
+	posT, err := ort.NewTensor(ort.NewShape(1, seq), pos)
+	if err != nil {
+		return nil, fmt.Errorf("position_ids tensor: %w", err)
+	}
+	defer posT.Destroy()
+
+	inputs := make([]ort.Value, len(o.inputNames))
+	for i, name := range o.inputNames {
+		switch name {
+		case "input_ids":
+			inputs[i] = idT
+		case "attention_mask":
+			inputs[i] = maskT
+		case "position_ids":
+			inputs[i] = posT
+		default:
+			return nil, fmt.Errorf("unexpected ONNX input %q", name)
+		}
+	}
+	outputs := []ort.Value{nil}
+	o.mu.Lock()
+	err = o.session.Run(inputs, outputs)
+	o.mu.Unlock()
+	if err != nil {
+		return nil, fmt.Errorf("onnx run: %w", err)
+	}
+	if outputs[0] != nil {
+		defer outputs[0].Destroy()
+	}
+	hidden, ok := outputs[0].(*ort.Tensor[float32])
+	if !ok {
+		return nil, fmt.Errorf("onnx output is %T, want Tensor[float32]", outputs[0])
+	}
+	data := hidden.GetData()
+	shape := hidden.GetShape()
+	if len(shape) != 3 || shape[2] != int64(o.dim) {
+		return nil, fmt.Errorf("unexpected last_hidden_state shape %v dim=%d", shape, o.dim)
+	}
+	last := lastTokenIndex(mask)
+	if last < 0 || int64(last) >= shape[1] {
+		return nil, fmt.Errorf("bad EOS index %d seq=%d", last, shape[1])
+	}
+	off := last * o.dim
+	vec := make([]float32, o.dim)
+	copy(vec, data[off:off+o.dim])
+	return l2normalize(vec), nil
+}
+
+func lastTokenIndex(mask []int64) int {
+	last := -1
+	for i, m := range mask {
+		if m != 0 {
+			last = i
+		}
+	}
+	return last
 }
 
 func (o *ONNX) init() error {
@@ -94,6 +166,7 @@ func (o *ONNX) init() error {
 		return o.initErr
 	}
 	o.session = sess
+	o.inputNames = in
 	return nil
 }
 

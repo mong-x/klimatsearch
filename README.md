@@ -28,10 +28,15 @@ make run
 Default production embedder is [codefuse-ai/F2LLM-v2-80M](https://huggingface.co/codefuse-ai/F2LLM-v2-80M) (hidden size 320). Weights are not in git.
 
 ```bash
-make models          # huggingface-cli download; refuses to run in CI
-# export to ONNX (see scripts/download-models.sh)
-KLIMAT_EMBEDDER=onnx go run ./cmd/klimatsearch
+brew install onnxruntime          # macOS; or set ONNXRUNTIME_LIB
+./scripts/fetch-libtokenizers.sh  # CGO lib for HuggingFace tokenizer.json
+make models                       # Hugging Face download (uv or huggingface-cli)
+python scripts/export-f2llm-onnx.py
+make build
+KLIMAT_EMBEDDER=onnx ./bin/klimatsearch
 ```
+
+Weights stay gitignored. CI uses Fake and does not need ONNX. Details: [docs/LAUNCH.md](docs/LAUNCH.md).
 
 The binary uses `onnx` when `{models}/{embedding-model}/model.onnx` exists, otherwise `fake`. `--embedder` / `KLIMAT_EMBEDDER` always wins.
 

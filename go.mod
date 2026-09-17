@@ -14,6 +14,7 @@ require (
 )
 
 require (
+	github.com/daulet/tokenizers v1.27.0 // indirect
 	github.com/google/jsonschema-go v0.4.3 // indirect
 	github.com/mfridman/interpolate v0.0.2 // indirect
 	github.com/richardlehane/mscfb v1.0.7 // indirect
