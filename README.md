@@ -4,6 +4,8 @@ Distributed search engine and MCP server for [Boverket Klimatdatabas](https://ww
 
 Data is from **Boverket Klimatdatabas**. You must cite Boverket as the source. This project is not affiliated with Boverket.
 
+**Software is ready for `make run` (fake embedder).** Accounts, ONNX weights, and production hosting are yours — start at **[docs/LAUNCH.md](docs/LAUNCH.md)**.
+
 ## Requirements
 
 - Go 1.27

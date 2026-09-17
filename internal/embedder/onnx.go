@@ -50,7 +50,7 @@ func (o *ONNX) Embed(text string) ([]float32, error) {
 	}
 	_ = ids
 	_ = mask
-	return nil, fmt.Errorf("onnx embed session is initialized but inference is not run without a wired tokenizer; use --embedder=fake")
+	return nil, fmt.Errorf("onnx session is up but Embed inference is not wired (EOS pool + L2); see docs/LAUNCH.md §1 or use --embedder=fake")
 }
 
 func (o *ONNX) init() error {

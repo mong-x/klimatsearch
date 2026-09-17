@@ -29,5 +29,5 @@ type FileTokenizer struct {
 }
 
 func (t FileTokenizer) Encode(string) ([]int64, []int64, error) {
-	return nil, nil, fmt.Errorf("onnx tokenizer file found at %s but HuggingFace tokenization is not wired in this build; use --embedder=fake or add a Tokenizer implementation", t.Path)
+	return nil, nil, fmt.Errorf("onnx tokenizer file found at %s but HuggingFace tokenization is not wired; implement Tokenizer (see docs/LAUNCH.md §1) or use --embedder=fake", t.Path)
 }

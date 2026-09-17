@@ -1,4 +1,8 @@
-.PHONY: test build run models e2e docker
+.PHONY: test build run models e2e docker help
+
+help:
+	@echo "make test | build | run | models | docker | e2e"
+	@echo "Human launch steps: docs/LAUNCH.md"
 
 # fts5 is a mattn/go-sqlite3 build tag (FTS5 is off by default).
 GO_TAGS ?= fts5

@@ -4,7 +4,7 @@ Go 1.27. CGO is required (`CGO_ENABLED=1`) for mattn/go-sqlite3, sqlite-vec, and
 
 HTTP routing uses `net/http.ServeMux` only (Go 1.22 method + path values). Do not add Chi, Gin, or Echo.
 
-Architecture decisions live in `docs/adr/`. Glossary is `CONTEXT.md`. Product spec is `docs/prd.md`.
+Architecture decisions live in `docs/adr/`. Glossary is `CONTEXT.md`. Product spec is `docs/prd.md`. Human launch work (ONNX, Unkey, ZeroClick, BR25, AWS) is `docs/LAUNCH.md`.
 
 Do not commit `/data/*.db`, `/models/**` weights, `*.onnx`, or `*.safetensors`. Tests and default CI use the fake Embedder; they must not require ONNX weights or libonnxruntime.
 

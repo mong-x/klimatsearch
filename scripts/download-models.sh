@@ -37,8 +37,10 @@ ONNX export is required. Example (Python, not run by this script):
   #     "codefuse-ai/F2LLM-v2-80M", export=True)
   # model.save_pretrained("./models/f2llm-v2-80m")
 
-Then:
+Then export ONNX (refuses to run here so you can review the Python env):
 
-  KLIMAT_EMBEDDER=onnx go run ./cmd/klimatsearch
+  python scripts/export-f2llm-onnx.py
+
+See docs/LAUNCH.md §1 for libonnxruntime, tokenizer wiring, and re-ingest.
 
 EOF
