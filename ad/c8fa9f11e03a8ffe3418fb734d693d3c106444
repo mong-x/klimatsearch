@@ -1,0 +1,59 @@
+internal/embedder/resolve.go
+  s_546f0a9ec1bffd::t_45081af78f16b2 1-45
+Makefile
+  s_2c29a5f33eb839::t_0393b70b12e453 1,4,41-44
+cmd/evalgolden/main.go
+  s_01ae9a8582e2e4::t_d6397d41ecd99e 1-267
+internal/config/config_test.go
+  s_2cccfedf5a7f2e::t_16f75ca2d13954 17-29
+internal/eval/golden_test.go
+  s_2cccfedf5a7f2e::t_f53446b881042c 1-60
+internal/reranker/instruct_test.go
+  s_2cccfedf5a7f2e::t_c90624e3d96174 1-45
+internal/reranker/onnx.go
+  s_2cccfedf5a7f2e::t_3254185b63b953 16-17,24,29-31,33,56-75,108-114,130,146-156
+scripts/quantize-onnx.py
+  s_2cccfedf5a7f2e::t_29ead02b3e4698 1-54
+testdata/golden-queries.json
+  s_2cccfedf5a7f2e::t_cc273ed3bb4140 3-4,6-64
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "adc8fa9f11e03a8ffe3418fb734d693d3c106444",
+  "prompts": {},
+  "sessions": {
+    "s_01ae9a8582e2e4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "999bac45-8663-43f0-af29-659fa951db8e",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "mjnong <marcusnagy@icloud.com>"
+    },
+    "s_2c29a5f33eb839": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "53c7b46f-cb10-48e6-a8bf-882aef18185c",
+        "model": "claude-fable-5-1"
+      },
+      "human_author": "mjnong <marcusnagy@icloud.com>"
+    },
+    "s_2cccfedf5a7f2e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f2a7131b-4486-4fdf-8582-9e01aef2f595",
+        "model": "claude-opus-5"
+      },
+      "human_author": "mjnong <marcusnagy@icloud.com>"
+    },
+    "s_546f0a9ec1bffd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "01a0af4f-5c78-7b63-b802-9a718213d37a",
+        "model": "unknown"
+      },
+      "human_author": "mjnong <marcusnagy@icloud.com>"
+    }
+  }
+}
