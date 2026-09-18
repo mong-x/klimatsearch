@@ -6,6 +6,19 @@ import (
 	"testing"
 )
 
+func TestCompareA4(t *testing.T) {
+	a4a, a4b := 0.06, 0.10
+	a := Resource{ResourceID: "a", A1A3: 0.39, Unit: "kg", Details: Details{A4: &a4a}}
+	b := Resource{ResourceID: "b", A1A3: 0.50, Unit: "kg", Details: Details{A4: &a4b}}
+	got, err := Compare(a, b, "Boverket Klimatdatabas", "kg", "a4")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Impact != ImpactA4 || math.Abs(got.DeltaA1A3-(-0.04)) > 1e-9 || got.LowerImpactID != "a" {
+		t.Fatalf("%+v", got)
+	}
+}
+
 func TestCompareTable(t *testing.T) {
 	kgA := Resource{ResourceID: "a", NameSV: "A", A1A3: 0.12, Unit: "kg", Conversions: map[string]float64{"kg/m³": 2400}}
 	kgB := Resource{ResourceID: "b", NameSV: "B", A1A3: 1.55, Unit: "kg", Conversions: map[string]float64{"kg/m³": 1800}}
@@ -70,7 +83,7 @@ func TestCompareTable(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := Compare(tt.a, tt.b, "Boverket Klimatdatabas", tt.unit)
+			got, err := Compare(tt.a, tt.b, "Boverket Klimatdatabas", tt.unit, "")
 			if tt.wantErr {
 				var uerr ErrUnitUnavailable
 				if !errors.As(err, &uerr) {

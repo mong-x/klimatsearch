@@ -5,7 +5,6 @@ import (
 	"errors"
 	"io"
 	"net/http"
-	"strconv"
 	"strings"
 
 	"github.com/mong-x/klimatsearch/internal/config"
@@ -64,12 +63,15 @@ func (h *Handler) search(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
 		return
 	}
+	qs := r.URL.Query()
+	_, hasV := qs["vector"]
+	_, hasR := qs["rerank"]
 	qreq := search.Query{
 		Text:     q,
 		Lang:     lang,
-		Catalogs: store.ParseCatalogs(r.URL.Query().Get("databases")),
-		Vector:   parseBool(r.URL.Query().Get("vector"), false),
-		Rerank:   parseBool(r.URL.Query().Get("rerank"), false),
+		Catalogs: store.ParseCatalogs(qs.Get("databases")),
+		Vector:   search.Coalesce(search.ParseFlag(qs.Get("vector"), hasV), false),
+		Rerank:   search.Coalesce(search.ParseFlag(qs.Get("rerank"), hasR), false),
 	}
 	hits, err := h.Engine.Search(r.Context(), qreq)
 	if err != nil {
@@ -81,7 +83,23 @@ func (h *Handler) search(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return
 	}
-	writeJSON(w, http.StatusOK, search.Envelope(h.Source, qreq, hits))
+	writeJSON(w, http.StatusOK, stampDetails(search.Envelope(h.Source, qreq, hits)))
+}
+
+func stampDetails(env map[string]any) map[string]any {
+	results, ok := env["results"].([]map[string]any)
+	if !ok {
+		return env
+	}
+	for _, m := range results {
+		id, _ := m["id"].(string)
+		cat, _ := m["catalog"].(string)
+		if id == "" {
+			continue
+		}
+		m["details"] = "/api/resources/" + model.DocID(cat, id)
+	}
+	return env
 }
 
 func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
@@ -163,6 +181,7 @@ func (h *Handler) compare(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	unit := strings.TrimSpace(r.URL.Query().Get("unit"))
+	impact := strings.TrimSpace(r.URL.Query().Get("impact"))
 	ra, status, err := h.loadResource(r, idA)
 	if err != nil {
 		writeJSON(w, status, map[string]string{"error": err.Error()})
@@ -173,10 +192,15 @@ func (h *Handler) compare(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, status, map[string]string{"error": err.Error()})
 		return
 	}
-	cmp, err := model.Compare(*ra, *rb, h.Source, unit)
+	cmp, err := model.Compare(*ra, *rb, h.Source, unit, impact)
 	if err != nil {
 		var uerr model.ErrUnitUnavailable
 		if errors.As(err, &uerr) {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+			return
+		}
+		var ierr model.ErrImpactUnknown
+		if errors.As(err, &ierr) {
 			writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
 			return
 		}
@@ -257,18 +281,6 @@ func (h *Handler) ingestFile(w http.ResponseWriter, r *http.Request) {
 		"upserted": res.Upserted,
 		"skipped":  res.Skipped,
 	})
-}
-
-func parseBool(v string, def bool) bool {
-	v = strings.TrimSpace(strings.ToLower(v))
-	if v == "" {
-		return def
-	}
-	b, err := strconv.ParseBool(v)
-	if err != nil {
-		return def
-	}
-	return b
 }
 
 func writeJSON(w http.ResponseWriter, status int, v any) {

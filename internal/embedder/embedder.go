@@ -9,8 +9,8 @@ import (
 )
 
 var (
-	_ search.Embedder      = Fake{}
-	_ search.QueryEmbedder = (*ONNX)(nil)
+	_ search.Embedder = Fake{}
+	_ search.Embedder = (*ONNX)(nil)
 )
 
 // New builds an Embedder. kind is auto|fake|onnx.

@@ -3,8 +3,6 @@ package embedder
 import (
 	"math"
 	"testing"
-
-	"github.com/mong-x/klimatsearch/internal/search"
 )
 
 func TestNewONNXMissingModel(t *testing.T) {
@@ -14,10 +12,20 @@ func TestNewONNXMissingModel(t *testing.T) {
 	}
 }
 
-func TestFakeIsNotQueryEmbedder(t *testing.T) {
-	var e search.Embedder = Fake{}
-	if _, ok := e.(search.QueryEmbedder); ok {
-		t.Fatal("Fake must hash the raw Query so tests match EmbeddingText")
+func TestFakeEmbedQueryHashesRawQuery(t *testing.T) {
+	var f Fake
+	q, err := f.EmbedQuery("betong")
+	if err != nil {
+		t.Fatal(err)
+	}
+	d, err := f.Embed("betong")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i := range q {
+		if q[i] != d[i] {
+			t.Fatal("Fake EmbedQuery must hash the raw Query")
+		}
 	}
 }
 

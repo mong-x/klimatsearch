@@ -62,7 +62,7 @@ func (s *Server) register() {
 	}, s.getTool)
 	mcpsdk.AddTool(s.MCP, &mcpsdk.Tool{
 		Name:        ToolCompare,
-		Description: "Compare A1-A3 typical climate impact of two resources in a shared unit",
+		Description: "Compare climate impact of two Resources in a shared unit. impact=typical (default)|conservative|a4|a5_1",
 	}, s.compareTool)
 	s.ToolNames = []string{ToolSearch, ToolGet, ToolCompare}
 }
@@ -103,8 +103,8 @@ func (s *Server) searchTool(ctx context.Context, _ *mcpsdk.CallToolRequest, in s
 		Text:     in.Query,
 		Lang:     lang,
 		Catalogs: in.Databases,
-		Vector:   pickBool(in.Vector, s.useVector),
-		Rerank:   pickBool(in.Rerank, s.useRerank),
+		Vector:   search.Coalesce(in.Vector, s.useVector),
+		Rerank:   search.Coalesce(in.Rerank, s.useRerank),
 	}
 	hits, err := s.engine.Search(ctx, q)
 	if err != nil {
@@ -145,51 +145,31 @@ func (s *Server) getTool(ctx context.Context, _ *mcpsdk.CallToolRequest, in getI
 }
 
 type compareIn struct {
-	IDA  string `json:"id_a" jsonschema:"First resource ID"`
-	IDB  string `json:"id_b" jsonschema:"Second resource ID"`
-	Unit string `json:"unit,omitempty" jsonschema:"Optional unit to compare in"`
+	IDA    string `json:"id_a" jsonschema:"First resource ID"`
+	IDB    string `json:"id_b" jsonschema:"Second resource ID"`
+	Unit   string `json:"unit,omitempty" jsonschema:"Optional unit to compare in"`
+	Impact string `json:"impact,omitempty" jsonschema:"typical (default), conservative, a4, or a5_1"`
 }
 
-type compareOut struct {
-	Source        string         `json:"source"`
-	A             map[string]any `json:"a"`
-	B             map[string]any `json:"b"`
-	Unit          string         `json:"unit"`
-	DeltaA1A3     float64        `json:"delta_a1a3"`
-	LowerImpactID string         `json:"lower_impact_id"`
-	Incomparable  bool           `json:"incomparable"`
-}
-
-func (s *Server) compareTool(ctx context.Context, _ *mcpsdk.CallToolRequest, in compareIn) (*mcpsdk.CallToolResult, compareOut, error) {
-	out, err := Compare(ctx, s.st, in.IDA, in.IDB, s.source, in.Unit)
+func (s *Server) compareTool(ctx context.Context, _ *mcpsdk.CallToolRequest, in compareIn) (*mcpsdk.CallToolResult, map[string]any, error) {
+	cmp, err := Compare(ctx, s.st, in.IDA, in.IDB, s.source, in.Unit, in.Impact)
 	if err != nil {
-		return nil, compareOut{}, err
+		return nil, nil, err
 	}
-	return textResult(out), out, nil
+	view := cmp.View()
+	return textResult(view), view, nil
 }
 
-func Compare(ctx context.Context, st *store.Store, idA, idB, source, unit string) (compareOut, error) {
+func Compare(ctx context.Context, st *store.Store, idA, idB, source, unit, impact string) (model.Comparison, error) {
 	a, err := st.Get(ctx, idA)
 	if err != nil {
-		return compareOut{}, fmt.Errorf("id_a: %w", err)
+		return model.Comparison{}, fmt.Errorf("id_a: %w", err)
 	}
 	b, err := st.Get(ctx, idB)
 	if err != nil {
-		return compareOut{}, fmt.Errorf("id_b: %w", err)
+		return model.Comparison{}, fmt.Errorf("id_b: %w", err)
 	}
-	cmp, err := model.Compare(*a, *b, source, unit)
-	if err != nil {
-		return compareOut{}, err
-	}
-	return compareOut{
-		Source:        cmp.Attribution,
-		A:             cmp.A,
-		B:             cmp.B,
-		Unit:          cmp.Unit,
-		DeltaA1A3:     cmp.DeltaA1A3,
-		LowerImpactID: cmp.LowerImpactID,
-		Incomparable:  cmp.Incomparable,
-	}, nil
+	return model.Compare(*a, *b, source, unit, impact)
 }
 
 func textResult(v any) *mcpsdk.CallToolResult {

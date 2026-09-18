@@ -44,7 +44,7 @@ Cite **Boverket Klimatdatabas** on every answer. Follow `origin` (or `GET {detai
 | `vector=true` | Paraphrase, translation, missing FTS tokens | ~112 ms, F2LLM |
 | `rerank=true` | Sibling grades after hybrid | **Use BGE-m3 INT8 only** (~7.3 s p50, 44/44 Hit@1). Skip BGE fp32 and zerank fp32. **Never zerank INT8** (Hit@1 0.57). |
 
-REST defaults **both flags off**. MCP `search_climate_data` takes optional `vector` / `rerank`; omit them to use process config (`KLIMAT_RERANKER=onnx` still defaults MCP to rerank). Pass `"rerank": false` for the cheap path on a reranking process.
+REST omit `vector`/`rerank` = off. MCP omit = process config. Both go through `search.Coalesce`. Pass MCP `"rerank": false` for the cheap path on a reranking process.
 
 Session cache: reuse Hits for the same `(q, lang)` in one conversation. One search, then `get_resource_details` / `compare_resources`. Do not poll.
 

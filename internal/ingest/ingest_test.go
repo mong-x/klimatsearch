@@ -216,6 +216,40 @@ func TestExcelParseAndMerge(t *testing.T) {
 	}
 }
 
+func TestExcelParsesDetails(t *testing.T) {
+	raw := writeXLSX(t, []string{
+		"Resurs-ID", "Produktnamn", "Kategori", "Version",
+		"Enhet för klimatpåverkan",
+		"A1-A3 byggproduktens klimatpåverkan GWP-GHG, typiskt värde",
+		"A1-A3 byggproduktens klimatpåverkan GWP-GHG, konservativt värde",
+		"A4", "A5.1", "Avfallsfaktor", "A1-A3 faktor för konservativa värden",
+		"Omräkningsfaktor", "Enhet för omräkningsfaktor", "Teknisk beskrivning",
+	}, [][]string{
+		{"6000000000", "Spånskiva", "Byggskivor", "02.07.000", "kg CO₂e/kg",
+			"0.39", "0.488", "0.0629", "0.055", "1.1", "1.25", "700", "kg/m³", "skiva"},
+	})
+	b, err := ParseExcel(raw, "sv")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(b.Resources) != 1 {
+		t.Fatalf("n=%d", len(b.Resources))
+	}
+	r := b.Resources[0]
+	if r.A1A3 != 0.39 || r.Details.A1A3Conservative != 0.488 {
+		t.Fatalf("a1a3 %+v cons %v", r.A1A3, r.Details.A1A3Conservative)
+	}
+	if r.Details.A4 == nil || *r.Details.A4 != 0.0629 {
+		t.Fatalf("a4=%v", r.Details.A4)
+	}
+	if r.Details.A51 == nil || *r.Details.A51 != 0.055 {
+		t.Fatalf("a5=%v", r.Details.A51)
+	}
+	if r.Details.WasteFactor != 1.1 || r.Details.ConservativeFactor != 1.25 {
+		t.Fatalf("factors %+v", r.Details)
+	}
+}
+
 func writeXLSX(t *testing.T, headers []string, rows [][]string) []byte {
 	t.Helper()
 	f := excelize.NewFile()

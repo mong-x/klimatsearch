@@ -75,7 +75,7 @@ func TestToolsRegistered(t *testing.T) {
 		}
 	}
 
-	cmp, err := mcp.Compare(ctx, st, "a", "b", "Boverket Klimatdatabas", "")
+	cmp, err := mcp.Compare(ctx, st, "a", "b", "Boverket Klimatdatabas", "", "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -92,12 +92,12 @@ func TestToolsRegistered(t *testing.T) {
 		t.Fatalf("unit=%s", cmp.Unit)
 	}
 
-	_, err = mcp.Compare(ctx, st, "a", "b", "Boverket Klimatdatabas", "m²")
+	_, err = mcp.Compare(ctx, st, "a", "b", "Boverket Klimatdatabas", "m²", "")
 	if err == nil {
 		t.Fatal("explicit missing unit should error")
 	}
 
-	cmp, err = mcp.Compare(ctx, st, "a", "b", "Boverket Klimatdatabas", "m³")
+	cmp, err = mcp.Compare(ctx, st, "a", "b", "Boverket Klimatdatabas", "m³", "")
 	if err != nil {
 		t.Fatal(err)
 	}

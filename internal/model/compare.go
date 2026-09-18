@@ -3,6 +3,14 @@ package model
 import (
 	"fmt"
 	"sort"
+	"strings"
+)
+
+const (
+	ImpactTypical      = "typical"
+	ImpactConservative = "conservative"
+	ImpactA4           = "a4"
+	ImpactA51          = "a5_1"
 )
 
 // Comparison is A1A3 of two Resources expressed in one shared unit.
@@ -11,6 +19,7 @@ type Comparison struct {
 	B             map[string]any
 	Attribution   string
 	Unit          string
+	Impact        string
 	DeltaA1A3     float64
 	LowerImpactID string
 	Incomparable  bool
@@ -39,18 +48,23 @@ func (e ErrUnitUnavailable) Error() string {
 // With no unit: matching Declared units, else both convertible to kg, else
 // exactly one shared Conversion key. Otherwise incomparable (no numeric delta).
 // An explicit unit that cannot apply is an error, never silent incomparable.
-func Compare(a, b Resource, attribution, unit string) (Comparison, error) {
+func Compare(a, b Resource, attribution, unit, impact string) (Comparison, error) {
+	imp, err := NormalizeImpact(impact)
+	if err != nil {
+		return Comparison{}, err
+	}
 	out := Comparison{
 		A:           a.View(attribution),
 		B:           b.View(attribution),
 		Attribution: attribution,
+		Impact:      imp,
 	}
 	if unit != "" {
-		va, okA := a1a3InUnit(a, unit)
+		va, okA := impactInUnit(a, unit, imp)
 		if !okA {
 			return Comparison{}, ErrUnitUnavailable{Unit: unit, ID: a.ResourceID}
 		}
-		vb, okB := a1a3InUnit(b, unit)
+		vb, okB := impactInUnit(b, unit, imp)
 		if !okB {
 			return Comparison{}, ErrUnitUnavailable{Unit: unit, ID: b.ResourceID}
 		}
@@ -58,18 +72,24 @@ func Compare(a, b Resource, attribution, unit string) (Comparison, error) {
 	}
 
 	if a.Unit != "" && a.Unit == b.Unit {
-		return finishCompare(out, a, b, a.Unit, a.A1A3, b.A1A3), nil
+		va, okA := climateValue(a, imp)
+		vb, okB := climateValue(b, imp)
+		if !okA || !okB {
+			out.Incomparable = true
+			return out, nil
+		}
+		return finishCompare(out, a, b, a.Unit, va, vb), nil
 	}
-	if convertsToKg(a) && convertsToKg(b) {
-		va, _ := a1a3InUnit(a, "kg")
-		vb, _ := a1a3InUnit(b, "kg")
+	if convertsToKg(a, imp) && convertsToKg(b, imp) {
+		va, _ := impactInUnit(a, "kg", imp)
+		vb, _ := impactInUnit(b, "kg", imp)
 		return finishCompare(out, a, b, "kg", va, vb), nil
 	}
 	shared := sharedConversionKeys(a, b)
 	if len(shared) == 1 {
 		u := shared[0]
-		va, okA := a1a3InUnit(a, u)
-		vb, okB := a1a3InUnit(b, u)
+		va, okA := impactInUnit(a, u, imp)
+		vb, okB := impactInUnit(b, u, imp)
 		if okA && okB {
 			return finishCompare(out, a, b, u, va, vb), nil
 		}
@@ -85,9 +105,58 @@ func (c Comparison) View() map[string]any {
 		"a":               c.A,
 		"b":               c.B,
 		"unit":            c.Unit,
+		"impact":          c.Impact,
 		"delta_a1a3":      c.DeltaA1A3,
 		"lower_impact_id": c.LowerImpactID,
 		"incomparable":    c.Incomparable,
+	}
+}
+
+// ErrImpactUnknown is returned when impact is not typical|conservative|a4|a5_1.
+type ErrImpactUnknown struct{ Impact string }
+
+func (e ErrImpactUnknown) Error() string {
+	return fmt.Sprintf("unknown impact %q (typical|conservative|a4|a5_1)", e.Impact)
+}
+
+func NormalizeImpact(impact string) (string, error) {
+	s := strings.ToLower(strings.TrimSpace(impact))
+	switch s {
+	case "", ImpactTypical, "a1a3":
+		return ImpactTypical, nil
+	case ImpactConservative:
+		return ImpactConservative, nil
+	case ImpactA4:
+		return ImpactA4, nil
+	case ImpactA51, "a51", "a5.1":
+		return ImpactA51, nil
+	default:
+		return "", ErrImpactUnknown{Impact: impact}
+	}
+}
+
+func climateValue(r Resource, impact string) (float64, bool) {
+	switch impact {
+	case ImpactTypical:
+		return r.A1A3, true
+	case ImpactConservative:
+		v := r.Details.A1A3Conservative
+		if v == 0 && r.A1A3 != 0 {
+			return 0, false
+		}
+		return v, true
+	case ImpactA4:
+		if r.Details.A4 == nil {
+			return 0, false
+		}
+		return *r.Details.A4, true
+	case ImpactA51:
+		if r.Details.A51 == nil {
+			return 0, false
+		}
+		return *r.Details.A51, true
+	default:
+		return 0, false
 	}
 }
 
@@ -101,30 +170,27 @@ func finishCompare(out Comparison, a, b Resource, unit string, va, vb float64) C
 	return out
 }
 
-// a1a3InUnit restates A1A3 in unit u.
-// value = A1A3 is per Declared unit. Conversion factors multiply A1A3 to
-// express it per the target unit (Boverket: kg per m³ etc.).
-func a1a3InUnit(r Resource, u string) (float64, bool) {
-	if u == "" {
+func impactInUnit(r Resource, u, impact string) (float64, bool) {
+	base, ok := climateValue(r, impact)
+	if !ok || u == "" {
 		return 0, false
 	}
 	if r.Unit == u {
-		return r.A1A3, true
+		return base, true
 	}
 	if r.Conversions != nil {
 		if f, ok := r.Conversions[u]; ok {
-			return r.A1A3 * f, true
+			return base * f, true
 		}
-		// Composite key "{declared}/{target}", e.g. kg/m³ when asking for m³.
 		if f, ok := r.Conversions[r.Unit+"/"+u]; ok {
-			return r.A1A3 * f, true
+			return base * f, true
 		}
 	}
 	return 0, false
 }
 
-func convertsToKg(r Resource) bool {
-	_, ok := a1a3InUnit(r, "kg")
+func convertsToKg(r Resource, impact string) bool {
+	_, ok := impactInUnit(r, "kg", impact)
 	return ok
 }
 

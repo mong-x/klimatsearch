@@ -44,7 +44,7 @@ func (Fake) Rerank(query string, docs []search.Hit) ([]search.Hit, error) {
 	}
 	boosts := make([]scored, len(out))
 	for i, d := range out {
-		hay := strings.ToLower(d.NameSV + " " + d.NameEN + " " + d.DescriptionSV + " " + d.DescriptionEN)
+		hay := strings.ToLower(d.EmbeddingText())
 		var b float64
 		if q != "" && strings.Contains(hay, q) {
 			b += 10

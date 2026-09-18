@@ -100,11 +100,11 @@ _Avoid_: listener, callback, inbound Boverket hook
 _Avoid_: crawler, importer, connector
 
 **Comparison**:
-A1A3 of two Resources expressed in one shared unit, using Conversion when the caller asks or when Declared units already agree.
+Climate impact of two Resources in one shared unit (typical A1A3 by default; conservative, A4, or A5.1 when asked), using Conversion when the caller asks or when Declared units already agree.
 _Avoid_: material compare, delta (bare)
 
 **Embedder**:
-The mapping from Resource text or a Query to a vector.
+The mapping from Resource text (`Embed`) or a Query (`EmbedQuery`) to a vector. ONNX applies the F2LLM Instruct prefix only on EmbedQuery.
 _Avoid_: encoder, model, embed, component
 
 **Reranker**:

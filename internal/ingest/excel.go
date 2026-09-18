@@ -83,6 +83,7 @@ func resourcesFromRows(rows [][]string, lang, origin string) (Batch, error) {
 		if cf != 0 && cu != "" {
 			r.Conversions[cu] = cf
 		}
+		r.Details = detailsFromExcel(row, idx)
 		if r.Version != "" && batch.Version == "" {
 			batch.Version = r.Version
 		}
@@ -188,12 +189,47 @@ func MergeLang(sv, en Batch) Batch {
 type colIdx struct {
 	id, name, category, version, unit int
 	a1a3, a1a3Energy                  int
+	a1a3Cons, consFactor, waste       int
+	a4, a51, biogenic, life, bk04     int
 	desc, convFactor, convUnit        int
 	appl, applSV, applEN, synonyms    int
 }
 
+func detailsFromExcel(row []string, idx colIdx) model.Details {
+	d := model.Details{GWPUnit: cell(row, idx.unit)}
+	if f := parseFloat(cell(row, idx.a1a3Cons)); f != 0 {
+		d.A1A3Conservative = f
+	}
+	if f := parseFloat(cell(row, idx.consFactor)); f != 0 {
+		d.ConservativeFactor = f
+	}
+	if f := parseFloat(cell(row, idx.waste)); f != 0 {
+		d.WasteFactor = f
+	}
+	if s := cell(row, idx.a4); s != "" {
+		v := parseFloat(s)
+		d.A4 = &v
+	}
+	if s := cell(row, idx.a51); s != "" {
+		v := parseFloat(s)
+		d.A51 = &v
+	}
+	if s := cell(row, idx.biogenic); s != "" {
+		v := parseFloat(s)
+		d.BiogenicCarbon = &v
+	}
+	d.ServiceLife = cell(row, idx.life)
+	d.BK04Code = cell(row, idx.bk04)
+	return d
+}
+
 func headerIndex(headers []string) colIdx {
-	idx := colIdx{id: -1, name: -1, category: -1, version: -1, unit: -1, a1a3: -1, a1a3Energy: -1, desc: -1, convFactor: -1, convUnit: -1, appl: -1, applSV: -1, applEN: -1, synonyms: -1}
+	idx := colIdx{
+		id: -1, name: -1, category: -1, version: -1, unit: -1,
+		a1a3: -1, a1a3Energy: -1, a1a3Cons: -1, consFactor: -1, waste: -1,
+		a4: -1, a51: -1, biogenic: -1, life: -1, bk04: -1,
+		desc: -1, convFactor: -1, convUnit: -1, appl: -1, applSV: -1, applEN: -1, synonyms: -1,
+	}
 	for i, h := range headers {
 		n := normHeader(h)
 		switch {
@@ -223,6 +259,26 @@ func headerIndex(headers []string) colIdx {
 			idx.appl = i
 		case n == "synonyms" || n == "synonymer":
 			idx.synonyms = i
+		case strings.Contains(n, "konservativ") && strings.Contains(n, "a1-a3") && !strings.Contains(n, "faktor"):
+			idx.a1a3Cons = i
+		case strings.Contains(n, "conservative") && strings.Contains(n, "a1-a3") && strings.Contains(n, "value"):
+			idx.a1a3Cons = i
+		case strings.Contains(n, "faktor for konservativ") || (strings.Contains(n, "conservative") && strings.Contains(n, "factor")):
+			idx.consFactor = i
+		case n == "avfallsfaktor" || n == "waste factor":
+			idx.waste = i
+		case n == "a4" || strings.HasPrefix(n, "a4 ") || (strings.Contains(n, "a4") && strings.Contains(n, "gwp")):
+			if idx.a4 < 0 && !strings.Contains(n, "a1") {
+				idx.a4 = i
+			}
+		case strings.Contains(n, "a5.1") || strings.Contains(n, "a5,1"):
+			idx.a51 = i
+		case strings.Contains(n, "biogen"):
+			idx.biogenic = i
+		case strings.Contains(n, "referenslivslangd") || strings.Contains(n, "reference service life"):
+			idx.life = i
+		case strings.Contains(n, "bk04"):
+			idx.bk04 = i
 		}
 	}
 	return idx

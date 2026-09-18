@@ -112,7 +112,7 @@ GET /api/search?q=spånskiva&lang=sv&vector=true
 | GET | `/api/search?q=&lang=sv\|en&vector=&rerank=&databases=` |
 | GET | `/api/resources?lang=&databases=` |
 | GET | `/api/resources/{id}` · `/api/resources/{id}/origin` |
-| GET | `/api/resources/compare?a=&b=&unit=` |
+| GET | `/api/resources/compare?a=&b=&unit=&impact=` |
 | POST | `/admin/ingest/file?catalog=` |
 
 `vector` and `rerank` default **off**. `{id}` is `boverket:6000000000` or a bare id (**409** if ambiguous). Compare `unit` must apply to both or **400**. `databases=` filters Catalog IDs.
@@ -121,6 +121,7 @@ GET /api/search?q=spånskiva&lang=sv&vector=true
 curl -sS 'http://127.0.0.1:8081/api/search?q=spånskiva&lang=sv&vector=true&rerank=true'
 curl -sS 'http://127.0.0.1:8081/api/resources/boverket:6000000000?lang=en'
 curl -sS 'http://127.0.0.1:8081/api/resources/compare?a=6000000029&b=6000000028&unit=kg'
+curl -sS 'http://127.0.0.1:8081/api/resources/compare?a=6000000000&b=6000000029&unit=kg&impact=a4'
 ```
 
 ## MCP

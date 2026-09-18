@@ -184,8 +184,5 @@ func rrf(fts, knn []model.Ranked, lang string, limit int) []Hit {
 }
 
 func embedQuery(e Embedder, query string) ([]float32, error) {
-	if qe, ok := e.(QueryEmbedder); ok {
-		return qe.EmbedQuery(query)
-	}
-	return e.Embed(query)
+	return e.EmbedQuery(query)
 }

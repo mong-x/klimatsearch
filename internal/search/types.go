@@ -18,29 +18,22 @@ type Query struct {
 // Hit is a Resource returned for a Query, plus retrieval fields.
 type Hit struct {
 	model.Resource
-	Lang    string
-	Score   float64
-	Source  string // "fts" | "vector" | "both" | "rerank"
-	Details string
+	Lang   string
+	Score  float64
+	Source string // "fts" | "vector" | "both" | "rerank"
 }
 
 func HitFrom(r model.Resource, lang, source string, score float64) Hit {
-	return Hit{
-		Resource: r,
-		Lang:     lang,
-		Score:    score,
-		Source:   source,
-		Details:  "/api/resources/" + r.DocID(),
-	}
+	return Hit{Resource: r, Lang: lang, Score: score, Source: source}
 }
 
-// View is Resource JSON plus score, match_source, and details.
+// View is Resource JSON plus score and match_source.
+// REST stamps details (/api/resources/…) on the Envelope; MCP does not.
 func (h Hit) View(attribution string) map[string]any {
 	m := h.Resource.View(attribution)
 	m["lang"] = h.Lang
 	m["score"] = h.Score
 	m["match_source"] = h.Source
-	m["details"] = h.Details
 	return m
 }
 
@@ -62,12 +55,9 @@ func Envelope(attribution string, q Query, hits []Hit) map[string]any {
 }
 
 // Embedder maps Resource text or a Query to a vector.
+// EmbedQuery is the Query path (F2LLM Instruct on ONNX; Fake hashes the raw Query).
 type Embedder interface {
 	Embed(text string) ([]float32, error)
-}
-
-// QueryEmbedder applies the F2LLM Instruct prefix. Fake does not implement it.
-type QueryEmbedder interface {
 	EmbedQuery(query string) ([]float32, error)
 }
 

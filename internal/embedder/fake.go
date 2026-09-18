@@ -14,6 +14,10 @@ type Fake struct{}
 
 func (Fake) Dim() int { return Dim }
 
+func (Fake) EmbedQuery(query string) ([]float32, error) {
+	return Fake{}.Embed(query)
+}
+
 func (Fake) Embed(text string) ([]float32, error) {
 	sum := sha256.Sum256([]byte(text))
 	raw := make([]byte, Dim*4)
