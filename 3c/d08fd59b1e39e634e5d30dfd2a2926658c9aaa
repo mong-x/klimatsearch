@@ -1,0 +1,42 @@
+README.md
+  h_af7161f060dc1e 132
+cmd/evalgolden/main.go
+  h_af7161f060dc1e 68,178
+cmd/klimatsearch/main.go
+  h_af7161f060dc1e 40,47
+docs/AGENT-SELFHOST.md
+  h_af7161f060dc1e 47
+internal/embedder/embedder.go
+  h_af7161f060dc1e 18-19,21
+internal/embedder/fake_test.go
+  h_af7161f060dc1e 11
+internal/ingest/json.go
+  h_af7161f060dc1e 143-145,149-160,172,198,210,213,244,247,273,276,279,287,290
+internal/mcp/flags.go
+  h_af7161f060dc1e 1-8
+internal/mcp/flags_test.go
+  h_af7161f060dc1e 1-16
+internal/mcp/server.go
+  h_af7161f060dc1e 57,86-87,102-108
+internal/model/details.go
+  h_af7161f060dc1e 47-98
+internal/model/resource.go
+  h_af7161f060dc1e 191
+internal/reranker/onnx.go
+  h_af7161f060dc1e 27,29
+internal/reranker/onnx_test.go
+  h_af7161f060dc1e 13,31,46
+internal/reranker/reranker.go
+  h_af7161f060dc1e 14,21
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "3cd08fd59b1e39e634e5d30dfd2a2926658c9aaa",
+  "prompts": {},
+  "humans": {
+    "h_af7161f060dc1e": {
+      "author": "mjnong <marcusnagy@icloud.com>"
+    }
+  }
+}
