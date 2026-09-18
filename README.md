@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="https://capsule-render.vercel.app/api?type=waving&color=0:0A0B0D,45:1F6F4A,100:82AAFF&height=200&section=header&text=klimatsearch&fontColor=E6E8EB&fontSize=64&fontAlignY=38&animation=fadeIn&desc=Hybrid%20search%20%2B%20MCP%20for%20Boverket%20Klimatdatabas&descSize=16&descAlignY=62" width="100%" alt="klimatsearch — hybrid search and MCP for Boverket Klimatdatabas" />
+<img src="site/assets/hero.jpg" alt="Particle board, ready-mix concrete, and glass wool — generic construction resources from Boverket Klimatdatabas" width="100%" />
 
 [![CI](https://img.shields.io/github/actions/workflow/status/mong-x/klimatsearch/ci.yml?branch=main&style=for-the-badge&logo=githubactions&logoColor=E6E8EB&label=CI&labelColor=0A0B0D&color=1F6F4A)](https://github.com/mong-x/klimatsearch/actions/workflows/ci.yml)
 [![kind e2e](https://img.shields.io/github/actions/workflow/status/mong-x/klimatsearch/e2e-kind.yml?branch=main&style=for-the-badge&logo=kubernetes&logoColor=E6E8EB&label=kind%20e2e&labelColor=0A0B0D&color=82AAFF)](https://github.com/mong-x/klimatsearch/actions/workflows/e2e-kind.yml)
@@ -19,7 +19,7 @@
 </div>
 
 <p align="center">
-  <img src="site/assets/og.jpg" alt="klimatsearch: hybrid search and MCP over Boverket Klimatdatabas, shown as a terminal GET /api/search?q=betong" width="920" />
+  <img src="site/assets/og.jpg" alt="Real klimatsearch response for q=spånskiva: Resource 6000000000 with typical A1–A3 0.39, A4 0.0629, A5.1 0.055" width="920" />
 </p>
 
 ## Introduction
@@ -175,14 +175,16 @@ Measured on Boverket Klimatdatabas **02.07.000** (230 resources) with 44 labeled
 
 `make eval-golden` — F2LLM-ingested `data/klimat.db`, not the Fake embedder.
 
-| Stage | Hit@1 | Hit@3 | MRR | Inversions | Miss@20 | p50 |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| FTS only | 0.750 | 0.750 | 0.750 | 0.000 | 0.250 | 0.1 ms |
-| Hybrid (FTS + F2LLM) | 0.955 | 0.977 | 0.972 | 0.045 | **0.000** | 112 ms |
-| Hybrid + BGE-m3 fp32 | 0.955 | **1.000** | 0.977 | 0.045 | **0.000** | 11.1 s |
-| Hybrid + **BGE-m3 INT8** | **1.000** | **1.000** | **1.000** | **0.000** | **0.000** | **7.3 s** |
-| Hybrid + zerank-1-small fp32 | 0.955 | **1.000** | 0.977 | 0.045 | **0.000** | 42.3 s |
-| Hybrid + zerank-1-small INT8 | 0.568 | 0.864 | 0.731 | 0.273 | **0.000** | 14.9 s |
+**Ship this:** hybrid retrieval (F2LLM) + **BGE-m3 INT8** rerank. That is the only lane with 44/44 Hit@1.
+
+| Stage | Use | Hit@1 | Hit@3 | MRR | Inversions | Miss@20 | p50 |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| FTS only | Always on (cheap lexical) | 0.750 | 0.750 | 0.750 | 0.000 | 0.250 | 0.1 ms |
+| Hybrid (FTS + F2LLM) | **Default retrieval** (`vector=true`) | 0.955 | 0.977 | 0.972 | 0.045 | **0.000** | 112 ms |
+| Hybrid + BGE-m3 fp32 | Skip — INT8 is better and faster | 0.955 | **1.000** | 0.977 | 0.045 | **0.000** | 11.1 s |
+| Hybrid + **BGE-m3 INT8** | **Use this reranker** (`KLIMAT_RERANKER=onnx`, `KLIMAT_ONNX_QUANT=auto`) | **1.000** | **1.000** | **1.000** | **0.000** | **0.000** | **7.3 s** |
+| Hybrid + zerank-1-small fp32 | Skip — same Hit@1 as BGE fp32, ~6× slower | 0.955 | **1.000** | 0.977 | 0.045 | **0.000** | 42.3 s |
+| Hybrid + zerank-1-small INT8 | **Never** — ranking is broken | 0.568 | 0.864 | 0.731 | 0.273 | **0.000** | 14.9 s |
 
 INT8 vs fp32 top-1 agreement: BGE **0.955** (INT8 *fixes* the two remaining fp32 inversions). zerank **0.568** — INT8 is not a drop-in for that graph.
 
@@ -197,7 +199,7 @@ INT8 vs fp32 top-1 agreement: BGE **0.955** (INT8 *fixes* the two remaining fp32
 | **Miss@20** | Labeled id not in the 20-hit window at all. Hybrid/rerank cannot recover a document that retrieval never saw. |
 | **p50** | Median time to score one query at that stage (20 candidates for rerank). |
 
-**How to read this snapshot.** Keyword search is fast and brittle: 75% Hit@1, and **11/44 queries return no FTS hits**. F2LLM hybrid recovers every miss and is the quality jump (two sibling inversions remain: klimatförbättrad C-class vs ordinary). **BGE-m3 INT8 is the production reranker**: 44/44 Hit@1, no inversions, ~35% faster than BGE fp32. BGE fp32 and zerank fp32 tie at 95.5% Hit@1; zerank fp32 costs ~42 s. **Do not ship zerank INT8** on this export (Hit@1 56.8%). `KLIMAT_ONNX_QUANT=auto` already prefers `model.int8.onnx`.
+**How to read this snapshot.** Keyword search is fast and brittle: 75% Hit@1, and **11/44 queries return no FTS hits**. F2LLM hybrid recovers every miss (two sibling inversions remain: klimatförbättrad C-class vs ordinary). **BGE-m3 INT8 is the only reranker to ship**: 44/44 Hit@1, no inversions, faster than BGE fp32. Skip BGE fp32 and zerank fp32. **Never ship zerank INT8** (Hit@1 56.8%). `KLIMAT_ONNX_QUANT=auto` already prefers BGE `model.int8.onnx`.
 
 Reproduce:
 
@@ -313,9 +315,6 @@ Full index: **[docs/README.md](docs/README.md)**.
 
 [Apache-2.0](./LICENSE). Klimatdatabas content remains Boverket's; cite **Boverket Klimatdatabas** on every public surface.
 
-README header by [capsule-render](https://github.com/kyechan99/capsule-render).
-
 <div align="center">
-<img src="https://capsule-render.vercel.app/api?type=waving&color=0:82AAFF,55:1F6F4A,100:0A0B0D&height=120&section=footer" width="100%" alt="" />
 <sub>Search Klimatdatabas. Cite Boverket.</sub>
 </div>

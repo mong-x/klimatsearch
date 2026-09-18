@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <style>
+    @import url("https://fonts.googleapis.com/css2?family=Inter:wght@500;600&family=JetBrains+Mono:wght@400;500&display=swap");
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 1280px; height: 640px; overflow: hidden; background: #0A0B0D; }
+    body {
+      display: grid;
+      grid-template-columns: 420px 1fr;
+      font-family: Inter, system-ui, sans-serif;
+      color: #E6E8EB;
+    }
+    .left {
+      padding: 56px 48px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      border-right: 1px solid #1E2127;
+    }
+    h1 { font-size: 44px; letter-spacing: -0.04em; font-weight: 600; }
+    .sub { margin-top: 16px; font-size: 18px; line-height: 1.45; color: #9aa3ad; font-weight: 500; }
+    .meta { font-size: 13px; color: #6b737c; letter-spacing: 0.02em; }
+    .meta span { color: #1F6F4A; }
+    .frame { padding: 40px 44px 40px 36px; display: flex; align-items: center; }
+    pre {
+      width: 100%;
+      background: #12141a;
+      border: 1px solid #1E2127;
+      border-radius: 12px;
+      padding: 22px 24px;
+      font-family: "JetBrains Mono", ui-monospace, monospace;
+      font-size: 14.5px;
+      line-height: 1.45;
+      color: #c9d0d8;
+    }
+    .cmd { color: #82AAFF; }
+    .k { color: #9aa3ad; }
+    .s { color: #7dcea0; }
+    .n { color: #e6c07b; }
+    .dim { color: #5c6570; }
+  </style>
+</head>
+<body>
+  <div class="left">
+    <div>
+      <h1>klimatsearch</h1>
+      <p class="sub">Hybrid search and MCP over Boverket Klimatdatabas — typical A1–A3, A4, A5.1, transports.</p>
+    </div>
+    <p class="meta">Go · SQLite FTS5 · sqlite-vec · <span>BGE-m3 INT8</span> · Apache-2.0</p>
+  </div>
+  <div class="frame">
+<pre><span class="cmd">$</span> curl -sS '<span class="s">/api/search?q=spånskiva&amp;lang=sv&amp;vector=true</span>'
+{
+  <span class="k">"source"</span>: <span class="s">"Boverket Klimatdatabas"</span>,
+  <span class="k">"query"</span>: <span class="s">"spånskiva"</span>,
+  <span class="k">"results"</span>: [{
+    <span class="k">"id"</span>: <span class="s">"6000000000"</span>,
+    <span class="k">"name_sv"</span>: <span class="s">"Spånskiva"</span>,
+    <span class="k">"a1a3"</span>: <span class="n">0.39</span>,
+    <span class="k">"a4"</span>: <span class="n">0.0629</span>,
+    <span class="k">"a5_1"</span>: <span class="n">0.055</span>,
+    <span class="k">"unit"</span>: <span class="s">"kg"</span>,
+    <span class="k">"match_source"</span>: <span class="s">"both"</span>,
+    <span class="k">"origin"</span>: <span class="s">"klimatdatabasen.boverket.se/…"</span>
+  }]
+}</pre>
+  </div>
+</body>
+</html>

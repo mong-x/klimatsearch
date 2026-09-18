@@ -42,7 +42,7 @@ Cite **Boverket Klimatdatabas** on every answer. Follow `origin` (or `GET {detai
 | --- | --- | --- |
 | FTS (default REST) | Exact or near-exact name in the query language | 0.1 ms, no ONNX |
 | `vector=true` | Paraphrase, translation, missing FTS tokens | ~112 ms, F2LLM |
-| `rerank=true` | Sibling grades after hybrid | **~7.3 s p50** with **BGE-m3 INT8** (44/44 Hit@1). BGE fp32 ~11 s; zerank fp32 ~42 s, same Hit@1 as BGE fp32. **Do not use zerank INT8** (Hit@1 0.57). |
+| `rerank=true` | Sibling grades after hybrid | **Use BGE-m3 INT8 only** (~7.3 s p50, 44/44 Hit@1). Skip BGE fp32 and zerank fp32. **Never zerank INT8** (Hit@1 0.57). |
 
 REST defaults **both flags off**. MCP sets vector/rerank from process config (`KLIMAT_RERANKER=onnx` ⇒ every MCP search reranks). For a high-QPS agent fleet, run a pool with `KLIMAT_RERANKER=none` and call REST `vector=true` without rerank unless the top hits are the same family.
 
