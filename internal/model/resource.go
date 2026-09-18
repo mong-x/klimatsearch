@@ -41,6 +41,7 @@ type Resource struct {
 	Hash            string // persisted ContentHash
 	Version         string // DatasetVersion
 	RawJSON         string
+	Details         Details
 }
 
 // Origin is the Catalog's own page for this Resource, if we can form one.
@@ -143,6 +144,7 @@ func (r Resource) ContentHash() (string, error) {
 		"conversions":      conversions,
 		"description_en":   r.DescriptionEN,
 		"description_sv":   r.DescriptionSV,
+		"details":          r.Details,
 		"name_en":          r.NameEN,
 		"name_sv":          r.NameSV,
 		"synonyms":         r.Synonyms,
@@ -185,6 +187,19 @@ func (r Resource) View(attribution string) map[string]any {
 	}
 	if o := r.Origin(); o != "" {
 		m["origin"] = o
+	}
+	if !r.Details.empty() {
+		raw, err := json.Marshal(r.Details)
+		if err == nil {
+			var extra map[string]any
+			if json.Unmarshal(raw, &extra) == nil {
+				for k, v := range extra {
+					if _, exists := m[k]; !exists {
+						m[k] = v
+					}
+				}
+			}
+		}
 	}
 	return m
 }

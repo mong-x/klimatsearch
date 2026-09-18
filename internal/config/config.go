@@ -15,6 +15,7 @@ const (
 	DefaultModels         = "./models"
 	DefaultEmbeddingModel = "f2llm-v2-80m"
 	DefaultRerankerModel  = "bge-reranker-v2-m3"
+	DefaultONNXQuant      = "auto"
 	DefaultSource         = "Boverket Klimatdatabas"
 	DefaultAPIBase        = "https://api.boverket.se/klimatdatabas"
 	DefaultIngestInterval = 168 * time.Hour
@@ -33,6 +34,7 @@ type Config struct {
 	Reranker                string
 	EmbeddingModel          string
 	RerankerModel           string
+	ONNXQuant               string
 	IngestOnStart           bool
 	IngestInterval          time.Duration
 	BoverketAPIBase         string
@@ -59,6 +61,7 @@ func Parse(args []string) (Config, error) {
 		Reranker:                env("KLIMAT_RERANKER", "none"),
 		EmbeddingModel:          env("KLIMAT_EMBEDDING_MODEL", DefaultEmbeddingModel),
 		RerankerModel:           env("KLIMAT_RERANKER_MODEL", DefaultRerankerModel),
+		ONNXQuant:               env("KLIMAT_ONNX_QUANT", DefaultONNXQuant),
 		IngestOnStart:           envBool("KLIMAT_INGEST_ON_START", true),
 		IngestInterval:          DefaultIngestInterval,
 		BoverketAPIBase:         env("BOVERKET_API_BASE", env("KLIMAT_BOVERKET_API_BASE", DefaultAPIBase)),
@@ -87,6 +90,7 @@ func Parse(args []string) (Config, error) {
 	fs.StringVar(&c.Reranker, "reranker", c.Reranker, "reranker: none|fake|onnx (`KLIMAT_RERANKER`)")
 	fs.StringVar(&c.EmbeddingModel, "embedding-model", c.EmbeddingModel, "embedder directory under --models")
 	fs.StringVar(&c.RerankerModel, "reranker-model", c.RerankerModel, "reranker directory under --models (`KLIMAT_RERANKER_MODEL`)")
+	fs.StringVar(&c.ONNXQuant, "onnx-quant", c.ONNXQuant, "onnx file pick: auto|int8|fp32 (`KLIMAT_ONNX_QUANT`)")
 	fs.BoolVar(&c.IngestOnStart, "ingest-on-start", c.IngestOnStart, "run ingest once at boot")
 	fs.DurationVar(&c.IngestInterval, "ingest-interval", c.IngestInterval, "repeat ingest interval (0 disables ticker)")
 	fs.StringVar(&c.BoverketAPIBase, "boverket-api-base", c.BoverketAPIBase, "Boverket APIM base URL")
@@ -99,6 +103,16 @@ func Parse(args []string) (Config, error) {
 	}
 	c.Embedder = strings.ToLower(strings.TrimSpace(c.Embedder))
 	c.Reranker = strings.ToLower(strings.TrimSpace(c.Reranker))
+	c.ONNXQuant = strings.ToLower(strings.TrimSpace(c.ONNXQuant))
+	if c.ONNXQuant == "" {
+		c.ONNXQuant = DefaultONNXQuant
+	}
+	switch c.ONNXQuant {
+	case "auto", "int8", "fp32", "none":
+	default:
+		return Config{}, fmt.Errorf("invalid --onnx-quant %q (auto|int8|fp32)", c.ONNXQuant)
+	}
+	_ = os.Setenv("KLIMAT_ONNX_QUANT", c.ONNXQuant)
 	switch c.Embedder {
 	case "auto", "fake", "onnx":
 	default:

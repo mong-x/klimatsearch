@@ -54,7 +54,7 @@ func New(eng search.SearchEngine, st *store.Store, source string, useVector, use
 func (s *Server) register() {
 	mcpsdk.AddTool(s.MCP, &mcpsdk.Tool{
 		Name:        ToolSearch,
-		Description: "Search Klimatdatabas. Each hit is the full Resource (names, descriptions, applicability, conversions, A1A3, category) plus score, match_source, and a details path for get_resource_details",
+		Description: "Search Klimatdatabas. Each hit is the full Resource (names, descriptions, applicability, conversions, typical A1A3 plus conservative A1A3, A4, A5.1, biogenic carbon, service life, transport legs when published) plus score, match_source, and a details path for get_resource_details",
 	}, s.searchTool)
 	mcpsdk.AddTool(s.MCP, &mcpsdk.Tool{
 		Name:        ToolGet,

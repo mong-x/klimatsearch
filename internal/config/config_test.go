@@ -14,3 +14,16 @@ func TestDefaultAPIBase(t *testing.T) {
 		t.Fatalf("BoverketAPIBase=%s", c.BoverketAPIBase)
 	}
 }
+
+func TestONNXQuantFlag(t *testing.T) {
+	c, err := Parse([]string{"-onnx-quant", "int8"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c.ONNXQuant != "int8" {
+		t.Fatalf("ONNXQuant=%s", c.ONNXQuant)
+	}
+	if _, err := Parse([]string{"-onnx-quant", "q4"}); err == nil {
+		t.Fatal("expected invalid quant")
+	}
+}

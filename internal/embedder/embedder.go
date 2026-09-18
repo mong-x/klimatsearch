@@ -14,12 +14,13 @@ var (
 )
 
 // New builds an Embedder. kind is auto|fake|onnx.
-// auto uses onnx when model.onnx exists, otherwise fake.
+// auto uses onnx when model.int8.onnx or model.onnx exists, otherwise fake.
 func New(kind, modelsDir, modelName string) (search.Embedder, error) {
-	onnxPath := filepath.Join(modelsDir, modelName, "model.onnx")
+	dir := filepath.Join(modelsDir, modelName)
+	onnxPath, resErr := ResolveONNX(dir, QuantFromEnv())
 	switch kind {
 	case "", "auto":
-		if fileExists(onnxPath) {
+		if resErr == nil {
 			kind = "onnx"
 		} else {
 			kind = "fake"
@@ -29,10 +30,10 @@ func New(kind, modelsDir, modelName string) (search.Embedder, error) {
 	case "fake":
 		return Fake{}, nil
 	case "onnx":
-		if !fileExists(onnxPath) {
-			return nil, fmt.Errorf("embedder onnx: missing %s (see docs/SELFHOST.md)", onnxPath)
+		if resErr != nil {
+			return nil, fmt.Errorf("embedder %w (see docs/SELFHOST.md)", resErr)
 		}
-		tokPath := filepath.Join(modelsDir, modelName, "tokenizer.json")
+		tokPath := filepath.Join(dir, "tokenizer.json")
 		if !fileExists(tokPath) {
 			return nil, fmt.Errorf("embedder onnx: missing %s (Hugging Face tokenizer.json is required)", tokPath)
 		}

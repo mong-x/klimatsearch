@@ -1,13 +1,66 @@
 {
   "catalog": "boverket",
-  "notes": "Run against a real F2LLM-v2-80M Embedder, not Fake. Expected IDs are 02.07.000 ResourceIds.",
+  "dataset_version": "02.07.000",
+  "notes": "Labeled sibling-confusion set for Boverket Klimatdatabas 02.07.000. Score with a real F2LLM-v2-80M Embedder, not Fake. expect_id is the Resource that should rank first; near_miss are siblings that must not outrank it. kind=sibling is a cluster inversion test; exact is a control; cross_lingual uses the other language's words with lang set to the FTS column language. Run: make eval-golden",
   "queries": [
-    {"q": "glasull lösull vägg", "lang": "sv", "expect_id": "6000000003", "near_miss": ["6000000004", "6000000005"]},
-    {"q": "glass wool attic", "lang": "en", "expect_id": "6000000005", "near_miss": ["6000000003", "6000000004"]},
-    {"q": "spånskiva", "lang": "sv", "expect_id": "6000000000"},
-    {"q": "particle board", "lang": "en", "expect_id": "6000000000"},
-    {"q": "sawn timber 16% moisture", "lang": "en", "expect_id": "6000000007"},
-    {"q": "återanvänd byggprodukt", "lang": "sv", "expect_id": "6000000174"},
-    {"q": "reused building product", "lang": "en", "expect_id": "6000000174"}
+    {"id": "glasull-losull-vagg-sv", "q": "glasull lösull vägg", "lang": "sv", "expect_id": "6000000003", "near_miss": ["6000000004", "6000000005"], "cluster": "glasull", "kind": "sibling"},
+    {"id": "glasull-attic-en", "q": "glass wool attic", "lang": "en", "expect_id": "6000000005", "near_miss": ["6000000003", "6000000004"], "cluster": "glasull", "kind": "sibling"},
+    {"id": "spanskiva-sv", "q": "spånskiva", "lang": "sv", "expect_id": "6000000000", "cluster": "boards", "kind": "exact"},
+    {"id": "particle-board-en", "q": "particle board", "lang": "en", "expect_id": "6000000000", "cluster": "boards", "kind": "exact"},
+    {"id": "sawn-timber-16-en", "q": "sawn timber 16% moisture", "lang": "en", "expect_id": "6000000007", "cluster": "timber", "kind": "exact"},
+    {"id": "ateranvand-sv", "q": "återanvänd byggprodukt", "lang": "sv", "expect_id": "6000000174", "cluster": "reuse", "kind": "exact"},
+    {"id": "reused-en", "q": "reused building product", "lang": "en", "expect_id": "6000000174", "cluster": "reuse", "kind": "exact"},
+
+    {"id": "glasull-vindsbjalklag-sv", "q": "glasull lösull vindsbjälklag", "lang": "sv", "expect_id": "6000000005", "near_miss": ["6000000003", "6000000004"], "cluster": "glasull", "kind": "sibling"},
+    {"id": "glasull-bjalklag-sv", "q": "glasull lösull bjälklag", "lang": "sv", "expect_id": "6000000004", "near_miss": ["6000000003", "6000000005"], "cluster": "glasull", "kind": "sibling"},
+    {"id": "glasull-fasad-sv", "q": "glasull fasadskivor", "lang": "sv", "expect_id": "6000000002", "near_miss": ["6000000001", "6000000006"], "cluster": "glasull", "kind": "sibling"},
+    {"id": "glasull-sound-en", "q": "glasswool sound batts", "lang": "en", "expect_id": "6000000006", "near_miss": ["6000000001", "6000000002"], "cluster": "glasull", "kind": "sibling"},
+    {"id": "glasull-batts-sv", "q": "glasull skivor och rullar", "lang": "sv", "expect_id": "6000000001", "near_miss": ["6000000002", "6000000006"], "cluster": "glasull", "kind": "sibling"},
+
+    {"id": "betong-c25-sv", "q": "fabriksbetong C25/30", "lang": "sv", "expect_id": "6000000029", "near_miss": ["6000000028", "6000000032"], "cluster": "fabriksbetong", "kind": "sibling"},
+    {"id": "betong-c30-sv", "q": "fabriksbetong C30/37", "lang": "sv", "expect_id": "6000000032", "near_miss": ["6000000033", "6000000029"], "cluster": "fabriksbetong", "kind": "sibling"},
+    {"id": "betong-kf-c25-sv", "q": "fabriksbetong klimatförbättrad C25/30", "lang": "sv", "expect_id": "6000000028", "near_miss": ["6000000029", "6000000033"], "cluster": "fabriksbetong", "kind": "sibling"},
+    {"id": "betong-c25-en", "q": "ready-mix made concrete buildings C25/30", "lang": "en", "expect_id": "6000000029", "near_miss": ["6000000028", "6000000032"], "cluster": "fabriksbetong", "kind": "sibling"},
+    {"id": "betong-kf-c30-en", "q": "climate-improved ready-mix C30/37", "lang": "en", "expect_id": "6000000033", "near_miss": ["6000000032", "6000000028"], "cluster": "fabriksbetong", "kind": "sibling"},
+
+    {"id": "gips-standard-sv", "q": "gipsskiva standardskiva", "lang": "sv", "expect_id": "6000000020", "near_miss": ["6000000018", "6000000016"], "cluster": "gips", "kind": "sibling"},
+    {"id": "gips-vatrum-sv", "q": "gipsskiva våtrumsskiva", "lang": "sv", "expect_id": "6000000018", "near_miss": ["6000000020", "6000000016"], "cluster": "gips", "kind": "sibling"},
+    {"id": "gips-fire-en", "q": "gypsum fireboard", "lang": "en", "expect_id": "6000000016", "near_miss": ["6000000020", "6000000018"], "cluster": "gips", "kind": "sibling"},
+
+    {"id": "stenull-vagg-sv", "q": "stenull lösull vägg", "lang": "sv", "expect_id": "6000000130", "near_miss": ["6000000128", "6000000129"], "cluster": "stenull", "kind": "sibling"},
+    {"id": "stenull-attic-en", "q": "stone wool blowing wool attic floor", "lang": "en", "expect_id": "6000000128", "near_miss": ["6000000130", "6000000129"], "cluster": "stenull", "kind": "sibling"},
+
+    {"id": "koppar-97-sv", "q": "kopparplåt 97% skrotbaserad", "lang": "sv", "expect_id": "6000000163", "near_miss": ["6000000162"], "cluster": "copper", "kind": "sibling"},
+    {"id": "koppar-51-en", "q": "copper sheet 51% scrap-based", "lang": "en", "expect_id": "6000000162", "near_miss": ["6000000163"], "cluster": "copper", "kind": "sibling"},
+
+    {"id": "alu-skrot-sv", "q": "aluminiumprofiler skrotbaserad", "lang": "sv", "expect_id": "6000000160", "near_miss": ["6000000159"], "cluster": "aluminium", "kind": "sibling"},
+    {"id": "alu-primary-en", "q": "aluminium profile primary", "lang": "en", "expect_id": "6000000159", "near_miss": ["6000000160"], "cluster": "aluminium", "kind": "sibling"},
+
+    {"id": "cellglas-90-sv", "q": "cellglas skivor 90% återvunnet", "lang": "sv", "expect_id": "6000000228", "near_miss": ["6000000229", "6000000227"], "cluster": "cellglas", "kind": "sibling"},
+    {"id": "cellglas-50-en", "q": "cellular glass boards 50% recycled", "lang": "en", "expect_id": "6000000229", "near_miss": ["6000000228"], "cluster": "cellglas", "kind": "sibling"},
+
+    {"id": "diesel-fossil-sv", "q": "diesel fossil", "lang": "sv", "expect_id": "6000000011", "near_miss": ["6000000010", "6100000008"], "cluster": "diesel", "kind": "sibling"},
+    {"id": "diesel-mk1-sv", "q": "diesel MK1 reduktionsplikt", "lang": "sv", "expect_id": "6000000010", "near_miss": ["6000000011", "6100000008"], "cluster": "diesel", "kind": "sibling"},
+
+    {"id": "fonster-tra-sidhangt-sv", "q": "fönster trä sidhängt 3-glas", "lang": "sv", "expect_id": "6000000104", "near_miss": ["6000000103", "6000000105"], "cluster": "windows", "kind": "sibling"},
+    {"id": "fonster-tra-alu-fast-en", "q": "window wood/aluminium fixed triple-glazed", "lang": "en", "expect_id": "6000000110", "near_miss": ["6000000109", "6000000103"], "cluster": "windows", "kind": "sibling"},
+
+    {"id": "solcell-mono-sv", "q": "solcell mono-Si", "lang": "sv", "expect_id": "6000000203", "near_miss": ["6000000204", "6000000206"], "cluster": "pv", "kind": "sibling"},
+    {"id": "solcell-cdte-en", "q": "photovoltaic cells CdTe", "lang": "en", "expect_id": "6000000206", "near_miss": ["6000000203", "6000000204"], "cluster": "pv", "kind": "sibling"},
+
+    {"id": "xps-sv", "q": "XPS extruderad polystyren", "lang": "sv", "expect_id": "6000000132", "near_miss": ["6000000131"], "cluster": "foam", "kind": "sibling"},
+    {"id": "eps-en", "q": "EPS expanded polystyrene", "lang": "en", "expect_id": "6000000131", "near_miss": ["6000000132"], "cluster": "foam", "kind": "sibling"},
+
+    {"id": "cellulosa-atervunnen-sv", "q": "cellulosafiber återvunnet papper lösull", "lang": "sv", "expect_id": "6000000138", "near_miss": ["6000000134", "6000000137"], "cluster": "cellulose", "kind": "sibling"},
+    {"id": "cellulosa-unused-en", "q": "cellulose fibre blowing wool unused paper", "lang": "en", "expect_id": "6000000137", "near_miss": ["6000000138", "6000000134"], "cluster": "cellulose", "kind": "sibling"},
+
+    {"id": "osb-sv", "q": "OSB", "lang": "sv", "expect_id": "6000000024", "cluster": "boards", "kind": "exact"},
+    {"id": "plywood-en", "q": "plywood", "lang": "en", "expect_id": "6000000023", "near_miss": ["6000000024", "6000000000"], "cluster": "boards", "kind": "exact"},
+
+    {"id": "balk-forspand-kf-sv", "q": "balkar förspänd klimatförbättrad", "lang": "sv", "expect_id": "6000000072", "near_miss": ["6000000071"], "cluster": "precast", "kind": "sibling"},
+    {"id": "beams-prestressed-en", "q": "beams prestressed", "lang": "en", "expect_id": "6000000071", "near_miss": ["6000000072"], "cluster": "precast", "kind": "sibling"},
+
+    {"id": "particle-board-sv-enwords", "q": "particle board", "lang": "sv", "expect_id": "6000000000", "cluster": "boards", "kind": "cross_lingual"},
+    {"id": "glass-wool-attic-sv-enwords", "q": "glass wool attic", "lang": "sv", "expect_id": "6000000005", "near_miss": ["6000000003", "6000000004"], "cluster": "glasull", "kind": "cross_lingual"}
   ]
 }

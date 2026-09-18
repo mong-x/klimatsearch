@@ -12,6 +12,10 @@ info:
     (`https://klimatdatabasen.boverket.se/detaljer/{category_code}/{id}`).
     `GET /api/resources/{id}/origin` 302s there.
 
+    Resources include typical A1–A3 (`a1a3`) plus conservative A1–A3, A4, A5.1,
+    waste/conservative factors, biogenic carbon, service life, BK04, and A4
+    transport legs when Boverket publishes them. Energy carriers omit A4/A5.1.
+
     `GET /healthz`, `GET /openapi.yaml`, and `GET /docs` are public.
     The default self-hosted build (`make build`) has no Unkey or MPP and does not
     gate `/api/*`. The binary we run is `make build-hosted` (`-tags hosted`).
@@ -402,7 +406,48 @@ components:
         a1a3:
           type: number
           format: double
-          description: Typical A1–A3 kg CO2e per Declared unit
+          description: Typical GWP-GHG A1–A3 kg CO2e per Declared unit (comparison / typical value, not the conservative declaration factor)
+        a1a3_conservative:
+          type: number
+          format: double
+          description: Conservative A1–A3 (~25% above typical). Boverket uses this for climate declarations; klimatsearch Compare uses typical.
+        a4:
+          type: number
+          format: double
+          description: GWP-GHG module A4 (transport to site). Omitted for energy carriers.
+        a5_1:
+          type: number
+          format: double
+          description: GWP-GHG module A5.1 (construction-site waste). Omitted for energy carriers.
+        gwp_unit:
+          type: string
+          example: kg CO2 eq./kg
+        conservative_factor:
+          type: number
+          format: double
+        waste_factor:
+          type: number
+          format: double
+        biogenic_carbon:
+          type: number
+          format: double
+        service_life:
+          type: string
+        transports:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              distance_km:
+                type: number
+              type:
+                type: string
+              fuel:
+                type: string
+              fuel_resource_id:
+                type: string
         unit:
           type: string
           example: kg

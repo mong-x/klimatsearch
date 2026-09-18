@@ -1,0 +1,27 @@
+# klimatsearch
+
+> Hybrid search and MCP server for Boverket Klimatdatabas. One Go binary: SQLite FTS5 + sqlite-vec, REST, MCP. Self-host is ungated (no Unkey, no MPP). Cite Boverket Klimatdatabas. Not affiliated with Boverket.
+
+An agent setting up a client or a self-host instance should load [docs/AGENT-SELFHOST.md](https://github.com/mong-x/klimatsearch/blob/main/docs/AGENT-SELFHOST.md) first. Search with the cheapest path that can hit the labeled Resource: FTS, then hybrid (`vector=true`), then rerank (`rerank=true`) only for sibling grades. REST defaults vector and rerank off. MCP uses whatever the process loaded (`KLIMAT_RERANKER=onnx` means MCP always reranks). Scale by replica-local SQLite plus HPA; do not share one SQLite WAL across writers. Do not load zerank-2.
+
+## Docs
+
+- [Agent self-host playbook](https://github.com/mong-x/klimatsearch/blob/main/docs/AGENT-SELFHOST.md): Cost, MCP/REST, load, and HPA for a self-hosted instance
+- [README](https://github.com/mong-x/klimatsearch/blob/main/README.md): Product, REST, MCP, retrieval quality
+- [SELFHOST.md](https://github.com/mong-x/klimatsearch/blob/main/docs/SELFHOST.md): F2LLM + BGE/zerank files, compose, check-models
+- [LAUNCH.md](https://github.com/mong-x/klimatsearch/blob/main/docs/LAUNCH.md): Human steps (weights, Unkey/MPP hosted lane, k8s)
+- [CONTEXT.md](https://github.com/mong-x/klimatsearch/blob/main/CONTEXT.md): Glossary (Catalog, Resource, Hit, Guard)
+- [OpenAPI](https://mong-x.github.io/klimatsearch/swagger/): REST spec
+- [Golden queries](https://github.com/mong-x/klimatsearch/blob/main/testdata/golden-queries.json): 44 labeled sibling/exact/cross-lingual queries
+
+## Deploy
+
+- [compose.onnx.yml](https://github.com/mong-x/klimatsearch/blob/main/deploy/compose.onnx.yml): Docker Compose with F2LLM + BGE reranker
+- [deployment.onnx.yaml](https://github.com/mong-x/klimatsearch/blob/main/deploy/k8s/deployment.onnx.yaml): Kubernetes Deployment (4 GiB, reranker on)
+- [hpa.onnx.yaml](https://github.com/mong-x/klimatsearch/blob/main/deploy/k8s/hpa.onnx.yaml): HorizontalPodAutoscaler for CPU/memory
+
+## Optional
+
+- [GitHub Pages](https://mong-x.github.io/klimatsearch/)
+- [Boverket Klimatdatabas](https://www.boverket.se/sv/klimatdeklaration/klimatdatabas/)
+- [Boverket product sheet pattern](https://klimatdatabasen.boverket.se): origin URL is `/detaljer/{category_code}/{resource_id}`

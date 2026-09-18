@@ -1,0 +1,143 @@
+package model
+
+// Details is Boverket payload beyond typical A1–A3. Empty for BR25 until mapped.
+// a1a3 on Resource stays the typical GWP-GHG value used for Compare.
+type Details struct {
+	A1A3Conservative     float64     `json:"a1a3_conservative,omitempty"`
+	A4                   *float64    `json:"a4,omitempty"`
+	A51                  *float64    `json:"a5_1,omitempty"`
+	GWPUnit              string      `json:"gwp_unit,omitempty"`
+	ConservativeFactor   float64     `json:"conservative_factor,omitempty"`
+	WasteFactor          float64     `json:"waste_factor,omitempty"`
+	BiogenicCarbon       *float64    `json:"biogenic_carbon,omitempty"`
+	ServiceLife          string      `json:"service_life,omitempty"`
+	ServiceLifeCommentSV string      `json:"service_life_comment_sv,omitempty"`
+	ServiceLifeCommentEN string      `json:"service_life_comment_en,omitempty"`
+	UseAdviceSV          string      `json:"use_advice_sv,omitempty"`
+	UseAdviceEN          string      `json:"use_advice_en,omitempty"`
+	CommentSV            string      `json:"comment_sv,omitempty"`
+	CommentEN            string      `json:"comment_en,omitempty"`
+	StdName              string      `json:"std_name,omitempty"`
+	StdCalc              string      `json:"std_calc,omitempty"`
+	Geography            string      `json:"geography,omitempty"`
+	TimeRepSV            string      `json:"time_representativeness_sv,omitempty"`
+	TimeRepEN            string      `json:"time_representativeness_en,omitempty"`
+	SupplySV             string      `json:"supply_sv,omitempty"`
+	SupplyEN             string      `json:"supply_en,omitempty"`
+	ComparativeSV        string      `json:"comparative_sv,omitempty"`
+	ComparativeEN        string      `json:"comparative_en,omitempty"`
+	A4BackgroundSV       string      `json:"a4_background_sv,omitempty"`
+	A4BackgroundEN       string      `json:"a4_background_en,omitempty"`
+	BK04Code             string      `json:"bk04_code,omitempty"`
+	BK04Text             string      `json:"bk04_text,omitempty"`
+	Transports           []Transport `json:"transports,omitempty"`
+}
+
+// Transport is one generic A4 transport leg from Boverket TransportItems.
+type Transport struct {
+	Name           string  `json:"name,omitempty"`
+	DistanceKM     float64 `json:"distance_km,omitempty"`
+	Type           string  `json:"type,omitempty"`
+	EnergyUse      string  `json:"energy_use,omitempty"`
+	EnergyUseValue float64 `json:"energy_use_value,omitempty"`
+	Fuel           string  `json:"fuel,omitempty"`
+	FuelResourceID string  `json:"fuel_resource_id,omitempty"`
+}
+
+func (d Details) empty() bool {
+	return d.A1A3Conservative == 0 && d.A4 == nil && d.A51 == nil && d.GWPUnit == "" &&
+		d.ConservativeFactor == 0 && d.WasteFactor == 0 && d.BiogenicCarbon == nil &&
+		d.ServiceLife == "" && d.StdName == "" && d.StdCalc == "" && d.Geography == "" &&
+		d.BK04Code == "" && len(d.Transports) == 0 &&
+		d.UseAdviceSV == "" && d.UseAdviceEN == "" && d.CommentSV == "" && d.CommentEN == ""
+}
+
+// MergeDetails overlays src onto dst. fromEN fills *_en text; otherwise *_sv.
+func MergeDetails(dst, src Details, fromEN bool) Details {
+	if dst.A1A3Conservative == 0 {
+		dst.A1A3Conservative = src.A1A3Conservative
+	}
+	if dst.A4 == nil {
+		dst.A4 = src.A4
+	}
+	if dst.A51 == nil {
+		dst.A51 = src.A51
+	}
+	if dst.GWPUnit == "" {
+		dst.GWPUnit = src.GWPUnit
+	}
+	if dst.ConservativeFactor == 0 {
+		dst.ConservativeFactor = src.ConservativeFactor
+	}
+	if dst.WasteFactor == 0 {
+		dst.WasteFactor = src.WasteFactor
+	}
+	if dst.BiogenicCarbon == nil {
+		dst.BiogenicCarbon = src.BiogenicCarbon
+	}
+	if dst.ServiceLife == "" {
+		dst.ServiceLife = src.ServiceLife
+	}
+	if dst.StdName == "" {
+		dst.StdName = src.StdName
+	}
+	if dst.StdCalc == "" {
+		dst.StdCalc = src.StdCalc
+	}
+	if dst.Geography == "" {
+		dst.Geography = src.Geography
+	}
+	if dst.BK04Code == "" {
+		dst.BK04Code = src.BK04Code
+		dst.BK04Text = src.BK04Text
+	}
+	if len(dst.Transports) == 0 {
+		dst.Transports = src.Transports
+	}
+	if fromEN {
+		if src.ServiceLifeCommentEN != "" {
+			dst.ServiceLifeCommentEN = src.ServiceLifeCommentEN
+		}
+		if src.UseAdviceEN != "" {
+			dst.UseAdviceEN = src.UseAdviceEN
+		}
+		if src.CommentEN != "" {
+			dst.CommentEN = src.CommentEN
+		}
+		if src.TimeRepEN != "" {
+			dst.TimeRepEN = src.TimeRepEN
+		}
+		if src.SupplyEN != "" {
+			dst.SupplyEN = src.SupplyEN
+		}
+		if src.ComparativeEN != "" {
+			dst.ComparativeEN = src.ComparativeEN
+		}
+		if src.A4BackgroundEN != "" {
+			dst.A4BackgroundEN = src.A4BackgroundEN
+		}
+	} else {
+		if src.ServiceLifeCommentSV != "" {
+			dst.ServiceLifeCommentSV = src.ServiceLifeCommentSV
+		}
+		if src.UseAdviceSV != "" {
+			dst.UseAdviceSV = src.UseAdviceSV
+		}
+		if src.CommentSV != "" {
+			dst.CommentSV = src.CommentSV
+		}
+		if src.TimeRepSV != "" {
+			dst.TimeRepSV = src.TimeRepSV
+		}
+		if src.SupplySV != "" {
+			dst.SupplySV = src.SupplySV
+		}
+		if src.ComparativeSV != "" {
+			dst.ComparativeSV = src.ComparativeSV
+		}
+		if src.A4BackgroundSV != "" {
+			dst.A4BackgroundSV = src.A4BackgroundSV
+		}
+	}
+	return dst
+}

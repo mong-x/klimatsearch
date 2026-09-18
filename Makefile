@@ -1,7 +1,7 @@
-.PHONY: test test-hosted build build-hosted run models check-models e2e docker help tidy
+.PHONY: test test-hosted build build-hosted run models check-models eval-golden e2e docker help tidy
 
 help:
-	@echo "make test | build | run | models | check-models | docker | e2e"
+	@echo "make test | build | run | models | check-models | eval-golden | docker | e2e"
 	@echo "make build-hosted | test-hosted  # Unkey + MPP Guard (the binary we run)"
 	@echo "Human launch steps: docs/LAUNCH.md"
 
@@ -37,6 +37,10 @@ models:
 
 check-models:
 	./scripts/check-models.sh
+
+# Honest retrieval metrics. Needs data/klimat.db ingested with F2LLM, not Fake.
+eval-golden:
+	CGO_ENABLED=1 go run -tags "$(GO_TAGS)" ./cmd/evalgolden --embedder=onnx
 
 docker:
 	docker build -t klimatsearch:local .

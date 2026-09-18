@@ -140,19 +140,36 @@ func parseV2Resource(raw json.RawMessage, culture string) (model.Resource, error
 			}
 		}
 	}
-	r.A1A3 = typicalA1A3(m)
+	parseClimate(&r, m)
+	parseDetailsText(&r, m, culture)
+	parseTransports(&r, m)
+	parseBK04(&r, m)
 	return r, nil
 }
 
-func typicalA1A3(m map[string]any) float64 {
+func parseClimate(r *model.Resource, m map[string]any) {
+	d := r.Details
+	if f, ok := asFloat(m["ConservativeDataConversionFactor"]); ok {
+		d.ConservativeFactor = f
+	}
+	if f, ok := asFloat(m["WasteFactor"]); ok {
+		d.WasteFactor = f
+	}
+	if f, ok := asFloat(m["CalculatedBiogenicCarbon"]); ok {
+		d.BiogenicCarbon = &f
+	}
 	items, ok := m["DataItems"].([]any)
 	if !ok {
-		return 0
+		r.Details = d
+		return
 	}
 	for _, di := range items {
 		dim, ok := di.(map[string]any)
 		if !ok {
 			continue
+		}
+		if u := firstString(dim, "PropertyUnitCode"); u != "" {
+			d.GWPUnit = u
 		}
 		dvis, ok := dim["DataValueItems"].([]any)
 		if !ok {
@@ -163,14 +180,109 @@ func typicalA1A3(m map[string]any) float64 {
 			if !ok {
 				continue
 			}
-			if firstString(item, "DataModuleCode") == "A1-A3 Typical" {
-				if f, ok := asFloat(item["Value"]); ok {
-					return f
-				}
+			code := firstString(item, "DataModuleCode")
+			f, ok := asFloat(item["Value"])
+			if !ok {
+				continue
+			}
+			switch code {
+			case "A1-A3 Typical":
+				r.A1A3 = f
+			case "A1-A3 Conservative":
+				d.A1A3Conservative = f
+			case "A4":
+				v := f
+				d.A4 = &v
+			case "A5.1":
+				v := f
+				d.A51 = &v
 			}
 		}
 	}
-	return 0
+	r.Details = d
+}
+
+func parseDetailsText(r *model.Resource, m map[string]any, culture string) {
+	d := r.Details
+	d.ServiceLife = firstString(m, "RefServiceLifeNormal")
+	d.StdName = firstString(m, "StdName")
+	d.StdCalc = firstString(m, "StdCalc")
+	d.Geography = firstString(m, "GeographicalRepresentativenessDescription")
+	lifeC := firstString(m, "RefServiceLifeNormalComment")
+	advice := firstString(m, "UseAdviceForDataSet")
+	comment := firstString(m, "GeneralComment")
+	timeRep := firstString(m, "TimeRepresentativenessDescription")
+	supply := firstString(m, "AnnualSupplyOrProductionVolume")
+	comp := firstString(m, "ComparativeProperty")
+	a4b := firstString(m, "A4ValueBackground")
+	if strings.HasPrefix(strings.ToLower(culture), "en") {
+		d.ServiceLifeCommentEN = lifeC
+		d.UseAdviceEN = advice
+		d.CommentEN = comment
+		d.TimeRepEN = timeRep
+		d.SupplyEN = supply
+		d.ComparativeEN = comp
+		d.A4BackgroundEN = a4b
+	} else {
+		d.ServiceLifeCommentSV = lifeC
+		d.UseAdviceSV = advice
+		d.CommentSV = comment
+		d.TimeRepSV = timeRep
+		d.SupplySV = supply
+		d.ComparativeSV = comp
+		d.A4BackgroundSV = a4b
+	}
+	r.Details = d
+}
+
+func parseTransports(r *model.Resource, m map[string]any) {
+	items, ok := m["TransportItems"].([]any)
+	if !ok {
+		return
+	}
+	var legs []model.Transport
+	for _, it := range items {
+		tm, ok := it.(map[string]any)
+		if !ok {
+			continue
+		}
+		leg := model.Transport{
+			Name:           firstString(tm, "Name"),
+			Type:           firstString(tm, "TransportTypeName"),
+			EnergyUse:      firstString(tm, "EnergyUseName"),
+			Fuel:           firstString(tm, "FuelTypeName"),
+			FuelResourceID: firstString(tm, "FuelTypeResourceId"),
+		}
+		if f, ok := asFloat(tm["GenericDistance"]); ok {
+			leg.DistanceKM = f
+		}
+		if f, ok := asFloat(tm["EnergyUseValue"]); ok {
+			leg.EnergyUseValue = f
+		}
+		if leg.Name == "" && leg.Type == "" {
+			continue
+		}
+		legs = append(legs, leg)
+	}
+	r.Details.Transports = legs
+}
+
+func parseBK04(r *model.Resource, m map[string]any) {
+	cats, ok := m["Categories"].([]any)
+	if !ok {
+		return
+	}
+	for _, c := range cats {
+		cm, ok := c.(map[string]any)
+		if !ok {
+			continue
+		}
+		if firstString(cm, "ClassificationType") == "BK04" {
+			r.Details.BK04Code = firstString(cm, "Code")
+			r.Details.BK04Text = firstString(cm, "Text")
+			return
+		}
+	}
 }
 
 func parseLegacyDoc(doc map[string]json.RawMessage, raw []byte) (Batch, error) {

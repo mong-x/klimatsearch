@@ -1,0 +1,85 @@
+# Self-host ONNX (F2LLM + BGE reranker). Not used by kind e2e.
+# Mount models/ and libonnxruntime.so; raise memory to 8Gi for zerank-1-small.
+# Clients: vector=true&rerank=true. MCP reranks when KLIMAT_RERANKER=onnx.
+# Shared klimatsearch-data PVC = one replica only. For HPA (hpa.onnx.yaml)
+# use emptyDir (or a per-pod volume) so each replica ingests its own SQLite.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: klimatsearch
+  labels:
+    app: klimatsearch
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: klimatsearch
+  template:
+    metadata:
+      labels:
+        app: klimatsearch
+    spec:
+      containers:
+        - name: klimatsearch
+          image: klimatsearch:onnx
+          imagePullPolicy: IfNotPresent
+          command: ["klimatsearch"]
+          args:
+            - --embedder=onnx
+            - --reranker=onnx
+            - --reranker-model=bge-reranker-v2-m3
+            - --onnx-quant=auto
+            - --ingest-on-start
+          ports:
+            - containerPort: 8080
+              name: http
+          env:
+            - name: KLIMAT_EMBEDDER
+              value: onnx
+            - name: KLIMAT_RERANKER
+              value: onnx
+            - name: KLIMAT_RERANKER_MODEL
+              value: bge-reranker-v2-m3
+            - name: KLIMAT_ONNX_QUANT
+              value: auto
+            - name: KLIMAT_MODELS
+              value: /models
+            - name: KLIMAT_EMBEDDING_MODEL
+              value: f2llm-v2-80m
+            - name: KLIMAT_LISTEN
+              value: ":8080"
+            - name: KLIMAT_DB
+              value: /data/klimat.db
+            - name: ONNXRUNTIME_LIB
+              value: /usr/local/lib/libonnxruntime.so
+          volumeMounts:
+            - name: models
+              mountPath: /models
+              readOnly: true
+            - name: data
+              mountPath: /data
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 15
+          resources:
+            requests:
+              cpu: 500m
+              memory: 2Gi
+            limits:
+              memory: 4Gi
+      volumes:
+        - name: models
+          persistentVolumeClaim:
+            claimName: klimatsearch-models
+        - name: data
+          persistentVolumeClaim:
+            claimName: klimatsearch-data

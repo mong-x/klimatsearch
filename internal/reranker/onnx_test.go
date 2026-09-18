@@ -16,6 +16,25 @@ func TestNewONNXMissingModel(t *testing.T) {
 	}
 }
 
+func TestNewONNXInt8Missing(t *testing.T) {
+	t.Setenv("KLIMAT_ONNX_QUANT", "int8")
+	root := t.TempDir()
+	dir := filepath.Join(root, "m")
+	if err := os.Mkdir(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "model.onnx"), []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "tokenizer.json"), []byte("{}"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	_, err := New("onnx", root, "m")
+	if err == nil {
+		t.Fatal("expected error when model.int8.onnx is required but absent")
+	}
+}
+
 func TestONNXRerankIfModelPresent(t *testing.T) {
 	root := filepath.Join("..", "..")
 	dir := filepath.Join(root, "models", "bge-reranker-v2-m3")

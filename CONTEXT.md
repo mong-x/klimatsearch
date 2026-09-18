@@ -45,8 +45,23 @@ A factor that restates a Resource's Declared unit in another unit (for example k
 _Avoid_: density, multiplier, unit map
 
 **A1A3**:
-The typical GWP-GHG climate impact of a Resource for life-cycle modules A1–A3, in kg CO2e per Declared unit.
+The typical GWP-GHG climate impact of a Resource for life-cycle modules A1–A3, in kg CO2e per Declared unit. Compare uses this value.
 _Avoid_: GWP, carbon footprint, emission factor, conservative A1-A3
+
+**A1A3 Conservative**:
+Boverket's conservative A1–A3 (~25% above typical), used in climate declarations. Not the Compare value.
+_Avoid_: declaration GWP (bare)
+
+**A4**:
+GWP-GHG for transport to the construction site. Present on construction products, not energy carriers.
+_Avoid_: transport emissions (bare)
+
+**A5.1**:
+GWP-GHG for construction-site waste (module A5.1). Present on construction products, not energy carriers.
+
+**Details**:
+The rest of Boverket's Resource payload klimatsearch surfaces (conservative A1–A3, A4, A5.1, factors, biogenic carbon, service life, comments, BK04, transport legs).
+_Avoid_: raw JSON dump
 
 **DatasetVersion**:
 The Klimatdatabas publication a Resource was ingested from (for example 02.07.000).

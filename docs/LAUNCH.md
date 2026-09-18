@@ -72,7 +72,7 @@ Self-hosters (AWS, Docker, a VM): follow **[SELFHOST.md](SELFHOST.md)** — F2LL
    KLIMAT_EMBEDDER=onnx ./bin/klimatsearch
    ```
 
-5. Score `testdata/golden-queries.json` (hit@1 / sibling inversions). Do **not** use the Fake embedder for that table.
+5. Score the labeled set: `make eval-golden` (Hit@1 / Hit@3 / sibling inversions / INT8 vs fp32 agreement). Do **not** use the Fake embedder. Re-ingest with `KLIMAT_EMBEDDER=onnx` first.
 
 Documents use labeled bilingual `EmbeddingText` (no Instruct prefix). Queries use `Instruct:…\nQuery:`. Do not score quality with the Fake embedder.
 
@@ -186,12 +186,12 @@ Kind e2e uses `klimatsearch:e2e`, `imagePullPolicy: Never`, fake embedder, fixtu
 
 **You:**
 
-1. Follow [SELFHOST.md](SELFHOST.md). Build and push a real image (mount `models/` or a private layer; do not git the weights). `KLIMAT_EMBEDDER=onnx` and `KLIMAT_RERANKER=none`.
+1. Follow [SELFHOST.md](SELFHOST.md). Build and push a real image (mount `models/` or a private layer; do not git the weights). `KLIMAT_EMBEDDER=onnx`. Reranker: `KLIMAT_RERANKER=onnx` (BGE-m3) or `none`. Example manifest: `deploy/k8s/deployment.onnx.yaml`.
 2. Set `image:` + `imagePullPolicy: IfNotPresent` in `deploy/k8s/deployment.yaml`.
 3. Replace the Ingress stub (`deploy/k8s/ingress.yaml`) with your ALB / ingress class, host, TLS.
 4. Attach secrets: `UNKEY_ROOT_KEY`, `MPP_SECRET_KEY`, `MPP_RECIPIENT`, `ONNXRUNTIME_LIB`, `KLIMAT_EMBEDDER=onnx`.
 5. PVC is optional: ~230 rows rebuild on boot via the Boverket Ingester. Use a PVC if you do not want to re-embed on every pod start.
-6. Memory: ONNX 80M needs more than the e2e `512Mi` limit — raise it (1–2 Gi is a sane starting point).
+6. Memory: embedder-only **1–2 Gi**; embedder + BGE **4 Gi** (`deployment.onnx.yaml`); zerank-1-small **8 Gi**. Kind e2e’s `512Mi` is fake-embedder only.
 7. CGO: image already builds with `CGO_ENABLED=1` and `-tags fts5`.
 
 ---
@@ -200,10 +200,12 @@ Kind e2e uses `klimatsearch:e2e`, `imagePullPolicy: Never`, fake embedder, fixtu
 
 | Item | Notes |
 | --- | --- |
-| Reranker ONNX (`BAAI/bge-reranker-v2-m3`) | `python scripts/export-bge-reranker-onnx.py` then `KLIMAT_RERANKER=onnx` and `rerank=true`. Optional; needs extra RAM. |
+| Reranker ONNX (BGE-m3, self-host default) | Same OSS binary. `KLIMAT_RERANKER=onnx`, REST `rerank=true`, MCP reranks when loaded. Compose: `deploy/compose.onnx.yml`. ~4 GiB. |
+| Reranker ONNX (zerank-1-small) | `python scripts/export-zerank-onnx.py` then `KLIMAT_RERANKER_MODEL=zerank-1-small`. Apache 1.7B; ~8 GiB. Do not load zerank-2 in-process. |
+| INT8 ONNX | `python scripts/quantize-onnx.py models/<dir>` then default `KLIMAT_ONNX_QUANT=auto` loads `model.int8.onnx`. |
 | Subscription key | Live Boverket v2 JSON worked without `BOVERKET_SUBSCRIPTION_KEY`; keep the header if APIM starts requiring it. |
 | MCP client config | Point Claude/Cursor at `/mcp` (streamable) or `/mcp/sse`. |
-| Golden set expansion | Add Fabriksbetong C-class Queries after ONNX works. |
+| Golden eval | `make eval-golden` scores `testdata/golden-queries.json` (44 sibling/exact/cross-lingual queries). INT8 and zerank lanes appear when those ONNX files exist. |
 | Graphify | `graphify extract . --code-only` if you want a code graph; `graphify-out/` is gitignored. |
 
 ---
@@ -215,10 +217,9 @@ Kind e2e uses `klimatsearch:e2e`, `imagePullPolicy: Never`, fake embedder, fixtu
 [ ] Live ingest from api.boverket.se (no --demo-fixture)
 [ ] brew install onnxruntime (or ONNXRUNTIME_LIB)
 [ ] ./scripts/fetch-libtokenizers.sh
-[ ] make models && python scripts/export-f2llm-onnx.py
+[ ] make models && python scripts/export-f2llm-onnx.py && python scripts/quantize-onnx.py models/f2llm-v2-80m
 [ ] rm data/klimat.db && KLIMAT_EMBEDDER=onnx make build && ./bin/klimatsearch
-[ ] Score testdata/golden-queries.json with ONNX (not Fake)
-[ ] Score testdata/golden-queries.json
+[ ] `make eval-golden` (F2LLM-ingested DB; Fake numbers are not a quality signal)
 [ ] Unkey **root key** in `.env` as `UNKEY_ROOT_KEY` (not the keyspace API key)
 [ ] Create a customer **API key** in the keyspace; curl with `Authorization: Bearer`
 [ ] MPP_SECRET_KEY (`openssl rand -hex 32`) + MPP_RECIPIENT (Tempo address) in `.env`

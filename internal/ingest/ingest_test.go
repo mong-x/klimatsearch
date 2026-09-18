@@ -40,6 +40,31 @@ func TestParseBoverketV2One(t *testing.T) {
 	if r.A1A3 != 0.39 {
 		t.Fatalf("a1a3=%v (must be Typical, not Conservative 0.488)", r.A1A3)
 	}
+	if r.Details.A1A3Conservative != 0.488 {
+		t.Fatalf("conservative=%v", r.Details.A1A3Conservative)
+	}
+	if r.Details.A4 == nil || *r.Details.A4 != 0.0629 {
+		t.Fatalf("a4=%v", r.Details.A4)
+	}
+	if r.Details.A51 == nil || *r.Details.A51 != 0.055 {
+		t.Fatalf("a5_1=%v", r.Details.A51)
+	}
+	if r.Details.BiogenicCarbon == nil || *r.Details.BiogenicCarbon != 0.42 {
+		t.Fatalf("biogenic=%v", r.Details.BiogenicCarbon)
+	}
+	if r.Details.WasteFactor != 1.1 || r.Details.ConservativeFactor != 1.25 {
+		t.Fatalf("factors waste=%v cons=%v", r.Details.WasteFactor, r.Details.ConservativeFactor)
+	}
+	if r.Details.ServiceLife == "" || r.Details.UseAdviceSV == "" || r.Details.CommentSV == "" {
+		t.Fatalf("text details %+v", r.Details)
+	}
+	if r.Details.BK04Code != "01208" {
+		t.Fatalf("bk04=%s", r.Details.BK04Code)
+	}
+	v := r.View("Boverket Klimatdatabas")
+	if v["a4"] == nil || v["a5_1"] == nil || v["a1a3_conservative"] == nil {
+		t.Fatalf("view missing climate modules: %+v", v)
+	}
 	if r.Unit != "kg" {
 		t.Fatalf("unit=%s", r.Unit)
 	}

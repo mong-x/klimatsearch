@@ -187,13 +187,17 @@ func (s *Store) Upsert(ctx context.Context, r model.Resource, embedding []float3
 	if err != nil {
 		return fmt.Errorf("marshal conversions: %w", err)
 	}
+	details, err := json.Marshal(r.Details)
+	if err != nil {
+		return fmt.Errorf("marshal details: %w", err)
+	}
 	_, err = s.db.ExecContext(ctx, `
 INSERT INTO resources (
     catalog_id, id, name_sv, name_en, description_sv, description_en,
     applicability_sv, applicability_en, synonyms,
     a1_a3, unit, conversions_json, category, category_code, version,
-    content_hash, raw_json, updated_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+    content_hash, raw_json, details_json, updated_at
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
 ON CONFLICT(catalog_id, id) DO UPDATE SET
     name_sv=excluded.name_sv,
     name_en=excluded.name_en,
@@ -210,10 +214,11 @@ ON CONFLICT(catalog_id, id) DO UPDATE SET
     version=excluded.version,
     content_hash=excluded.content_hash,
     raw_json=excluded.raw_json,
+    details_json=excluded.details_json,
     updated_at=excluded.updated_at
 `, r.CatalogID, r.ResourceID, r.NameSV, r.NameEN, r.DescriptionSV, r.DescriptionEN,
 		r.ApplicabilitySV, r.ApplicabilityEN, r.Synonyms,
-		r.A1A3, r.Unit, string(conv), r.Category, r.CategoryCode, r.Version, r.Hash, r.RawJSON)
+		r.A1A3, r.Unit, string(conv), r.Category, r.CategoryCode, r.Version, r.Hash, r.RawJSON, string(details))
 	if err != nil {
 		return fmt.Errorf("upsert resource %s: %w", r.DocID(), err)
 	}
@@ -327,7 +332,8 @@ func (s *Store) Count(ctx context.Context) (int, error) {
 
 const resourceCols = `r.catalog_id, r.id, r.name_sv, r.name_en, r.description_sv, r.description_en,
        r.applicability_sv, r.applicability_en, r.synonyms, r.a1_a3, r.unit,
-       r.conversions_json, r.category, r.category_code, r.version, r.content_hash, r.raw_json`
+       r.conversions_json, r.category, r.category_code, r.version, r.content_hash, r.raw_json,
+       r.details_json`
 
 // SearchFTS runs BM25 over language-specific columns. Rank is 1-based in this list.
 func (s *Store) SearchFTS(ctx context.Context, query, lang string, limit int, catalogs []string) ([]model.Ranked, error) {
@@ -440,11 +446,11 @@ type scanner interface {
 
 func scanResource(row scanner) (*model.Resource, error) {
 	var r model.Resource
-	var conv string
+	var conv, details string
 	if err := row.Scan(
 		&r.CatalogID, &r.ResourceID, &r.NameSV, &r.NameEN, &r.DescriptionSV, &r.DescriptionEN,
 		&r.ApplicabilitySV, &r.ApplicabilityEN, &r.Synonyms,
-		&r.A1A3, &r.Unit, &conv, &r.Category, &r.CategoryCode, &r.Version, &r.Hash, &r.RawJSON,
+		&r.A1A3, &r.Unit, &conv, &r.Category, &r.CategoryCode, &r.Version, &r.Hash, &r.RawJSON, &details,
 	); err != nil {
 		return nil, err
 	}
@@ -452,6 +458,11 @@ func scanResource(row scanner) (*model.Resource, error) {
 	if conv != "" {
 		if err := json.Unmarshal([]byte(conv), &r.Conversions); err != nil {
 			return nil, fmt.Errorf("conversions json: %w", err)
+		}
+	}
+	if details != "" && details != "{}" {
+		if err := json.Unmarshal([]byte(details), &r.Details); err != nil {
+			return nil, fmt.Errorf("details json: %w", err)
 		}
 	}
 	return &r, nil

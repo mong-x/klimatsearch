@@ -157,6 +157,7 @@ func MergeLang(sv, en Batch) Batch {
 		for k, v := range r.Conversions {
 			cur.Conversions[k] = v
 		}
+		cur.Details = model.MergeDetails(cur.Details, r.Details, fromEN)
 		byID[r.ResourceID] = cur
 	}
 	for _, r := range sv.Resources {

@@ -29,8 +29,15 @@ MODEL="${KLIMAT_EMBEDDING_MODEL:-f2llm-v2-80m}"
 HF_ID="${F2LLM_HF_ID:-codefuse-ai/F2LLM-v2-80M}"
 DEST="${KLIMAT_MODELS:-./models}/${MODEL}"
 RERANK_MODEL="${KLIMAT_RERANKER_MODEL:-bge-reranker-v2-m3}"
-RERANK_HF="${BGE_RERANK_HF_ID:-BAAI/bge-reranker-v2-m3}"
 RERANK_DEST="${KLIMAT_MODELS:-./models}/${RERANK_MODEL}"
+case "${RERANK_MODEL}" in
+  zerank*|qwen*)
+    RERANK_HF="${ZERANK_HF_ID:-zeroentropy/zerank-1-small}"
+    ;;
+  *)
+    RERANK_HF="${BGE_RERANK_HF_ID:-BAAI/bge-reranker-v2-m3}"
+    ;;
+esac
 
 download_hf "$HF_ID" "$DEST"
 download_hf "$RERANK_HF" "$RERANK_DEST"
@@ -48,8 +55,11 @@ ONNX export is required. Example (Python, not run by this script):
 Then export ONNX (refuses to run here so you can review the Python env):
 
   python scripts/export-f2llm-onnx.py
-  python scripts/export-bge-reranker-onnx.py
+  python scripts/export-bge-reranker-onnx.py   # default reranker
+  # or: python scripts/export-zerank-onnx.py  # zerank-1-small (Apache, 1.7B)
+  python scripts/quantize-onnx.py models/f2llm-v2-80m
+  python scripts/quantize-onnx.py models/bge-reranker-v2-m3
 
-See docs/SELFHOST.md for layout, libonnxruntime, and KLIMAT_RERANKER=onnx.
+See docs/SELFHOST.md for layout, libonnxruntime, KLIMAT_RERANKER=onnx, and KLIMAT_ONNX_QUANT.
 
 EOF

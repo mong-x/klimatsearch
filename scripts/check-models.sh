@@ -18,9 +18,33 @@ need() {
   fi
 }
 
-echo "embedder model: ${DIR}"
-need "${DIR}/model.onnx"
-need "${DIR}/tokenizer.json"
+quant="${KLIMAT_ONNX_QUANT:-auto}"
+
+pick_onnx() {
+  local d="$1"
+  case "${quant}" in
+    int8)
+      need "${d}/model.int8.onnx"
+      ;;
+    fp32|none)
+      need "${d}/model.onnx"
+      ;;
+    *)
+      if [[ -f "${d}/model.int8.onnx" ]]; then
+        echo "ok  ${d}/model.int8.onnx  (auto)"
+      elif [[ -f "${d}/model.onnx" ]]; then
+        echo "ok  ${d}/model.onnx  (auto)"
+      else
+        echo "MISSING  ${d}/model.onnx (or model.int8.onnx)" >&2
+        ok=1
+      fi
+      ;;
+  esac
+  need "${d}/tokenizer.json"
+}
+
+echo "embedder model: ${DIR}  quant=${quant}"
+pick_onnx "${DIR}"
 
 a="${ROOT}/third_party/tokenizers/libtokenizers.a"
 if [[ -f "$a" ]]; then
@@ -52,8 +76,7 @@ rerank="${KLIMAT_RERANKER:-none}"
 RDIR="${MODELS}/${KLIMAT_RERANKER_MODEL:-bge-reranker-v2-m3}"
 echo "reranker: ${rerank} (${RDIR})"
 if [[ "${rerank}" == "onnx" ]]; then
-  need "${RDIR}/model.onnx"
-  need "${RDIR}/tokenizer.json"
+  pick_onnx "${RDIR}"
   if [[ -f "${RDIR}/model.onnx_data" ]]; then
     echo "ok  ${RDIR}/model.onnx_data"
   fi
@@ -66,5 +89,5 @@ if [[ "$ok" -ne 0 ]]; then
   exit 1
 fi
 echo "layout ok. Start with:"
-echo "  KLIMAT_EMBEDDER=onnx KLIMAT_RERANKER=${rerank} ONNXRUNTIME_LIB=${ort} ./bin/klimatsearch"
+echo "  KLIMAT_EMBEDDER=onnx KLIMAT_RERANKER=${rerank} KLIMAT_ONNX_QUANT=${quant} ONNXRUNTIME_LIB=${ort} ./bin/klimatsearch"
 echo "Search with vector=true (and rerank=true if ONNX reranker is loaded)."

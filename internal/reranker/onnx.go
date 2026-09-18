@@ -13,22 +13,24 @@ import (
 	"github.com/mong-x/klimatsearch/internal/search"
 )
 
-// ONNX is BGE reranker v2-m3 (cross-encoder). New loads the session or errors.
+// ONNX is a cross-encoder session. New loads it or errors.
+// BGE pair-encodes; zerank/qwen instruct-encodes (chat template + Yes logit).
 type ONNX struct {
 	mu         sync.Mutex
 	modelPath  string
 	tokPath    string
 	session    *ort.DynamicAdvancedSession
 	inputNames []string
+	instruct   bool
 }
 
 func newONNX(modelsDir, modelName string) (*ONNX, error) {
 	dir := filepath.Join(modelsDir, modelName)
-	modelPath := filepath.Join(dir, "model.onnx")
-	tokPath := filepath.Join(dir, "tokenizer.json")
-	if _, err := os.Stat(modelPath); err != nil {
-		return nil, fmt.Errorf("reranker onnx: missing %s (see docs/SELFHOST.md)", modelPath)
+	modelPath, err := embedder.ResolveONNX(dir, embedder.QuantFromEnv())
+	if err != nil {
+		return nil, fmt.Errorf("reranker %w (see docs/SELFHOST.md)", err)
 	}
+	tokPath := filepath.Join(dir, "tokenizer.json")
 	if _, err := os.Stat(tokPath); err != nil {
 		return nil, fmt.Errorf("reranker onnx: missing %s", tokPath)
 	}
@@ -51,7 +53,26 @@ func newONNX(modelsDir, modelName string) (*ONNX, error) {
 	if err != nil {
 		return nil, fmt.Errorf("reranker onnx session: %w", err)
 	}
-	return &ONNX{modelPath: modelPath, tokPath: tokPath, session: sess, inputNames: in}, nil
+	return &ONNX{
+		modelPath:  modelPath,
+		tokPath:    tokPath,
+		session:    sess,
+		inputNames: in,
+		instruct:   isInstructModel(modelName),
+	}, nil
+}
+
+// Close releases the ONNX session. Safe to call twice.
+func (o *ONNX) Close() {
+	if o == nil {
+		return
+	}
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	if o.session != nil {
+		o.session.Destroy()
+		o.session = nil
+	}
 }
 
 func (o *ONNX) Rerank(query string, docs []search.Hit) ([]search.Hit, error) {
@@ -84,7 +105,13 @@ func (o *ONNX) Rerank(query string, docs []search.Hit) ([]search.Hit, error) {
 }
 
 func (o *ONNX) score(query, passage string) (float32, error) {
-	ids, mask, err := encodePair(o.tokPath, query, passage)
+	var ids, mask []int64
+	var err error
+	if o.instruct {
+		ids, mask, err = encodeInstruct(o.tokPath, query, passage)
+	} else {
+		ids, mask, err = encodePair(o.tokPath, query, passage)
+	}
 	if err != nil {
 		return 0, err
 	}
@@ -100,7 +127,7 @@ func (o *ONNX) score(query, passage string) (float32, error) {
 	}
 	defer maskT.Destroy()
 
-	var typesT *ort.Tensor[int64]
+	var typesT, posT *ort.Tensor[int64]
 	inputs := make([]ort.Value, len(o.inputNames))
 	for i, name := range o.inputNames {
 		switch name {
@@ -110,13 +137,23 @@ func (o *ONNX) score(query, passage string) (float32, error) {
 			inputs[i] = maskT
 		case "token_type_ids":
 			zeros := make([]int64, seq)
-			var err error
 			typesT, err = ort.NewTensor(ort.NewShape(1, seq), zeros)
 			if err != nil {
 				return 0, fmt.Errorf("token_type_ids: %w", err)
 			}
 			defer typesT.Destroy()
 			inputs[i] = typesT
+		case "position_ids":
+			pos := make([]int64, seq)
+			for j := range pos {
+				pos[j] = int64(j)
+			}
+			posT, err = ort.NewTensor(ort.NewShape(1, seq), pos)
+			if err != nil {
+				return 0, fmt.Errorf("position_ids: %w", err)
+			}
+			defer posT.Destroy()
+			inputs[i] = posT
 		default:
 			return 0, fmt.Errorf("unexpected reranker ONNX input %q", name)
 		}

@@ -1,5 +1,8 @@
-# Self-host with F2LLM ONNX. Prepare models/ first (docs/SELFHOST.md).
+# Self-host with F2LLM + optional BGE/zerank ONNX. Prepare models/ first (docs/SELFHOST.md).
 # docker compose -f deploy/compose.onnx.yml up --build
+#
+# Reranker is on (BGE-m3). To skip: KLIMAT_RERANKER=none docker compose ...
+# Zerank: KLIMAT_RERANKER_MODEL=zerank-1-small and raise mem_limit to 8g.
 services:
   klimatsearch:
     build:
@@ -7,11 +10,15 @@ services:
       dockerfile: Dockerfile
       args:
         GO_TAGS: fts5 tokenizers
+    # Dockerfile CMD is --embedder=fake --demo-fixture; flags win over env.
+    command: ["--ingest-on-start"]
     environment:
       KLIMAT_LISTEN: ":8080"
       KLIMAT_DB: /app/data/klimat.db
       KLIMAT_EMBEDDER: onnx
-      KLIMAT_RERANKER: none
+      KLIMAT_RERANKER: ${KLIMAT_RERANKER:-onnx}
+      KLIMAT_RERANKER_MODEL: ${KLIMAT_RERANKER_MODEL:-bge-reranker-v2-m3}
+      KLIMAT_ONNX_QUANT: ${KLIMAT_ONNX_QUANT:-auto}
       KLIMAT_MODELS: /app/models
       KLIMAT_EMBEDDING_MODEL: f2llm-v2-80m
       ONNXRUNTIME_LIB: /usr/local/lib/libonnxruntime.so
@@ -21,7 +28,7 @@ services:
       - klimat-data:/app/data
     ports:
       - "8080:8080"
-    mem_limit: 2g
+    mem_limit: 4g
 
 volumes:
   klimat-data:

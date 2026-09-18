@@ -26,6 +26,8 @@ graphify-out/
 *.swo
 coverage.out
 *.test
+__pycache__/
+*.pyc
 
 # Internal design notes — keep locally, do not publish
 /docs/adr/

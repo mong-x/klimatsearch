@@ -92,6 +92,39 @@ func TestContentHashMapKeyOrder(t *testing.T) {
 	}
 }
 
+func TestContentHashDetailsChange(t *testing.T) {
+	a := sample()
+	ha, err := a.ContentHash()
+	if err != nil {
+		t.Fatal(err)
+	}
+	a.Details.A1A3Conservative = 0.15
+	hb, err := a.ContentHash()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if ha == hb {
+		t.Fatal("changed conservative A1A3 should change hash")
+	}
+}
+
+func TestViewFlattensDetails(t *testing.T) {
+	a4 := 0.06
+	r := sample()
+	r.Details.A4 = &a4
+	r.Details.ServiceLife = ">50 år"
+	v := r.View("Boverket Klimatdatabas")
+	if v["a4"] != a4 {
+		t.Fatalf("a4=%v", v["a4"])
+	}
+	if v["service_life"] != ">50 år" {
+		t.Fatalf("service_life=%v", v["service_life"])
+	}
+	if v["id"] != r.ResourceID {
+		t.Fatal("details must not overwrite id")
+	}
+}
+
 func TestContentHashA1A3Change(t *testing.T) {
 	r := sample()
 	a, err := r.ContentHash()

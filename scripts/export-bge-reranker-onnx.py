@@ -34,7 +34,8 @@ def main() -> None:
     if not onnx.exists():
         raise SystemExit(f"no model.onnx under {DEST}; check optimum output")
     print("ok:", onnx, "tokenizer.json:", (DEST / "tokenizer.json").exists())
-    print("Next: KLIMAT_RERANKER=onnx and search with rerank=true")
+    print("Next: python scripts/quantize-onnx.py", DEST)
+    print("Then: KLIMAT_RERANKER=onnx and search with rerank=true")
 
 
 if __name__ == "__main__":
