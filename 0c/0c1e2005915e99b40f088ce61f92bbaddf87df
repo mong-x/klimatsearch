@@ -1,0 +1,20 @@
+README.md
+  h_af7161f060dc1e 3,22,178-187,202
+docs/AGENT-SELFHOST.md
+  h_af7161f060dc1e 45
+site/assets/og.html
+  h_af7161f060dc1e 1-71
+site/index.html
+  h_af7161f060dc1e 38
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "0c0c1e2005915e99b40f088ce61f92bbaddf87df",
+  "prompts": {},
+  "humans": {
+    "h_af7161f060dc1e": {
+      "author": "mjnong <marcusnagy@icloud.com>"
+    }
+  }
+}
