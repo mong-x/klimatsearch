@@ -24,9 +24,9 @@ type ONNX struct {
 	instruct   bool
 }
 
-func newONNX(modelsDir, modelName string) (*ONNX, error) {
+func newONNX(modelsDir, modelName, quant string) (*ONNX, error) {
 	dir := filepath.Join(modelsDir, modelName)
-	modelPath, err := embedder.ResolveONNX(dir, embedder.QuantFromEnv())
+	modelPath, err := embedder.ResolveONNX(dir, quant)
 	if err != nil {
 		return nil, fmt.Errorf("reranker %w (see docs/SELFHOST.md)", err)
 	}

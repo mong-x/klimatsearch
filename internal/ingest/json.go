@@ -140,15 +140,24 @@ func parseV2Resource(raw json.RawMessage, culture string) (model.Resource, error
 			}
 		}
 	}
-	parseClimate(&r, m)
-	parseDetailsText(&r, m, culture)
-	parseTransports(&r, m)
-	parseBK04(&r, m)
+	d, typical := detailsFromV2(m, culture)
+	r.Details = d
+	r.A1A3 = typical
 	return r, nil
 }
 
-func parseClimate(r *model.Resource, m map[string]any) {
-	d := r.Details
+// detailsFromV2 maps Boverket v2 JSON onto Details and typical A1–A3.
+func detailsFromV2(m map[string]any, culture string) (model.Details, float64) {
+	d, typical := climateFromV2(m)
+	detailsText(&d, m, culture)
+	d.Transports = transportsFromV2(m)
+	d.BK04Code, d.BK04Text = bk04FromV2(m)
+	return d, typical
+}
+
+func climateFromV2(m map[string]any) (model.Details, float64) {
+	var d model.Details
+	var typical float64
 	if f, ok := asFloat(m["ConservativeDataConversionFactor"]); ok {
 		d.ConservativeFactor = f
 	}
@@ -160,8 +169,7 @@ func parseClimate(r *model.Resource, m map[string]any) {
 	}
 	items, ok := m["DataItems"].([]any)
 	if !ok {
-		r.Details = d
-		return
+		return d, typical
 	}
 	for _, di := range items {
 		dim, ok := di.(map[string]any)
@@ -187,7 +195,7 @@ func parseClimate(r *model.Resource, m map[string]any) {
 			}
 			switch code {
 			case "A1-A3 Typical":
-				r.A1A3 = f
+				typical = f
 			case "A1-A3 Conservative":
 				d.A1A3Conservative = f
 			case "A4":
@@ -199,11 +207,10 @@ func parseClimate(r *model.Resource, m map[string]any) {
 			}
 		}
 	}
-	r.Details = d
+	return d, typical
 }
 
-func parseDetailsText(r *model.Resource, m map[string]any, culture string) {
-	d := r.Details
+func detailsText(d *model.Details, m map[string]any, culture string) {
 	d.ServiceLife = firstString(m, "RefServiceLifeNormal")
 	d.StdName = firstString(m, "StdName")
 	d.StdCalc = firstString(m, "StdCalc")
@@ -232,13 +239,12 @@ func parseDetailsText(r *model.Resource, m map[string]any, culture string) {
 		d.ComparativeSV = comp
 		d.A4BackgroundSV = a4b
 	}
-	r.Details = d
 }
 
-func parseTransports(r *model.Resource, m map[string]any) {
+func transportsFromV2(m map[string]any) []model.Transport {
 	items, ok := m["TransportItems"].([]any)
 	if !ok {
-		return
+		return nil
 	}
 	var legs []model.Transport
 	for _, it := range items {
@@ -264,13 +270,13 @@ func parseTransports(r *model.Resource, m map[string]any) {
 		}
 		legs = append(legs, leg)
 	}
-	r.Details.Transports = legs
+	return legs
 }
 
-func parseBK04(r *model.Resource, m map[string]any) {
+func bk04FromV2(m map[string]any) (code, text string) {
 	cats, ok := m["Categories"].([]any)
 	if !ok {
-		return
+		return "", ""
 	}
 	for _, c := range cats {
 		cm, ok := c.(map[string]any)
@@ -278,11 +284,10 @@ func parseBK04(r *model.Resource, m map[string]any) {
 			continue
 		}
 		if firstString(cm, "ClassificationType") == "BK04" {
-			r.Details.BK04Code = firstString(cm, "Code")
-			r.Details.BK04Text = firstString(cm, "Text")
-			return
+			return firstString(cm, "Code"), firstString(cm, "Text")
 		}
 	}
+	return "", ""
 }
 
 func parseLegacyDoc(doc map[string]json.RawMessage, raw []byte) (Batch, error) {

@@ -129,7 +129,7 @@ curl -sS 'http://127.0.0.1:8081/api/resources/compare?a=6000000029&b=6000000028&
 
 | Tool | Args |
 | --- | --- |
-| `search_climate_data` | `query`, optional `lang`, `databases` |
+| `search_climate_data` | `query`, optional `lang`, `databases`, `vector`, `rerank` |
 | `get_resource_details` | Resource id |
 | `compare_resources` | `id_a`, `id_b`, optional `unit` |
 

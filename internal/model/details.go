@@ -44,6 +44,58 @@ type Transport struct {
 	FuelResourceID string  `json:"fuel_resource_id,omitempty"`
 }
 
+// MergeInto copies non-zero Details onto a Resource View map. JSON keys stay flat.
+func (d Details) MergeInto(m map[string]any) {
+	if d.A1A3Conservative != 0 {
+		m["a1a3_conservative"] = d.A1A3Conservative
+	}
+	if d.A4 != nil {
+		m["a4"] = *d.A4
+	}
+	if d.A51 != nil {
+		m["a5_1"] = *d.A51
+	}
+	putStr(m, "gwp_unit", d.GWPUnit)
+	if d.ConservativeFactor != 0 {
+		m["conservative_factor"] = d.ConservativeFactor
+	}
+	if d.WasteFactor != 0 {
+		m["waste_factor"] = d.WasteFactor
+	}
+	if d.BiogenicCarbon != nil {
+		m["biogenic_carbon"] = *d.BiogenicCarbon
+	}
+	putStr(m, "service_life", d.ServiceLife)
+	putStr(m, "service_life_comment_sv", d.ServiceLifeCommentSV)
+	putStr(m, "service_life_comment_en", d.ServiceLifeCommentEN)
+	putStr(m, "use_advice_sv", d.UseAdviceSV)
+	putStr(m, "use_advice_en", d.UseAdviceEN)
+	putStr(m, "comment_sv", d.CommentSV)
+	putStr(m, "comment_en", d.CommentEN)
+	putStr(m, "std_name", d.StdName)
+	putStr(m, "std_calc", d.StdCalc)
+	putStr(m, "geography", d.Geography)
+	putStr(m, "time_representativeness_sv", d.TimeRepSV)
+	putStr(m, "time_representativeness_en", d.TimeRepEN)
+	putStr(m, "supply_sv", d.SupplySV)
+	putStr(m, "supply_en", d.SupplyEN)
+	putStr(m, "comparative_sv", d.ComparativeSV)
+	putStr(m, "comparative_en", d.ComparativeEN)
+	putStr(m, "a4_background_sv", d.A4BackgroundSV)
+	putStr(m, "a4_background_en", d.A4BackgroundEN)
+	putStr(m, "bk04_code", d.BK04Code)
+	putStr(m, "bk04_text", d.BK04Text)
+	if len(d.Transports) > 0 {
+		m["transports"] = d.Transports
+	}
+}
+
+func putStr(m map[string]any, k, v string) {
+	if v != "" {
+		m[k] = v
+	}
+}
+
 func (d Details) empty() bool {
 	return d.A1A3Conservative == 0 && d.A4 == nil && d.A51 == nil && d.GWPUnit == "" &&
 		d.ConservativeFactor == 0 && d.WasteFactor == 0 && d.BiogenicCarbon == nil &&

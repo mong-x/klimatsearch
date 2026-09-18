@@ -11,14 +11,14 @@ import (
 // New builds a Reranker. kind is none|fake|onnx.
 // onnx loads models/<modelName>/model.int8.onnx (KLIMAT_ONNX_QUANT=auto) or model.onnx.
 // Names containing zerank or qwen use instruct encode; others use BGE pair encode.
-func New(kind, modelsDir, modelName string) (search.Reranker, error) {
+func New(kind, modelsDir, modelName, quant string) (search.Reranker, error) {
 	switch strings.ToLower(kind) {
 	case "", "none":
 		return None{}, nil
 	case "fake":
 		return Fake{}, nil
 	case "onnx":
-		return newONNX(modelsDir, modelName)
+		return newONNX(modelsDir, modelName, quant)
 	default:
 		return nil, fmt.Errorf("unknown reranker %q", kind)
 	}

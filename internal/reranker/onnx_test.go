@@ -10,14 +10,13 @@ import (
 )
 
 func TestNewONNXMissingModel(t *testing.T) {
-	_, err := New("onnx", t.TempDir(), "missing")
+	_, err := New("onnx", t.TempDir(), "missing", "auto")
 	if err == nil {
 		t.Fatal("expected error when reranker model.onnx is absent")
 	}
 }
 
 func TestNewONNXInt8Missing(t *testing.T) {
-	t.Setenv("KLIMAT_ONNX_QUANT", "int8")
 	root := t.TempDir()
 	dir := filepath.Join(root, "m")
 	if err := os.Mkdir(dir, 0o755); err != nil {
@@ -29,7 +28,7 @@ func TestNewONNXInt8Missing(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "tokenizer.json"), []byte("{}"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	_, err := New("onnx", root, "m")
+	_, err := New("onnx", root, "m", "int8")
 	if err == nil {
 		t.Fatal("expected error when model.int8.onnx is required but absent")
 	}
@@ -44,7 +43,7 @@ func TestONNXRerankIfModelPresent(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(dir, "tokenizer.json")); err != nil {
 		t.Skip("tokenizer.json not present")
 	}
-	rr, err := New("onnx", filepath.Join(root, "models"), "bge-reranker-v2-m3")
+	rr, err := New("onnx", filepath.Join(root, "models"), "bge-reranker-v2-m3", "auto")
 	if err != nil {
 		t.Fatal(err)
 	}

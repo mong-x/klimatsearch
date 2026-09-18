@@ -54,7 +54,7 @@ func New(eng search.SearchEngine, st *store.Store, source string, useVector, use
 func (s *Server) register() {
 	mcpsdk.AddTool(s.MCP, &mcpsdk.Tool{
 		Name:        ToolSearch,
-		Description: "Search Klimatdatabas. Each hit is the full Resource (names, descriptions, applicability, conversions, typical A1A3 plus conservative A1A3, A4, A5.1, biogenic carbon, service life, transport legs when published) plus score, match_source, and a details path for get_resource_details",
+		Description: "Search Klimatdatabas. Hits are full Resources (typical A1A3, conservative A1A3, A4, A5.1, transports when published). Optional vector/rerank override the process defaults (omit to use server config).",
 	}, s.searchTool)
 	mcpsdk.AddTool(s.MCP, &mcpsdk.Tool{
 		Name:        ToolGet,
@@ -83,6 +83,8 @@ type searchIn struct {
 	Query     string   `json:"query" jsonschema:"Search query"`
 	Lang      string   `json:"lang,omitempty" jsonschema:"Language sv or en (default sv)"`
 	Databases []string `json:"databases,omitempty" jsonschema:"Optional Catalog IDs to search"`
+	Vector    *bool    `json:"vector,omitempty" jsonschema:"Override process default; false is FTS only"`
+	Rerank    *bool    `json:"rerank,omitempty" jsonschema:"Override process default; BGE INT8 is slow"`
 }
 
 type searchOut struct {
@@ -97,7 +99,13 @@ func (s *Server) searchTool(ctx context.Context, _ *mcpsdk.CallToolRequest, in s
 	if err != nil {
 		return nil, searchOut{}, err
 	}
-	q := search.Query{Text: in.Query, Lang: lang, Catalogs: in.Databases, Vector: s.useVector, Rerank: s.useRerank}
+	q := search.Query{
+		Text:     in.Query,
+		Lang:     lang,
+		Catalogs: in.Databases,
+		Vector:   pickBool(in.Vector, s.useVector),
+		Rerank:   pickBool(in.Rerank, s.useRerank),
+	}
 	hits, err := s.engine.Search(ctx, q)
 	if err != nil {
 		return nil, searchOut{}, err

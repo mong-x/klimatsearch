@@ -2,7 +2,6 @@ package embedder
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 )
@@ -38,8 +37,4 @@ func ResolveONNX(dir, quant string) (string, error) {
 	default:
 		return "", fmt.Errorf("unknown KLIMAT_ONNX_QUANT %q (auto|int8|fp32)", quant)
 	}
-}
-
-func QuantFromEnv() string {
-	return strings.ToLower(strings.TrimSpace(os.Getenv("KLIMAT_ONNX_QUANT")))
 }

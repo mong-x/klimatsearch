@@ -15,9 +15,10 @@ var (
 
 // New builds an Embedder. kind is auto|fake|onnx.
 // auto uses onnx when model.int8.onnx or model.onnx exists, otherwise fake.
-func New(kind, modelsDir, modelName string) (search.Embedder, error) {
+// quant is auto|int8|fp32 (empty = auto).
+func New(kind, modelsDir, modelName, quant string) (search.Embedder, error) {
 	dir := filepath.Join(modelsDir, modelName)
-	onnxPath, resErr := ResolveONNX(dir, QuantFromEnv())
+	onnxPath, resErr := ResolveONNX(dir, quant)
 	switch kind {
 	case "", "auto":
 		if resErr == nil {

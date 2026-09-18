@@ -188,18 +188,6 @@ func (r Resource) View(attribution string) map[string]any {
 	if o := r.Origin(); o != "" {
 		m["origin"] = o
 	}
-	if !r.Details.empty() {
-		raw, err := json.Marshal(r.Details)
-		if err == nil {
-			var extra map[string]any
-			if json.Unmarshal(raw, &extra) == nil {
-				for k, v := range extra {
-					if _, exists := m[k]; !exists {
-						m[k] = v
-					}
-				}
-			}
-		}
-	}
+	r.Details.MergeInto(m)
 	return m
 }

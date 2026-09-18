@@ -112,7 +112,6 @@ func Parse(args []string) (Config, error) {
 	default:
 		return Config{}, fmt.Errorf("invalid --onnx-quant %q (auto|int8|fp32)", c.ONNXQuant)
 	}
-	_ = os.Setenv("KLIMAT_ONNX_QUANT", c.ONNXQuant)
 	switch c.Embedder {
 	case "auto", "fake", "onnx":
 	default:

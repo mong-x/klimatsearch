@@ -8,7 +8,7 @@ import (
 )
 
 func TestNewONNXMissingModel(t *testing.T) {
-	_, err := New("onnx", t.TempDir(), "missing")
+	_, err := New("onnx", t.TempDir(), "missing", "auto")
 	if err == nil {
 		t.Fatal("expected error when model.onnx is absent")
 	}

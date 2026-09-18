@@ -65,7 +65,7 @@ func run(args []string) error {
 		return err
 	}
 	defer st.Close()
-	emb, err := embedder.New(*embKind, *models, *embName)
+	emb, err := embedder.New(*embKind, *models, *embName, "auto")
 	if err != nil {
 		return err
 	}
@@ -175,10 +175,7 @@ func run(args []string) error {
 func runLane(ctx context.Context, st *store.Store, emb search.Embedder, models string, ln lane, queries []klimateval.Query) ([]klimateval.Case, error) {
 	rr := search.Reranker(reranker.None{})
 	if ln.rerank {
-		prev := os.Getenv("KLIMAT_ONNX_QUANT")
-		_ = os.Setenv("KLIMAT_ONNX_QUANT", ln.quant)
-		loaded, err := reranker.New("onnx", models, ln.model)
-		_ = os.Setenv("KLIMAT_ONNX_QUANT", prev)
+		loaded, err := reranker.New("onnx", models, ln.model, ln.quant)
 		if err != nil {
 			return nil, err
 		}

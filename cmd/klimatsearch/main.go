@@ -37,14 +37,14 @@ func main() {
 	}
 	defer st.Close()
 
-	emb, err := embedder.New(cfg.Embedder, cfg.Models, cfg.EmbeddingModel)
+	emb, err := embedder.New(cfg.Embedder, cfg.Models, cfg.EmbeddingModel, cfg.ONNXQuant)
 	if err != nil {
 		log.Error("embedder", "err", err)
 		os.Exit(1)
 	}
 	st.ConfigureVector(embedder.DimOf(emb))
 
-	rr, err := reranker.New(cfg.Reranker, cfg.Models, cfg.RerankerModel)
+	rr, err := reranker.New(cfg.Reranker, cfg.Models, cfg.RerankerModel, cfg.ONNXQuant)
 	if err != nil {
 		log.Error("reranker", "err", err)
 		os.Exit(1)
