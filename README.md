@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="site/assets/hero.jpg" alt="Particle board, ready-mix concrete, and glass wool — generic construction resources from Boverket Klimatdatabas" width="100%" />
+<img src="https://capsule-render.vercel.app/api?type=waving&color=0:0A0B0D,45:1F6F4A,100:82AAFF&height=200&section=header&text=klimatsearch&fontColor=E6E8EB&fontSize=64&fontAlignY=38&animation=fadeIn&desc=Hybrid%20search%20%2B%20MCP%20for%20Boverket%20Klimatdatabas&descSize=16&descAlignY=62" width="100%" alt="klimatsearch" />
 
 [![CI](https://img.shields.io/github/actions/workflow/status/mong-x/klimatsearch/ci.yml?branch=main&style=for-the-badge&logo=githubactions&logoColor=E6E8EB&label=CI&labelColor=0A0B0D&color=1F6F4A)](https://github.com/mong-x/klimatsearch/actions/workflows/ci.yml)
 [![kind e2e](https://img.shields.io/github/actions/workflow/status/mong-x/klimatsearch/e2e-kind.yml?branch=main&style=for-the-badge&logo=kubernetes&logoColor=E6E8EB&label=kind%20e2e&labelColor=0A0B0D&color=82AAFF)](https://github.com/mong-x/klimatsearch/actions/workflows/e2e-kind.yml)
@@ -11,6 +11,8 @@
 [![OpenAPI](https://img.shields.io/badge/OpenAPI-Swagger_UI-82AAFF?style=for-the-badge&labelColor=0A0B0D)](https://mong-x.github.io/klimatsearch/swagger/)
 
 **[Site](https://mong-x.github.io/klimatsearch/)** · **[Swagger](https://mong-x.github.io/klimatsearch/swagger/)** · **[llms.txt](llms.txt)** · **[Agent playbook](docs/AGENT-SELFHOST.md)**
+
+<img src="site/assets/hero.jpg" alt="Pixel-art yard: particle board, mixer, glass wool, CRT search" width="920" />
 
 </div>
 
