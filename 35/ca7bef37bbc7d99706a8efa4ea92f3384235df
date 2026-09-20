@@ -1,0 +1,18 @@
+README.md
+  h_af7161f060dc1e 53-70
+llms.txt
+  h_af7161f060dc1e 5
+site/index.html
+  h_af7161f060dc1e 113,133-158
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "35ca7bef37bbc7d99706a8efa4ea92f3384235df",
+  "prompts": {},
+  "humans": {
+    "h_af7161f060dc1e": {
+      "author": "mjnong <marcusnagy@icloud.com>"
+    }
+  }
+}
