@@ -1,0 +1,20 @@
+README.md
+  h_af7161f060dc1e 235
+docs/LAUNCH.md
+  h_af7161f060dc1e 162
+internal/ingest/webhook.go
+  h_af7161f060dc1e 92-96,103-137,145
+internal/ingest/webhook_test.go
+  h_af7161f060dc1e 11,175-195
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "37813482c30beaddd664e2bc2a9e9854e9ca6fe5",
+  "prompts": {},
+  "humans": {
+    "h_af7161f060dc1e": {
+      "author": "mjnong <marcusnagy@icloud.com>"
+    }
+  }
+}
