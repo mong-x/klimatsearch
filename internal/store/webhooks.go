@@ -20,6 +20,7 @@ type Webhook struct {
 	Events    string // empty = all; comma-separated event names
 	Created   time.Time
 	HasSecret bool
+	Kind      string // slack | discord | json — not stored
 }
 
 // ListWebhooks returns all rows (secrets stripped for display; HasSecret set).

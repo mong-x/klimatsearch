@@ -126,10 +126,7 @@ func (h *HTTPWebhook) Notify(ctx context.Context, ev Event) error {
 	}
 	var first error
 	for _, t := range targets {
-		payload, sign := body, t.Secret != ""
-		if slackWebhook(t.URL) {
-			payload, sign = slackBody(ev)
-		}
+		payload, sign := payloadFor(t.URL, ev, body, t.Secret)
 		if err := h.post(ctx, t.URL, payload, ev.Event, sign); err != nil && first == nil {
 			first = err
 		}
@@ -170,15 +167,46 @@ func (h *HTTPWebhook) PostURL(ctx context.Context, rawURL, secret string, ev Eve
 	if err != nil {
 		return err
 	}
-	payload, sign := body, secret != ""
-	if slackWebhook(rawURL) {
-		payload, sign = slackBody(ev)
-	}
+	payload, sign := payloadFor(rawURL, ev, body, secret)
 	return h.post(ctx, rawURL, payload, ev.Event, sign)
 }
 
+func payloadFor(rawURL string, ev Event, canonical []byte, secret string) ([]byte, bool) {
+	switch HookKind(rawURL) {
+	case "slack":
+		return slackBody(ev)
+	case "discord":
+		return discordBody(ev)
+	default:
+		return canonical, secret != ""
+	}
+}
+
+// HookKind is slack, discord, or json.
+func HookKind(rawURL string) string {
+	u := strings.ToLower(rawURL)
+	if strings.Contains(u, "hooks.slack.com") {
+		return "slack"
+	}
+	if strings.Contains(u, "discord.com/api/webhooks") || strings.Contains(u, "discordapp.com/api/webhooks") {
+		if strings.HasSuffix(strings.TrimSuffix(u, "/"), "/slack") {
+			return "slack"
+		}
+		return "discord"
+	}
+	return "json"
+}
+
+func discordBody(ev Event) ([]byte, bool) {
+	b, err := json.Marshal(map[string]string{"content": chatText(ev)})
+	if err != nil {
+		return nil, false
+	}
+	return b, false
+}
+
 func slackBody(ev Event) ([]byte, bool) {
-	b, err := json.Marshal(map[string]string{"text": slackText(ev)})
+	b, err := json.Marshal(map[string]string{"text": chatText(ev)})
 	if err != nil {
 		return nil, false
 	}
@@ -186,10 +214,10 @@ func slackBody(ev Event) ([]byte, bool) {
 }
 
 func slackWebhook(rawURL string) bool {
-	return strings.Contains(strings.ToLower(rawURL), "hooks.slack.com")
+	return HookKind(rawURL) == "slack"
 }
 
-func slackText(ev Event) string {
+func chatText(ev Event) string {
 	var b strings.Builder
 	b.WriteString("klimatsearch ")
 	b.WriteString(ev.Event)
@@ -209,6 +237,22 @@ func slackText(ev Event) string {
 		b.WriteString(ev.Error)
 	}
 	return b.String()
+}
+
+// SplitHookURLs splits a paste of several destinations (newline, comma, or space).
+func SplitHookURLs(raw string) []string {
+	raw = strings.ReplaceAll(raw, ",", "\n")
+	var out []string
+	seen := map[string]bool{}
+	for _, p := range strings.Fields(raw) {
+		p = strings.TrimSpace(p)
+		if p == "" || seen[p] {
+			continue
+		}
+		seen[p] = true
+		out = append(out, p)
+	}
+	return out
 }
 
 func (h *HTTPWebhook) post(ctx context.Context, rawURL string, body []byte, event string, sign bool) error {

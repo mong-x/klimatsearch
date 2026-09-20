@@ -173,11 +173,17 @@ func (failFetch) CatalogID() string                      { return model.CatalogB
 func (f failFetch) Fetch(context.Context) (Batch, error) { return Batch{}, f.err }
 
 func TestSlackIncomingWebhookShape(t *testing.T) {
-	if !slackWebhook("https://hooks.slack.com/services/T000/B000/xxx") {
+	if HookKind("https://hooks.slack.com/services/T000/B000/xxx") != "slack" {
 		t.Fatal("detect slack incoming url")
 	}
-	if slackWebhook("https://example.com/hook") {
-		t.Fatal("generic url is not slack")
+	if HookKind("https://discord.com/api/webhooks/1/tok") != "discord" {
+		t.Fatal("detect discord")
+	}
+	if HookKind("https://discord.com/api/webhooks/1/tok/slack") != "slack" {
+		t.Fatal("discord slack-compat")
+	}
+	if HookKind("https://example.com/hook") != "json" {
+		t.Fatal("generic url is json")
 	}
 	ev := Event{Event: EventCatalogUnreachable, Catalog: "boverket", Error: "timeout"}
 	got, sign := slackBody(ev)
@@ -190,6 +196,19 @@ func TestSlackIncomingWebhookShape(t *testing.T) {
 	}
 	if !strings.Contains(m["text"], "catalog.unreachable") || !strings.Contains(m["text"], "boverket") {
 		t.Fatalf("text=%q", m["text"])
+	}
+	d, sign := discordBody(ev)
+	if sign {
+		t.Fatal("discord HMAC")
+	}
+	if err := json.Unmarshal(d, &m); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(m["content"], "catalog.unreachable") {
+		t.Fatalf("content=%q", m["content"])
+	}
+	if len(SplitHookURLs("https://hooks.slack.com/a https://discord.com/api/webhooks/1/t")) != 2 {
+		t.Fatal("split two destinations")
 	}
 }
 

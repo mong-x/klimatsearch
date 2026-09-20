@@ -1,7 +1,7 @@
 {{define "content"}}
 <section class="hooks">
   <h1>Webhooks</h1>
-  <p class="hint">Outbound POSTs on ingest. Slack <code>hooks.slack.com</code> URLs get a text message. Others get JSON. Process env URLs are read-only here.</p>
+  <p class="hint">Every enabled URL is notified. Add Slack, Discord, and JSON receivers as separate rows — or paste several URLs at once. Process env URLs (comma-separated) are read-only here.</p>
 
   {{if .EnvHooks}}
   <h2>From process env</h2>
@@ -13,7 +13,7 @@
   <form class="toolbar" method="post" action="/webhooks">
     <input type="hidden" name="action" value="add" />
     <label class="sr-only" for="hook-url">URL</label>
-    <input id="hook-url" name="url" type="url" required placeholder="https://hooks.slack.com/services/…" />
+    <input id="hook-url" name="url" type="text" required placeholder="Slack URL, Discord URL, or both" />
     {{if .NeedToken}}
     <label>Admin token <input type="password" name="token" autocomplete="off" /></label>
     {{end}}
@@ -23,17 +23,18 @@
     <label>HMAC <input name="secret" type="password" autocomplete="off" placeholder="optional" /></label>
     <button type="submit">Add</button>
   </form>
-  <p class="hint">Leave event boxes empty to receive all. HMAC is skipped for Slack.</p>
+  <p class="hint">Leave event boxes empty to receive all. Slack gets <code>text</code>, Discord <code>content</code>, others JSON. HMAC is skipped for Slack and Discord.</p>
 
   {{if .Hooks}}
   <table class="hits">
     <thead>
-      <tr><th>URL</th><th>Events</th><th>On</th><th></th></tr>
+      <tr><th>URL</th><th>Kind</th><th>Events</th><th>On</th><th></th></tr>
     </thead>
     <tbody>
       {{range .Hooks}}
       <tr>
         <td class="mono">{{.URL}}{{if .HasSecret}} · secret{{end}}</td>
+        <td class="mono">{{.Kind}}</td>
         <td class="mono">{{if .Events}}{{.Events}}{{else}}all{{end}}</td>
         <td>{{if .Enabled}}on{{else}}off{{end}}</td>
         <td>

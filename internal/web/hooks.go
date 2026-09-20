@@ -1,6 +1,7 @@
 package web
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
 	"strings"
@@ -9,6 +10,8 @@ import (
 	"github.com/mong-x/klimatsearch/internal/ingest"
 	"github.com/mong-x/klimatsearch/internal/store"
 )
+
+var errHookURL = errors.New("webhook URL is required")
 
 func (h *Handler) webhooksGet(w http.ResponseWriter, r *http.Request) {
 	p := h.hookPage(r)
@@ -42,7 +45,18 @@ func (h *Handler) webhooksPost(w http.ResponseWriter, r *http.Request) {
 	switch action {
 	case "add":
 		events := strings.Join(r.Form["events"], ",")
-		_, err = h.Store.AddWebhook(ctx, r.FormValue("url"), r.FormValue("secret"), events)
+		secret := r.FormValue("secret")
+		urls := ingest.SplitHookURLs(r.FormValue("url"))
+		if len(urls) == 0 {
+			err = errHookURL
+			break
+		}
+		for _, u := range urls {
+			if _, e := h.Store.AddWebhook(ctx, u, secret, events); e != nil {
+				err = e
+				break
+			}
+		}
 	case "delete":
 		err = h.Store.DeleteWebhook(ctx, id)
 	case "enable":
@@ -86,6 +100,9 @@ func (h *Handler) loadHooks(r *http.Request) ([]store.Webhook, []string) {
 	rows, err := h.Store.ListWebhooks(r.Context())
 	if err != nil {
 		return nil, env
+	}
+	for i := range rows {
+		rows[i].Kind = ingest.HookKind(rows[i].URL)
 	}
 	return rows, env
 }

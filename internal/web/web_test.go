@@ -187,7 +187,7 @@ func TestOperatorUI(t *testing.T) {
 		if code != 200 {
 			t.Fatalf("status=%d", code)
 		}
-		if !strings.Contains(body, "Webhooks") || !strings.Contains(body, "hooks.slack.com") {
+		if !strings.Contains(body, "Webhooks") || !strings.Contains(body, `name="url"`) {
 			t.Fatal("missing webhooks form")
 		}
 	})
