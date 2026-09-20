@@ -1,61 +1,91 @@
 {{define "content"}}
 <section class="hooks">
   <h1>Webhooks</h1>
-  <p class="hint">Every enabled URL is notified. Add Slack, Discord, and JSON receivers as separate rows — or paste several URLs at once. Process env URLs (comma-separated) are read-only here.</p>
+  <p class="hint">Every enabled destination is notified. Slack, Discord, and JSON can all be on at once. Env URLs are not editable here.</p>
 
   {{if .EnvHooks}}
-  <h2>From process env</h2>
+  <h2>Process env</h2>
   <ul class="tools">
-    {{range .EnvHooks}}<li><code>{{.}}</code></li>{{end}}
+    {{range .EnvHooks}}<li><code>{{.}}</code> · read-only</li>{{end}}
   </ul>
   {{end}}
 
-  <form class="toolbar" method="post" action="/webhooks">
-    <input type="hidden" name="action" value="add" />
-    <label class="sr-only" for="hook-url">URL</label>
-    <input id="hook-url" name="url" type="text" required placeholder="Slack URL, Discord URL, or both" />
-    {{if .NeedToken}}
-    <label>Admin token <input type="password" name="token" autocomplete="off" /></label>
-    {{end}}
-    <label class="check"><input type="checkbox" name="events" value="catalog.changed" /> changed</label>
-    <label class="check"><input type="checkbox" name="events" value="catalog.unreachable" /> unreachable</label>
-    <label class="check"><input type="checkbox" name="events" value="ingest.failed" /> failed</label>
-    <label>HMAC <input name="secret" type="password" autocomplete="off" placeholder="optional" /></label>
-    <button type="submit">Add</button>
-  </form>
-  <p class="hint">Leave event boxes empty to receive all. Slack gets <code>text</code>, Discord <code>content</code>, others JSON. HMAC is skipped for Slack and Discord.</p>
-
-  {{if .Hooks}}
-  <table class="hits">
-    <thead>
-      <tr><th>URL</th><th>Kind</th><th>Events</th><th>On</th><th></th></tr>
-    </thead>
-    <tbody>
-      {{range .Hooks}}
-      <tr>
-        <td class="mono">{{.URL}}{{if .HasSecret}} · secret{{end}}</td>
-        <td class="mono">{{.Kind}}</td>
-        <td class="mono">{{if .Events}}{{.Events}}{{else}}all{{end}}</td>
-        <td>{{if .Enabled}}on{{else}}off{{end}}</td>
-        <td>
-          <form method="post" action="/webhooks" class="inline-actions">
-            {{if $.NeedToken}}<input type="password" name="token" placeholder="token" autocomplete="off" />{{end}}
-            <input type="hidden" name="id" value="{{.ID}}" />
-            {{if .Enabled}}
-            <button type="submit" name="action" value="disable">Disable</button>
-            {{else}}
-            <button type="submit" name="action" value="enable">Enable</button>
-            {{end}}
-            <button type="submit" name="action" value="test">Test</button>
-            <button type="submit" name="action" value="delete">Delete</button>
-          </form>
-        </td>
-      </tr>
+  <div class="hook-layout">
+    <div class="hook-list">
+      <h2>Destinations</h2>
+      {{if .Hooks}}
+      <ul class="hook-rows">
+        {{range .Hooks}}
+        <li class="{{if and $.EditHook (eq $.EditHook.ID .ID)}}is-on{{end}}">
+          <a href="/webhooks?edit={{.ID}}">
+            <strong class="mono">{{.Kind}}</strong>
+            <span class="mono url">{{.URL}}</span>
+            <span>{{if .Enabled}}on{{else}}off{{end}} · {{if .Events}}{{.Events}}{{else}}all{{end}}</span>
+          </a>
+        </li>
+        {{end}}
+      </ul>
+      {{else}}
+      <p class="hint">None yet.</p>
       {{end}}
-    </tbody>
-  </table>
-  {{else}}
-  <p class="hint">No operator webhooks yet. Add a Slack incoming URL or any HTTPS receiver.</p>
-  {{end}}
+      <p><a class="btn-ghost" href="/webhooks">New destination</a></p>
+    </div>
+
+    <div class="panel hook-edit">
+      {{if .EditHook}}
+      <div class="panel-h">Edit <span class="mono">{{.EditHook.Kind}}</span></div>
+      <form method="post" action="/webhooks" class="hook-form">
+        <input type="hidden" name="id" value="{{.EditHook.ID}}" />
+        {{if .NeedToken}}
+        <label>Admin token <input type="password" name="token" autocomplete="off" /></label>
+        {{end}}
+        <label>URL
+          <input name="url" type="url" required value="{{.EditHook.URL}}" />
+        </label>
+        <fieldset>
+          <legend>Events</legend>
+          <label class="check"><input type="checkbox" name="events" value="catalog.changed" {{if .EditHook.HasEvent "catalog.changed"}}checked{{end}} /> catalog.changed</label>
+          <label class="check"><input type="checkbox" name="events" value="catalog.unreachable" {{if .EditHook.HasEvent "catalog.unreachable"}}checked{{end}} /> catalog.unreachable</label>
+          <label class="check"><input type="checkbox" name="events" value="ingest.failed" {{if .EditHook.HasEvent "ingest.failed"}}checked{{end}} /> ingest.failed</label>
+        </fieldset>
+        <p class="hint">All checked (or none) means every event.</p>
+        <label>HMAC secret
+          <input name="secret" type="password" autocomplete="new-password" placeholder="{{if .EditHook.HasSecret}}leave blank to keep{{else}}optional{{end}}" />
+        </label>
+        {{if .EditHook.HasSecret}}
+        <label class="check"><input type="checkbox" name="clear_secret" value="1" /> clear secret</label>
+        {{end}}
+        <label class="check"><input type="checkbox" name="enabled" value="1" {{if .EditHook.Enabled}}checked{{end}} /> enabled</label>
+        <div class="inline-actions">
+          <button type="submit" name="action" value="save">Save</button>
+          <button type="submit" name="action" value="test">Test</button>
+          <button type="submit" name="action" value="delete">Delete</button>
+        </div>
+      </form>
+      {{else}}
+      <div class="panel-h">New destination</div>
+      <form method="post" action="/webhooks" class="hook-form">
+        <input type="hidden" name="action" value="add" />
+        {{if .NeedToken}}
+        <label>Admin token <input type="password" name="token" autocomplete="off" /></label>
+        {{end}}
+        <label>URL(s)
+          <textarea name="url" rows="3" required placeholder="https://hooks.slack.com/services/…&#10;https://discord.com/api/webhooks/…"></textarea>
+        </label>
+        <fieldset>
+          <legend>Events</legend>
+          <label class="check"><input type="checkbox" name="events" value="catalog.changed" /> catalog.changed</label>
+          <label class="check"><input type="checkbox" name="events" value="catalog.unreachable" /> catalog.unreachable</label>
+          <label class="check"><input type="checkbox" name="events" value="ingest.failed" /> ingest.failed</label>
+        </fieldset>
+        <p class="hint">Paste one URL per line to add Slack and Discord together. Empty events = all.</p>
+        <label>HMAC secret
+          <input name="secret" type="password" autocomplete="new-password" placeholder="optional; skipped for Slack/Discord" />
+        </label>
+        <button type="submit">Add</button>
+      </form>
+      {{end}}
+    </div>
+  </div>
 </section>
 {{end}}

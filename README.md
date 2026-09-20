@@ -46,7 +46,7 @@ Same binary as REST and MCP (`html/template`, no React). Not [GitHub Pages](http
 | `/resources/{id}` | Resource |
 | `/compare` | Two IDs |
 | `/connect` | Lab — healthz, mcp.json, curl |
-| `/webhooks` | Add/disable/test outbound URLs (Slack or JSON). Env `KLIMAT_WEBHOOK_URL` still applies. |
+| `/webhooks` | Add and edit destinations (Slack, Discord, JSON). Env `KLIMAT_WEBHOOK_URL` is read-only. |
 
 KPI strip: resource count, embedder, reranker, resolved ONNX quant.
 

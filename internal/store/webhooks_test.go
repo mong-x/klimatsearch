@@ -27,6 +27,26 @@ func TestWebhookCRUD(t *testing.T) {
 	if err != nil || len(deliv) != 0 {
 		t.Fatalf("disabled still delivered: %+v", deliv)
 	}
+	if err := st.SetWebhookEnabled(ctx, w.ID, true); err != nil {
+		t.Fatal(err)
+	}
+	if err := st.UpdateWebhook(ctx, w.ID, "https://discord.com/api/webhooks/1/tok", "sekret", "ingest.failed", true, false); err != nil {
+		t.Fatal(err)
+	}
+	got, err := st.GetWebhook(ctx, w.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.URL != "https://discord.com/api/webhooks/1/tok" || got.Secret != "sekret" || !got.HasEvent("ingest.failed") || got.HasEvent("catalog.changed") {
+		t.Fatalf("%+v", got)
+	}
+	if err := st.UpdateWebhook(ctx, w.ID, got.URL, "", "ingest.failed", true, true); err != nil {
+		t.Fatal(err)
+	}
+	got, _ = st.GetWebhook(ctx, w.ID)
+	if got.Secret != "sekret" {
+		t.Fatal("keep secret")
+	}
 	if err := st.DeleteWebhook(ctx, w.ID); err != nil {
 		t.Fatal(err)
 	}

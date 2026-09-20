@@ -51,6 +51,7 @@ type page struct {
 	LogEvents   []store.IngestEvent
 	Hooks       []store.Webhook
 	EnvHooks    []string
+	EditHook    *store.Webhook
 	Elapsed     string
 	RESTURL     string
 	MCPCall     string

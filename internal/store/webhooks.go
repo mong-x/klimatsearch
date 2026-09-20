@@ -126,6 +126,57 @@ func (s *Store) DeleteWebhook(ctx context.Context, id int64) error {
 	return nil
 }
 
+func (s *Store) UpdateWebhook(ctx context.Context, id int64, rawURL, secret, events string, enabled bool, keepSecret bool) error {
+	u, err := normalizeWebhookURL(rawURL)
+	if err != nil {
+		return err
+	}
+	en := 0
+	if enabled {
+		en = 1
+	}
+	events = strings.TrimSpace(events)
+	if keepSecret {
+		res, err := s.db.ExecContext(ctx,
+			`UPDATE webhooks SET url = ?, events = ?, enabled = ? WHERE id = ?`,
+			u, events, en, id,
+		)
+		if err != nil {
+			return fmt.Errorf("update webhook: %w", err)
+		}
+		n, _ := res.RowsAffected()
+		if n == 0 {
+			return ErrNotFound
+		}
+		return nil
+	}
+	res, err := s.db.ExecContext(ctx,
+		`UPDATE webhooks SET url = ?, secret = ?, events = ?, enabled = ? WHERE id = ?`,
+		u, strings.TrimSpace(secret), events, en, id,
+	)
+	if err != nil {
+		return fmt.Errorf("update webhook: %w", err)
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+func (w Webhook) HasEvent(name string) bool {
+	spec := strings.TrimSpace(w.Events)
+	if spec == "" {
+		return true
+	}
+	for _, p := range strings.Split(spec, ",") {
+		if strings.TrimSpace(p) == name {
+			return true
+		}
+	}
+	return false
+}
+
 func (s *Store) SetWebhookEnabled(ctx context.Context, id int64, on bool) error {
 	en := 0
 	if on {

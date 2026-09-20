@@ -41,10 +41,10 @@ func (h *Handler) webhooksPost(w http.ResponseWriter, r *http.Request) {
 	action := r.FormValue("action")
 	id, _ := strconv.ParseInt(r.FormValue("id"), 10, 64)
 	ctx := r.Context()
+	events := joinEvents(r.Form["events"])
 	var err error
 	switch action {
 	case "add":
-		events := strings.Join(r.Form["events"], ",")
 		secret := r.FormValue("secret")
 		urls := ingest.SplitHookURLs(r.FormValue("url"))
 		if len(urls) == 0 {
@@ -65,6 +65,8 @@ func (h *Handler) webhooksPost(w http.ResponseWriter, r *http.Request) {
 		err = h.Store.SetWebhookEnabled(ctx, id, false)
 	case "test":
 		err = h.testHook(r, id)
+	case "save":
+		err = h.saveHook(r, id)
 	default:
 		p.Error = "unknown action"
 		p.Status = http.StatusBadRequest
@@ -78,12 +80,54 @@ func (h *Handler) webhooksPost(w http.ResponseWriter, r *http.Request) {
 		h.render(w, "webhooks", p)
 		return
 	}
+	if (action == "save" || action == "test") && id > 0 {
+		http.Redirect(w, r, "/webhooks?edit="+strconv.FormatInt(id, 10), http.StatusSeeOther)
+		return
+	}
 	http.Redirect(w, r, "/webhooks", http.StatusSeeOther)
+}
+
+func joinEvents(ev []string) string {
+	all := []string{"catalog.changed", "catalog.unreachable", "ingest.failed"}
+	set := map[string]bool{}
+	for _, e := range ev {
+		e = strings.TrimSpace(e)
+		if e != "" {
+			set[e] = true
+		}
+	}
+	if len(set) == 0 {
+		return ""
+	}
+	for _, a := range all {
+		if !set[a] {
+			return strings.Join(ev, ",")
+		}
+	}
+	return ""
+}
+
+func (h *Handler) saveHook(r *http.Request, id int64) error {
+	if id == 0 {
+		return errHookURL
+	}
+	events := joinEvents(r.Form["events"])
+	secret := r.FormValue("secret")
+	keep := strings.TrimSpace(secret) == "" && r.FormValue("clear_secret") != "1"
+	on := r.FormValue("enabled") == "1"
+	return h.Store.UpdateWebhook(r.Context(), id, r.FormValue("url"), secret, events, on, keep)
 }
 
 func (h *Handler) hookPage(r *http.Request) page {
 	p := h.base(r, "webhooks", "Webhooks")
 	p.Hooks, p.EnvHooks = h.loadHooks(r)
+	if id, _ := strconv.ParseInt(r.URL.Query().Get("edit"), 10, 64); id > 0 && h.Store != nil {
+		if w, err := h.Store.GetWebhook(r.Context(), id); err == nil {
+			w.Secret = ""
+			w.Kind = ingest.HookKind(w.URL)
+			p.EditHook = &w
+		}
+	}
 	return p
 }
 
