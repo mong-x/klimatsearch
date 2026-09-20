@@ -89,14 +89,52 @@ func (h *HTTPWebhook) Notify(ctx context.Context, ev Event) error {
 	}
 	var first error
 	for _, u := range h.URLs {
-		if err := h.post(ctx, u, body, ev.Event); err != nil && first == nil {
+		payload, sign := body, h.Secret != ""
+		if slackWebhook(u) {
+			payload, sign = slackBody(ev)
+		}
+		if err := h.post(ctx, u, payload, ev.Event, sign); err != nil && first == nil {
 			first = err
 		}
 	}
 	return first
 }
 
-func (h *HTTPWebhook) post(ctx context.Context, rawURL string, body []byte, event string) error {
+func slackBody(ev Event) ([]byte, bool) {
+	b, err := json.Marshal(map[string]string{"text": slackText(ev)})
+	if err != nil {
+		return nil, false
+	}
+	return b, false
+}
+
+func slackWebhook(rawURL string) bool {
+	return strings.Contains(strings.ToLower(rawURL), "hooks.slack.com")
+}
+
+func slackText(ev Event) string {
+	var b strings.Builder
+	b.WriteString("klimatsearch ")
+	b.WriteString(ev.Event)
+	if ev.Catalog != "" {
+		b.WriteString(" ")
+		b.WriteString(ev.Catalog)
+	}
+	if ev.Version != "" {
+		b.WriteString(" version=")
+		b.WriteString(ev.Version)
+	}
+	if ev.Upserted > 0 {
+		fmt.Fprintf(&b, " upserted=%d", ev.Upserted)
+	}
+	if ev.Error != "" {
+		b.WriteString(" — ")
+		b.WriteString(ev.Error)
+	}
+	return b.String()
+}
+
+func (h *HTTPWebhook) post(ctx context.Context, rawURL string, body []byte, event string, sign bool) error {
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, rawURL, bytes.NewReader(body))
 	if err != nil {
 		return err
@@ -104,7 +142,7 @@ func (h *HTTPWebhook) post(ctx context.Context, rawURL string, body []byte, even
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("User-Agent", "klimatsearch")
 	req.Header.Set(EventHeader, event)
-	if h.Secret != "" {
+	if sign && h.Secret != "" {
 		req.Header.Set(SignatureHeader, "sha256="+Sign(h.Secret, body))
 	}
 	resp, err := h.client().Do(req)

@@ -159,7 +159,7 @@ Stripe metered billing is configured in the Unkey dashboard, not in this repo. S
 - `catalog.unreachable` when Boverket JSON and Excel both fail (API down)
 - `ingest.failed` when boot or weekly ingest errors for any other reason
 
-The same events are stored in SQLite (`ingest_events`, last 200) and listed on `GET /data`. Webhook delivery failure does not fail ingest. Boverket has no inbound hook.
+The same events are stored in SQLite (`ingest_events`, last 200) and listed on `GET /data`. Slack incoming webhook URLs (`hooks.slack.com`) get `{"text":"klimatsearch catalog.unreachable boverket — …"}` instead of the JSON Event. Mix Slack and generic URLs with a comma. HMAC is skipped for Slack. Webhook delivery failure does not fail ingest. Boverket has no inbound hook.
 
 Optional: `KLIMAT_ADMIN_TOKEN` as header `X-Admin-Token` on `POST /admin/ingest/file`.
 

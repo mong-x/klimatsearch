@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync/atomic"
 	"testing"
 
@@ -170,6 +171,27 @@ type failFetch struct{ err error }
 
 func (failFetch) CatalogID() string                      { return model.CatalogBoverket }
 func (f failFetch) Fetch(context.Context) (Batch, error) { return Batch{}, f.err }
+
+func TestSlackIncomingWebhookShape(t *testing.T) {
+	if !slackWebhook("https://hooks.slack.com/services/T000/B000/xxx") {
+		t.Fatal("detect slack incoming url")
+	}
+	if slackWebhook("https://example.com/hook") {
+		t.Fatal("generic url is not slack")
+	}
+	ev := Event{Event: EventCatalogUnreachable, Catalog: "boverket", Error: "timeout"}
+	got, sign := slackBody(ev)
+	if sign {
+		t.Fatal("slack body is not HMAC'd")
+	}
+	var m map[string]string
+	if err := json.Unmarshal(got, &m); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(m["text"], "catalog.unreachable") || !strings.Contains(m["text"], "boverket") {
+		t.Fatalf("text=%q", m["text"])
+	}
+}
 
 func TestNewHTTPWebhookEmpty(t *testing.T) {
 	if NewHTTPWebhook("", "x") != nil {
