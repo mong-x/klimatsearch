@@ -1,0 +1,22 @@
+AGENTS.md
+  h_af7161f060dc1e 7
+docs/AGENT-SELFHOST.md
+  h_af7161f060dc1e 27
+docs/LAUNCH.md
+  h_af7161f060dc1e 184,233-234
+internal/api/openapi.yaml
+  h_af7161f060dc1e 477
+site/openapi.yaml
+  h_af7161f060dc1e 477
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "e0d7f60e1d9e6ade3c3afc45fd453416799eec2a",
+  "prompts": {},
+  "humans": {
+    "h_af7161f060dc1e": {
+      "author": "mjnong <marcusnagy@icloud.com>"
+    }
+  }
+}
