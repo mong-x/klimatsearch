@@ -31,6 +31,8 @@ func (None) Rerank(_ string, docs []search.Hit) ([]search.Hit, error) {
 	return docs, nil
 }
 
+func (None) Passthrough() bool { return true }
+
 // Fake reorders by case-insensitive overlap of query tokens with names.
 type Fake struct{}
 
@@ -56,7 +58,6 @@ func (Fake) Rerank(query string, docs []search.Hit) ([]search.Hit, error) {
 		}
 		boosts[i] = scored{idx: i, boost: b}
 		out[i].Score = d.Score + b
-		out[i].Source = "rerank"
 	}
 	sort.SliceStable(out, func(i, j int) bool {
 		if boosts[i].boost != boosts[j].boost {

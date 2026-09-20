@@ -106,17 +106,23 @@ func (e *Engine) Search(ctx context.Context, q Query) ([]Hit, error) {
 	} else {
 		merged = ftsHits(ftsRanked, q.Lang)
 	}
-	if q.Rerank && e.reranker != nil && len(merged) > 0 {
+	if q.Rerank && e.reranker != nil && len(merged) > 0 && !passthroughRerank(e.reranker) {
 		merged, err = e.reranker.Rerank(q.Text, merged)
 		if err != nil {
 			return nil, fmt.Errorf("rerank: %w", err)
 		}
 		for i := range merged {
-			merged[i].Source = "rerank"
+			merged[i].Reranked = true
+			merged[i].RerankScore = merged[i].Score
 			merged[i].Lang = q.Lang
 		}
 	}
 	return merged, nil
+}
+
+func passthroughRerank(r Reranker) bool {
+	p, ok := r.(interface{ Passthrough() bool })
+	return ok && p.Passthrough()
 }
 
 const rrfK = 60

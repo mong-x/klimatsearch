@@ -95,16 +95,9 @@ type searchOut struct {
 }
 
 func (s *Server) searchTool(ctx context.Context, _ *mcpsdk.CallToolRequest, in searchIn) (*mcpsdk.CallToolResult, searchOut, error) {
-	lang, err := search.NormalizeLang(in.Lang)
+	q, err := search.FromMCP(in.Query, in.Lang, in.Databases, in.Vector, in.Rerank, search.Defaults{Vector: s.useVector, Rerank: s.useRerank})
 	if err != nil {
 		return nil, searchOut{}, err
-	}
-	q := search.Query{
-		Text:     in.Query,
-		Lang:     lang,
-		Catalogs: in.Databases,
-		Vector:   search.Coalesce(in.Vector, s.useVector),
-		Rerank:   search.Coalesce(in.Rerank, s.useRerank),
 	}
 	hits, err := s.engine.Search(ctx, q)
 	if err != nil {
@@ -114,7 +107,7 @@ func (s *Server) searchTool(ctx context.Context, _ *mcpsdk.CallToolRequest, in s
 	out := searchOut{
 		Source:  s.source,
 		Query:   in.Query,
-		Lang:    lang,
+		Lang:    q.Lang,
 		Results: env["results"].([]map[string]any),
 	}
 	return textResult(out), out, nil

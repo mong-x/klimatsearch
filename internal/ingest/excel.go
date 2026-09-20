@@ -15,41 +15,52 @@ import (
 // ParseExcel reads a Boverket-shaped workbook (SV or EN headers).
 // Empty lang detects the header language.
 func ParseExcel(data []byte, lang string) (Batch, error) {
+	rows, err := excelRows(data)
+	if err != nil {
+		return Batch{}, err
+	}
+	return resourcesFromRows(rows, lang, "excel", model.CatalogBoverket, nil)
+}
+
+func excelRows(data []byte) ([][]string, error) {
 	f, err := excelize.OpenReader(bytes.NewReader(data))
 	if err != nil {
-		return Batch{}, fmt.Errorf("open xlsx: %w", err)
+		return nil, fmt.Errorf("open xlsx: %w", err)
 	}
 	defer func() { _ = f.Close() }()
 	sheets := f.GetSheetList()
 	if len(sheets) == 0 {
-		return Batch{}, fmt.Errorf("xlsx has no sheets")
+		return nil, fmt.Errorf("xlsx has no sheets")
 	}
 	rows, err := f.GetRows(sheets[0])
 	if err != nil {
-		return Batch{}, fmt.Errorf("xlsx rows: %w", err)
+		return nil, fmt.Errorf("xlsx rows: %w", err)
 	}
 	if len(rows) < 2 {
-		return Batch{}, fmt.Errorf("xlsx %s: no data rows", sheets[0])
+		return nil, fmt.Errorf("xlsx %s: no data rows", sheets[0])
 	}
-	return resourcesFromRows(rows, lang, "excel")
+	return rows, nil
 }
 
-func resourcesFromRows(rows [][]string, lang, origin string) (Batch, error) {
+func resourcesFromRows(rows [][]string, lang, origin, catalog string, fmap map[string]string) (Batch, error) {
 	if len(rows) < 2 {
 		return Batch{}, fmt.Errorf("%s: no data rows", origin)
+	}
+	if catalog == "" {
+		catalog = model.CatalogBoverket
 	}
 	if lang == "" {
 		lang = detectLang(rows[0])
 	}
-	idx := headerIndex(rows[0])
-	batch := Batch{Origin: origin, CatalogID: model.CatalogBoverket}
+	idx := applyColumnMap(rows[0], headerIndex(rows[0]), fmap)
+	batch := Batch{Origin: origin, CatalogID: catalog}
 	for _, row := range rows[1:] {
 		id := cell(row, idx.id)
 		if id == "" {
 			continue
 		}
 		r := model.Resource{
-			CatalogID:       model.CatalogBoverket,
+			CatalogID:       catalog,
 			ResourceID:      id,
 			Category:        cell(row, idx.category),
 			Version:         cell(row, idx.version),
@@ -73,6 +84,9 @@ func resourcesFromRows(rows [][]string, lang, origin string) (Batch, error) {
 			if r.ApplicabilitySV == "" {
 				r.ApplicabilitySV = cell(row, idx.appl)
 			}
+		}
+		if en := cell(row, idx.nameEN); en != "" {
+			r.NameEN = en
 		}
 		r.A1A3 = parseFloat(cell(row, idx.a1a3))
 		if r.A1A3 == 0 {
@@ -187,12 +201,12 @@ func MergeLang(sv, en Batch) Batch {
 }
 
 type colIdx struct {
-	id, name, category, version, unit int
-	a1a3, a1a3Energy                  int
-	a1a3Cons, consFactor, waste       int
-	a4, a51, biogenic, life, bk04     int
-	desc, convFactor, convUnit        int
-	appl, applSV, applEN, synonyms    int
+	id, name, nameEN, category, version, unit int
+	a1a3, a1a3Energy                          int
+	a1a3Cons, consFactor, waste               int
+	a4, a51, biogenic, life, bk04             int
+	desc, convFactor, convUnit                int
+	appl, applSV, applEN, synonyms            int
 }
 
 func detailsFromExcel(row []string, idx colIdx) model.Details {
@@ -225,7 +239,7 @@ func detailsFromExcel(row []string, idx colIdx) model.Details {
 
 func headerIndex(headers []string) colIdx {
 	idx := colIdx{
-		id: -1, name: -1, category: -1, version: -1, unit: -1,
+		id: -1, name: -1, nameEN: -1, category: -1, version: -1, unit: -1,
 		a1a3: -1, a1a3Energy: -1, a1a3Cons: -1, consFactor: -1, waste: -1,
 		a4: -1, a51: -1, biogenic: -1, life: -1, bk04: -1,
 		desc: -1, convFactor: -1, convUnit: -1, appl: -1, applSV: -1, applEN: -1, synonyms: -1,
@@ -233,16 +247,24 @@ func headerIndex(headers []string) colIdx {
 	for i, h := range headers {
 		n := normHeader(h)
 		switch {
-		case n == "resurs-id" || n == "resource id" || n == "resourceid" || n == "id":
+		case n == "resurs-id" || n == "resource id" || n == "resourceid" || n == "id" || n == "produkt-id" || n == "ressource-id":
 			idx.id = i
-		case n == "produktnamn" || n == "product name" || n == "name" || n == "namn":
+		case n == "produktnamn" || n == "product name" || n == "name" || n == "namn" || n == "navn" || n == "produkt":
 			idx.name = i
-		case n == "kategori" || n == "category":
+		case n == "kategori" || n == "category" || n == "bygningsdel":
 			idx.category = i
 		case n == "version":
 			idx.version = i
+		case n == "unit" || n == "enhet" || n == "enhed":
+			if idx.unit < 0 {
+				idx.unit = i
+			}
 		case strings.Contains(n, "enhet for klimat") || strings.Contains(n, "unit for climate"):
 			idx.unit = i
+		case n == "a1a3" || n == "a1-a3" || n == "gwp" || n == "gwp-a1-a3" || n == "gwp a1-a3":
+			if idx.a1a3 < 0 {
+				idx.a1a3 = i
+			}
 		case strings.Contains(n, "typiskt varde") || strings.Contains(n, "typical value") && strings.Contains(n, "a1-a3"):
 			if !strings.Contains(n, "energy") && !strings.Contains(n, "energislag") {
 				idx.a1a3 = i
@@ -284,11 +306,48 @@ func headerIndex(headers []string) colIdx {
 	return idx
 }
 
+func applyColumnMap(headers []string, idx colIdx, fmap map[string]string) colIdx {
+	if len(fmap) == 0 {
+		return idx
+	}
+	pos := map[string]int{}
+	for i, h := range headers {
+		pos[normHeader(h)] = i
+		pos[strings.ToLower(strings.TrimSpace(h))] = i
+	}
+	set := func(field string, dst *int) {
+		h := strings.TrimSpace(fmap[field])
+		if h == "" {
+			return
+		}
+		if i, ok := pos[normHeader(h)]; ok {
+			*dst = i
+			return
+		}
+		if i, ok := pos[strings.ToLower(h)]; ok {
+			*dst = i
+		}
+	}
+	set("id", &idx.id)
+	set("name", &idx.name)
+	set("name_en", &idx.nameEN)
+	set("a1a3", &idx.a1a3)
+	set("unit", &idx.unit)
+	set("category", &idx.category)
+	set("version", &idx.version)
+	set("description", &idx.desc)
+	set("a4", &idx.a4)
+	set("a5_1", &idx.a51)
+	return idx
+}
+
 func normHeader(s string) string {
 	s = strings.ToLower(strings.TrimSpace(s))
 	s = strings.ReplaceAll(s, "å", "a")
 	s = strings.ReplaceAll(s, "ä", "a")
 	s = strings.ReplaceAll(s, "ö", "o")
+	s = strings.ReplaceAll(s, "æ", "ae")
+	s = strings.ReplaceAll(s, "ø", "o")
 	s = strings.ReplaceAll(s, "é", "e")
 	return s
 }

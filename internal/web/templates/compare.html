@@ -1,0 +1,78 @@
+{{define "content"}}
+<form class="command compare-form" method="get" action="/compare">
+  <div class="frame">
+    <div class="frame-inner">
+      <div class="chrome">
+        <span>compare</span>
+        <span class="lang">{{.Impact}}</span>
+      </div>
+      <div class="pair">
+        <label>A
+          <input name="a" value="{{.IDA}}" placeholder="6000000000" autocomplete="off" />
+        </label>
+        <label>B
+          <input name="b" value="{{.IDB}}" placeholder="6000000029" autocomplete="off" />
+        </label>
+      </div>
+      <div class="filters">
+        <label>Impact
+          <select name="impact">
+            <option value="typical" {{if or (eq .Impact "typical") (eq .Impact "")}}selected{{end}}>typical A1–A3</option>
+            <option value="conservative" {{if eq .Impact "conservative"}}selected{{end}}>conservative A1–A3</option>
+            <option value="a4" {{if eq .Impact "a4"}}selected{{end}}>A4</option>
+            <option value="a5_1" {{if eq .Impact "a5_1"}}selected{{end}}>A5.1</option>
+          </select>
+        </label>
+        <label>Unit
+          <input name="unit" value="{{.Unit}}" placeholder="kg" />
+        </label>
+        <input type="hidden" name="lang" value="{{.Lang}}" />
+        <button type="submit">Compare</button>
+      </div>
+    </div>
+  </div>
+</form>
+
+{{if .Compare}}
+<section class="cmp">
+  <h1>
+    {{.Compare.AName}}
+    <span>vs</span>
+    {{.Compare.BName}}
+  </h1>
+  {{if .Compare.Incomparable}}
+  <p class="banner" role="status">No shared unit for this impact. Set unit explicitly, or pick another pair.</p>
+  {{else}}
+  <p class="cmp-sum">
+    Lower {{.Compare.Impact}}
+    {{if .Compare.LowerName}}<strong>{{.Compare.LowerName}}</strong>{{end}}
+    · Δ <span class="num">{{.Compare.Delta}}</span>
+    {{if .Compare.Unit}} / {{.Compare.Unit}}{{end}}
+  </p>
+  {{end}}
+  <table class="hits cmp-table">
+    <thead>
+      <tr>
+        <th></th>
+        <th><a href="/resources/{{.Compare.ADoc}}?lang={{.Lang}}">{{.Compare.AName}}</a></th>
+        <th><a href="/resources/{{.Compare.BDoc}}?lang={{.Lang}}">{{.Compare.BName}}</a></th>
+      </tr>
+    </thead>
+    <tbody>
+      {{range .Compare.Rows}}
+      <tr>
+        <th>{{.Label}}</th>
+        <td class="num {{if .MarkA}}is-lower{{end}}">{{.A}}</td>
+        <td class="num {{if .MarkB}}is-lower{{end}}">{{.B}}</td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+  <p class="units">Delta is A − B in the compared module. Cite Boverket Klimatdatabas.</p>
+  <p class="agent-hint">MCP <code>compare_resources</code> · a <code>{{.Compare.AID}}</code> · b <code>{{.Compare.BID}}</code> · impact <code>{{.Compare.Impact}}</code></p>
+</section>
+{{else if and .IDA .IDB}}
+{{else}}
+<p class="empty-hits">Enter two Resource IDs, or pick two hits from search.</p>
+{{end}}
+{{end}}

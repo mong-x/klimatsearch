@@ -145,10 +145,13 @@ func TestEngineRRF(t *testing.T) {
 	if len(reranked) == 0 {
 		t.Fatal("empty rerank")
 	}
-	// None reranker leaves order; engine still stamps source=rerank.
+	// None is passthrough: retrieval Source stays, Reranked is false.
 	for _, hit := range reranked {
-		if hit.Source != "rerank" {
-			t.Fatalf("after rerank source=%s", hit.Source)
+		if hit.Source == "rerank" {
+			t.Fatalf("retrieval source wiped: %s", hit.Source)
+		}
+		if hit.Reranked {
+			t.Fatal("None must not stamp Reranked")
 		}
 	}
 }

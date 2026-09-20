@@ -163,18 +163,17 @@ Optional: `KLIMAT_ADMIN_TOKEN` as header `X-Admin-Token` on `POST /admin/ingest/
 
 **Why you:** no public API; you need the official Excel/CSV and a column map.
 
-1. Obtain a BR25 workbook.
-2. Implement mapping in `internal/ingest/file.go` (`CatalogBR25` currently returns `ErrCatalogNotImplemented`).
-3. Upload:
+1. Obtain a Danish BR workbook (BR18, BR25, or later). Catalog ID is `dkbr`; DatasetVersion is `BR18` / `BR25` / …
+2. Preview columns (`POST /admin/ingest/preview` or console Preview), map headers onto the Resource schema, then apply — or POST already-mapped JSON to `/admin/resources`.
+3. Console: `GET /ingest` (catalog **dkbr**, DatasetVersion field). REST:
 
    ```bash
-   curl -F file=@br25.xlsx \
+   curl -F file=@br.xlsx -F version=BR25 -F map.id=ID -F map.a1a3=GWP \
      -H "X-Admin-Token: $KLIMAT_ADMIN_TOKEN" \
-     -H "Authorization: Bearer $UNKEY_KEY" \
-     'http://127.0.0.1:8080/admin/ingest/file?catalog=br25'
+     'http://127.0.0.1:8080/admin/ingest/file?catalog=dkbr'
    ```
 
-4. Search: `GET /api/search?q=beton&databases=br25` (and `boverket,br25` for both Catalogs).
+4. Search: `GET /api/search?q=beton&databases=dkbr` (`br25` still aliases to `dkbr`).
 
 Identity is already `(catalog_id, resource_id)`; vec0 id is `br25:…`.
 
@@ -225,7 +224,7 @@ Kind e2e uses `klimatsearch:e2e`, `imagePullPolicy: Never`, fake embedder, fixtu
 [ ] MPP_SECRET_KEY (`openssl rand -hex 32`) + MPP_RECIPIENT (Tempo address) in `.env`
 [ ] Unpaid search returns 402 + WWW-Authenticate: Payment; `npx mppx` can pay on testnet
 [ ] Confirm 401/402 with secrets set, 200 on /healthz without
-[ ] BR25 file + FileIngester mapping (when you have the workbook)
+[ ] BR25 file via operator `GET /ingest` or `POST /admin/ingest/file?catalog=br25`
 [ ] Production image, Ingress, memory, secrets
 [ ] Attribution “Boverket Klimatdatabas” on every public surface
 ```

@@ -1,0 +1,109 @@
+{{define "content"}}
+<div class="workbench">
+  <form class="toolbar" method="get" action="/" role="search">
+    <label class="sr-only" for="q">Query</label>
+    <input id="q" name="q" type="search" value="{{.Q}}" placeholder="Query — spånskiva, fabriksbetong, glasull" autocomplete="off" autofocus />
+    <label>Lang
+      <select name="lang">
+        <option value="sv" {{if eq .Lang "sv"}}selected{{end}}>sv</option>
+        <option value="en" {{if eq .Lang "en"}}selected{{end}}>en</option>
+      </select>
+    </label>
+    <fieldset class="cats">
+      <legend class="sr-only">Catalogs</legend>
+      {{range .Catalogs}}
+      <label class="check"><input type="checkbox" name="databases" value="{{.ID}}" {{if index $.Selected .ID}}checked{{end}} /> {{.ID}}</label>
+      {{end}}
+    </fieldset>
+    <label class="check"><input type="checkbox" name="vector" value="true" {{if .Vector}}checked{{end}} /> vector</label>
+    <label class="check"><input type="checkbox" name="rerank" value="true" {{if .Rerank}}checked{{end}} /> rerank</label>
+    <button type="submit">Run</button>
+  </form>
+
+  {{if not .Q}}
+  <div class="presets" aria-label="Preset queries">
+    {{range .Examples}}
+    <a class="chip" href="/?q={{.Q}}&amp;lang={{.Lang}}">{{.Label}}</a>
+    {{end}}
+  </div>
+  {{end}}
+
+  <div class="split">
+    <section class="results">
+      {{if not .Q}}
+      <p class="hint">Build a query, Run, then inspect the REST and MCP calls on the right. Cheap path is FTS; vector then rerank only for sibling grades.</p>
+      {{else if eq .HitCount 0}}
+      <p class="hint">No Resources. Try a preset, or enable vector for English against Swedish names.</p>
+      {{else}}
+      <div class="list-head">
+        <h1><span class="mono">{{.HitCount}}</span> hits{{if .Elapsed}} · {{.Elapsed}}{{end}}</h1>
+        <form class="compare-bar" method="get" action="/compare" id="compare-form">
+          <input type="hidden" name="lang" value="{{.Lang}}" />
+          <input type="hidden" name="a" id="cmp-a" />
+          <input type="hidden" name="b" id="cmp-b" />
+          <button type="submit" id="cmp-go" disabled>Compare selected</button>
+        </form>
+      </div>
+      <table class="hits">
+        <thead>
+          <tr>
+            <th class="pick"><span class="sr-only">Compare</span></th>
+            <th>Resource</th>
+            <th>Rank</th>
+            <th>A1–A3</th>
+            <th>A4</th>
+            <th>A5.1</th>
+            <th>Match</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{range .Hits}}
+          <tr>
+            <td class="pick"><input type="checkbox" class="pick-box" value="{{.ID}}" data-doc="{{.DocID}}" aria-label="Select {{.Name}} to compare" /></td>
+            <td>
+              <a class="hit-name" href="/resources/{{.DocID}}?lang={{$.Lang}}">{{.Name}}</a>
+              <p class="hit-meta"><span class="mono">{{.DocID}}</span>{{if .Category}} · {{.Category}}{{end}}{{if .Unit}} · {{.Unit}}{{end}}</p>
+            </td>
+            <td class="num" data-label="Rank">{{.Score}}{{if .Reranked}} <span class="src src-rerank">rerank</span>{{end}}</td>
+            <td class="num" data-label="A1–A3">{{.A1A3}}</td>
+            <td class="num" data-label="A4">{{.A4}}</td>
+            <td class="num" data-label="A5.1">{{.A51}}</td>
+            <td data-label="Match"><span class="src src-{{.Source}}">{{.Source}}</span></td>
+          </tr>
+          {{end}}
+        </tbody>
+      </table>
+      {{end}}
+    </section>
+
+    <aside class="inspector" aria-label="Request inspector">
+      <h2>Inspector</h2>
+      {{if .Elapsed}}
+      <p class="stat"><span>Elapsed</span> <code>{{.Elapsed}}</code></p>
+      {{end}}
+      <p class="stat"><span>Hits</span> <code>{{.HitCount}}</code></p>
+      <div class="panel">
+        <div class="panel-h">REST <button type="button" class="copy" data-copy="#rest-call">Copy</button></div>
+        <pre id="rest-call" class="code"><code>GET {{if .RESTURL}}{{.RESTURL}}{{else}}/api/search?q=&amp;lang=sv{{end}}</code></pre>
+      </div>
+      <div class="panel">
+        <div class="panel-h">MCP <button type="button" class="copy" data-copy="#mcp-call">Copy</button></div>
+        <pre id="mcp-call" class="code"><code>{{if .MCPCall}}{{.MCPCall}}{{else}}{"name":"search_climate_data","arguments":{"query":"","lang":"sv"}}{{end}}</code></pre>
+      </div>
+      {{if .JSONPreview}}
+      <div class="panel">
+        <div class="panel-h">First hit JSON <button type="button" class="copy" data-copy="#hit-json">Copy</button></div>
+        <pre id="hit-json" class="code"><code>{{.JSONPreview}}</code></pre>
+      </div>
+      {{end}}
+      <ul class="tools">
+        {{range .Proc.Tools}}<li><code>{{.}}</code></li>{{else}}
+        <li><code>search_climate_data</code></li>
+        <li><code>get_resource_details</code></li>
+        <li><code>compare_resources</code></li>
+        {{end}}
+      </ul>
+    </aside>
+  </div>
+</div>
+{{end}}

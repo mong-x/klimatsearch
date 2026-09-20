@@ -460,9 +460,77 @@ func TestFileIngesterUnknownAndBR25(t *testing.T) {
 		t.Fatalf("want UnknownCatalogError, got %v", err)
 	}
 	_, err = FileIngester{Catalog: "br25", Data: []byte("x")}.Fetch(t.Context())
+	if err == nil {
+		t.Fatal("want parse error for garbage BR25 payload")
+	}
 	var ni ErrCatalogNotImplemented
-	if !errors.As(err, &ni) {
-		t.Fatalf("want ErrCatalogNotImplemented, got %v", err)
+	if errors.As(err, &ni) {
+		t.Fatal("BR25 mapping should parse a table, not return ErrCatalogNotImplemented")
+	}
+}
+
+func TestFileIngesterBR25CSV(t *testing.T) {
+	csv := []byte("id,name,a1a3,unit,category\nbr-1,Beton,0.11,kg,Beton\n")
+	batch, err := FileIngester{Catalog: "br25", Data: csv, Name: "br25.csv"}.Fetch(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if batch.CatalogID != model.CatalogDKBR {
+		t.Fatalf("catalog=%s", batch.CatalogID)
+	}
+	if batch.Version != "BR25" {
+		t.Fatalf("version=%s", batch.Version)
+	}
+	if len(batch.Resources) != 1 {
+		t.Fatalf("len=%d", len(batch.Resources))
+	}
+	r := batch.Resources[0]
+	if r.CatalogID != model.CatalogDKBR || r.ResourceID != "br-1" {
+		t.Fatalf("%+v", r)
+	}
+	if r.NameSV != "Beton" && r.NameEN != "Beton" {
+		t.Fatalf("name sv=%q en=%q", r.NameSV, r.NameEN)
+	}
+	if r.A1A3 != 0.11 {
+		t.Fatalf("a1a3=%v", r.A1A3)
+	}
+}
+
+func TestFileColumnMapAndBatch(t *testing.T) {
+	csv := []byte("foo,gwp,uid\nBeton,0.2,x1\n")
+	batch, err := FileIngester{
+		Catalog: "dkbr",
+		Version: "BR18",
+		Data:    csv,
+		Name:    "t.csv",
+		Map:     map[string]string{"id": "uid", "name": "foo", "a1a3": "gwp"},
+	}.Fetch(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if batch.CatalogID != model.CatalogDKBR || batch.Version != "BR18" {
+		t.Fatalf("%+v", batch)
+	}
+	if batch.Resources[0].ResourceID != "x1" || batch.Resources[0].A1A3 != 0.2 {
+		t.Fatalf("%+v", batch.Resources[0])
+	}
+	prev, err := PreviewFile(csv, "t.csv")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(prev.Headers) != 3 || prev.Headers[0] != "foo" {
+		t.Fatalf("%+v", prev.Headers)
+	}
+	b, err := ResourceBatch{
+		Catalog:   "boverket",
+		Version:   "02.07.000",
+		Resources: []model.Resource{{ResourceID: "9", NameSV: "X", A1A3: 1, Unit: "kg"}},
+	}.Fetch(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if b.Resources[0].CatalogID != model.CatalogBoverket || b.Version != "02.07.000" {
+		t.Fatalf("%+v", b)
 	}
 }
 

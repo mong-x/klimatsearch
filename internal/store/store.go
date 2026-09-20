@@ -482,16 +482,5 @@ func (e *AmbiguousError) Unwrap() error { return ErrAmbiguous }
 
 // ParseCatalogs splits a comma-separated databases query. Empty means all Catalogs.
 func ParseCatalogs(s string) []string {
-	s = strings.TrimSpace(s)
-	if s == "" {
-		return nil
-	}
-	var out []string
-	for _, p := range strings.Split(s, ",") {
-		p = strings.TrimSpace(p)
-		if p != "" {
-			out = append(out, p)
-		}
-	}
-	return out
+	return model.ParseCatalogIDs([]string{s})
 }

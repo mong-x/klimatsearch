@@ -2,6 +2,8 @@
 
 This is the layout klimatsearch expects on a laptop, a VM, ECS, or EKS. Weights are not in git. The default `make run` binary uses the **fake** embedder and needs none of this.
 
+The same binary serves the **operator console** at `GET /` (Query, Data inspect, Ingest, Lab). That is not the GitHub Pages marketing site. Open it after `make run` / `make build`. KPI strip shows Embedder, Reranker, and resolved ONNX quant (`int8`/`fp32`).
+
 ## Canonical models
 
 | Role | Model | Files klimatsearch reads | Env |

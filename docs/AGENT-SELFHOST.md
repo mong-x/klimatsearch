@@ -24,6 +24,8 @@ Tools: `search_climate_data`, `get_resource_details`, `compare_resources`.
 
 Completion: a search for `spånskiva` / `lang=sv` returns Resource `6000000000` and a `details` path.
 
+Operator console (same process, humans — not Pages): `GET /` Query (rank + match_source), `GET /data` SQLite/embedding inspect, `GET /ingest` file + Column map, `GET /connect` Lab. Danish Catalog is `dkbr`; `br25` is an alias. DatasetVersion is `BR18`/`BR25`. JSON upsert: `POST /admin/resources`.
+
 REST fallback (same process):
 
 ```http

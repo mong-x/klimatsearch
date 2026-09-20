@@ -1,0 +1,65 @@
+{{define "layout"}}
+<!DOCTYPE html>
+<html lang="{{.Lang}}">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{{.Title}} — klimatsearch console</title>
+  <meta name="description" content="Operator console: query, compare, ingest, and test REST/MCP." />
+  <link rel="icon" href="/static/mark.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/app.css" />
+</head>
+<body>
+  <!--
+    THESIS: This is a query workbench, not a marketing page. Run a search, inspect REST and MCP, compare, ingest. Refuses GitHub Pages terminal frames, Inter/JetBrains, and a cite-in-the-header.
+    OWN-WORLD: Dashboard console — IBM Plex Sans/Mono, sidebar nav, KPI chips, amber Run, inspector column. Surfaces #12141A / #0C0D11 / #181B22. Accent #E8A54B for execute only.
+    STORY: An operator builds a Query (lang, catalogs, vector, rerank), reads hits with climate modules, copies the equivalent REST/MCP call, compares two IDs, ingests BR25, pings healthz.
+    FIRST VIEWPORT: 220px sidebar, KPI row, query toolbar, results table + inspector. Empty state is presets in the toolbar, not a hero.
+    FORM: Operate dashboard. Distinct from Pages Terminal Dark. No concept-seed; user locked the rethink.
+    FINISH: unreviewed and undocumented is unfinished
+  -->
+  <a class="skip" href="#main">Skip to query</a>
+  <div class="app">
+    <aside class="nav" aria-label="Console">
+      <a class="brand" href="/">
+        <img src="/static/mark.svg" width="24" height="24" alt="" />
+        <span>klimatsearch</span>
+        <em>console</em>
+      </a>
+      <nav>
+        <a class="{{active .Active "search"}}" href="/">Query</a>
+        <a class="{{active .Active "data"}}" href="/data">Data</a>
+        <a class="{{active .Active "compare"}}" href="/compare">Compare</a>
+        <a class="{{active .Active "ingest"}}" href="/ingest">Ingest</a>
+        <a class="{{active .Active "connect"}}" href="/connect">Lab</a>
+      </nav>
+      <div class="nav-foot">
+        <a href="/docs">OpenAPI</a>
+        <a href="/healthz">/healthz</a>
+        <a href="/openapi.yaml">/openapi.yaml</a>
+        <p class="nav-cite">Cite Boverket Klimatdatabas</p>
+      </div>
+    </aside>
+    <div class="workspace">
+      <header class="kpis" aria-label="Process">
+        <div><span>Resources</span><strong class="mono">{{.Count}}</strong></div>
+        <div><span>Embedder</span><strong class="mono">{{if .Proc.Embedder}}{{.Proc.Embedder}}{{else}}—{{end}}</strong></div>
+        <div><span>Reranker</span><strong class="mono">{{if .Proc.Reranker}}{{.Proc.Reranker}}{{else}}none{{end}}</strong></div>
+        <div><span>Quant</span><strong class="mono">{{if .Proc.Quant}}{{.Proc.Quant}}{{else}}—{{end}}</strong></div>
+        <div><span>Vectors</span><strong class="mono">{{if .Proc.Vector}}on{{else}}off{{end}}</strong></div>
+        <div><span>MCP rerank</span><strong class="mono">{{if .Proc.Rerank}}on{{else}}off{{end}}</strong></div>
+        <div><span>MCP</span><strong class="mono">/mcp</strong> <button type="button" class="copy" data-copy-origin="/mcp">Copy</button></div>
+      </header>
+      {{if .Error}}<p class="banner" role="alert">{{.Error}}</p>{{end}}
+      <main id="main">
+        {{template "content" .}}
+      </main>
+    </div>
+  </div>
+  <script src="/static/app.js" defer></script>
+</body>
+</html>
+{{end}}

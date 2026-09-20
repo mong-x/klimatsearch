@@ -247,7 +247,10 @@ paths:
       tags: [Admin]
       summary: Ingest a file Catalog
       description: |
-        Multipart field `file`. Query `catalog` is required (`br25`).
+        Multipart `file` or `preview_id` from `/admin/ingest/preview`.
+        Query `catalog` is required (`dkbr` or `boverket`; `br25` aliases `dkbr`).
+        Form `version` is DatasetVersion (`BR18`, `BR25`, …).
+        Column map fields `map.id`, `map.a1a3`, `map.name`, … pair file headers to Resource fields.
         Optional `X-Admin-Token` when `KLIMAT_ADMIN_TOKEN` is set.
       operationId: ingestFile
       parameters:
@@ -256,7 +259,53 @@ paths:
           required: true
           schema:
             type: string
-            example: br25
+            example: dkbr
+        - name: X-Admin-Token
+          in: header
+          required: false
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                preview_id:
+                  type: string
+                version:
+                  type: string
+                  example: BR25
+                map.id:
+                  type: string
+                map.a1a3:
+                  type: string
+                map.name:
+                  type: string
+      responses:
+        "200":
+          description: Ingest counts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IngestResult"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "402":
+          $ref: "#/components/responses/PaymentRequired"
+  /admin/ingest/preview:
+    post:
+      tags: [Admin]
+      summary: Read file headers without upsert
+      description: Returns headers, sample rows, Resource schema, and a `preview_id` to pass to `/admin/ingest/file`.
+      operationId: ingestPreview
+      parameters:
         - name: X-Admin-Token
           in: header
           required: false
@@ -273,6 +322,35 @@ paths:
                 file:
                   type: string
                   format: binary
+      responses:
+        "200":
+          description: Preview
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IngestPreview"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /admin/resources:
+    post:
+      tags: [Admin]
+      summary: Upsert a Resource batch
+      description: Already-mapped Resources. Catalog `dkbr` or `boverket`. DatasetVersion on the body or per Resource.
+      operationId: upsertResources
+      parameters:
+        - name: X-Admin-Token
+          in: header
+          required: false
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResourceBatch"
       responses:
         "200":
           description: Ingest counts
@@ -552,6 +630,66 @@ components:
           type: integer
         skipped:
           type: integer
+    IngestPreview:
+      type: object
+      properties:
+        preview_id:
+          type: string
+        filename:
+          type: string
+        headers:
+          type: array
+          items:
+            type: string
+        sample:
+          type: array
+          items:
+            type: array
+            items:
+              type: string
+        schema:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+              label:
+                type: string
+    ResourceBatch:
+      type: object
+      required: [catalog, resources]
+      properties:
+        catalog:
+          type: string
+          example: dkbr
+        version:
+          type: string
+          example: BR25
+        resources:
+          type: array
+          items:
+            type: object
+            required: [id]
+            properties:
+              id:
+                type: string
+              name:
+                type: string
+              name_sv:
+                type: string
+              name_en:
+                type: string
+              a1a3:
+                type: number
+              unit:
+                type: string
+              category:
+                type: string
+              version:
+                type: string
+              description:
+                type: string
 security:
   - {}
   - unkey: []

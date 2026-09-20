@@ -40,6 +40,8 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/resources/{id}/origin", h.origin)
 	mux.HandleFunc("GET /api/resources/{id}", h.get)
 	mux.HandleFunc("POST /admin/ingest/file", h.ingestFile)
+	mux.HandleFunc("POST /admin/ingest/preview", h.ingestPreview)
+	mux.HandleFunc("POST /admin/resources", h.upsertResources)
 }
 
 func (h *Handler) healthz(w http.ResponseWriter, r *http.Request) {
@@ -53,25 +55,14 @@ func (h *Handler) healthz(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) search(w http.ResponseWriter, r *http.Request) {
-	q := strings.TrimSpace(r.URL.Query().Get("q"))
-	if q == "" {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "query q is required"})
-		return
-	}
-	lang, err := search.NormalizeLang(r.URL.Query().Get("lang"))
+	qreq, err := search.FromURL(r.URL.Query(), search.Defaults{})
 	if err != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
 		return
 	}
-	qs := r.URL.Query()
-	_, hasV := qs["vector"]
-	_, hasR := qs["rerank"]
-	qreq := search.Query{
-		Text:     q,
-		Lang:     lang,
-		Catalogs: store.ParseCatalogs(qs.Get("databases")),
-		Vector:   search.Coalesce(search.ParseFlag(qs.Get("vector"), hasV), false),
-		Rerank:   search.Coalesce(search.ParseFlag(qs.Get("rerank"), hasR), false),
+	if qreq.Text == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "query q is required"})
+		return
 	}
 	hits, err := h.Engine.Search(r.Context(), qreq)
 	if err != nil {
@@ -225,7 +216,7 @@ func (h *Handler) loadResource(r *http.Request, id string) (*model.Resource, int
 }
 
 func (h *Handler) ingestFile(w http.ResponseWriter, r *http.Request) {
-	if h.AdminToken != "" && r.Header.Get("X-Admin-Token") != h.AdminToken {
+	if !h.adminOK(r) {
 		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
 		return
 	}
@@ -238,49 +229,104 @@ func (h *Handler) ingestFile(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "ingest is not configured"})
 		return
 	}
-	if err := r.ParseMultipartForm(32 << 20); err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "file is required"})
+	p, err := ingest.ReadMultipart(r)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
 		return
 	}
-	file, hdr, err := r.FormFile("file")
+	p.Catalog = catalog
+	if v := strings.TrimSpace(r.URL.Query().Get("version")); v != "" && p.Version == "" {
+		p.Version = v
+	}
+	p, err = p.Resolve(h.Runner.FileStash())
 	if err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "file is required"})
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
 		return
 	}
-	defer file.Close()
-	data, err := io.ReadAll(io.LimitReader(file, 32<<20))
+	res, err := h.Runner.Run(r.Context(), p.Ingester())
 	if err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "file is required"})
+		writeJSON(w, ingestStatus(err), map[string]string{"error": err.Error()})
 		return
 	}
-	name := ""
-	if hdr != nil {
-		name = hdr.Filename
+	writeJSON(w, http.StatusOK, ingest.ResultBody(res))
+}
+
+func (h *Handler) ingestPreview(w http.ResponseWriter, r *http.Request) {
+	if !h.adminOK(r) {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
+		return
 	}
-	ing := ingest.FileIngester{Catalog: catalog, Data: data, Name: name}
-	res, err := h.Runner.Run(r.Context(), ing)
+	p, err := ingest.ReadMultipart(r)
+	if err != nil || len(p.Data) == 0 {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": ingest.ErrFileRequired.Error()})
+		return
+	}
+	prev, err := ingest.PreviewFile(p.Data, p.Filename)
 	if err != nil {
-		var unknown ingest.UnknownCatalogError
-		if errors.As(err, &unknown) {
-			writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
-			return
-		}
-		var ni ingest.ErrCatalogNotImplemented
-		if errors.As(err, &ni) {
-			writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
-			return
-		}
-		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
+	if h.Runner == nil {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "ingest is not configured"})
+		return
+	}
+	id := h.Runner.FileStash().Put(p)
+	writeJSON(w, http.StatusOK, map[string]any{
+		"preview_id": id,
+		"filename":   p.Filename,
+		"headers":    prev.Headers,
+		"sample":     prev.Sample,
+		"schema":     prev.Schema,
+	})
+}
+
+func (h *Handler) upsertResources(w http.ResponseWriter, r *http.Request) {
+	if !h.adminOK(r) {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
+		return
+	}
+	if h.Runner == nil {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "ingest is not configured"})
+		return
+	}
+	var body ingest.ResourceBatch
+	if err := json.NewDecoder(io.LimitReader(r.Body, 32<<20)).Decode(&body); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid json"})
+		return
+	}
+	res, err := h.Runner.Run(r.Context(), body)
+	if err != nil {
+		writeJSON(w, ingestStatus(err), map[string]string{"error": err.Error()})
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
-		"catalog":  catalog,
+		"catalog":  res.Catalog,
 		"origin":   res.Origin,
 		"version":  res.Version,
 		"seen":     res.Seen,
 		"upserted": res.Upserted,
 		"skipped":  res.Skipped,
 	})
+}
+
+func (h *Handler) adminOK(r *http.Request) bool {
+	if h.AdminToken == "" {
+		return true
+	}
+	tok := strings.TrimSpace(r.Header.Get("X-Admin-Token"))
+	if tok == "" {
+		tok = strings.TrimSpace(r.FormValue("token"))
+	}
+	return tok == h.AdminToken
+}
+
+func ingestStatus(err error) int {
+	var unknown ingest.UnknownCatalogError
+	var ni ingest.ErrCatalogNotImplemented
+	if errors.As(err, &unknown) || errors.As(err, &ni) {
+		return http.StatusBadRequest
+	}
+	return http.StatusInternalServerError
 }
 
 func writeJSON(w http.ResponseWriter, status int, v any) {

@@ -1,0 +1,93 @@
+{{define "content"}}
+{{if .Resource}}
+<article class="resource">
+  <p class="crumb"><a href="/">Search</a> / <span class="mono">{{.Resource.ID}}</span></p>
+  <header class="res-head">
+    <div>
+      <h1>{{.Resource.Name}}</h1>
+      {{if .Resource.NameOther}}<p class="other">{{.Resource.NameOther}}</p>{{end}}
+      <p class="hit-meta">
+        {{if .Resource.Category}}{{.Resource.Category}}{{end}}
+        {{if .Resource.CategoryCode}} · code {{.Resource.CategoryCode}}{{end}}
+        {{if .Resource.Unit}} · {{.Resource.Unit}}{{end}}
+        {{if .Resource.Version}} · {{.Resource.Version}}{{end}}
+      </p>
+    </div>
+    <div class="res-actions">
+      {{if .Resource.Origin}}<a class="btn-ghost" href="{{.Resource.Origin}}" rel="noopener noreferrer">Boverket sheet</a>{{end}}
+      <a class="btn-ghost" href="/data/embed/{{.Resource.DocID}}">Embedding</a>
+      <a class="btn-ghost" href="/compare?a={{.Resource.ID}}&amp;lang={{.Lang}}">Compare</a>
+    </div>
+  </header>
+
+  <section class="mods" aria-label="Climate modules">
+    <h2>Climate modules</h2>
+    <table class="hits">
+      <tbody>
+        <tr><th>Typical A1–A3</th><td class="num">{{.Resource.A1A3}}</td><td>{{if .Resource.GWPUnit}}{{.Resource.GWPUnit}}{{else}}kg CO₂e / {{.Resource.Unit}}{{end}}</td></tr>
+        <tr><th>Conservative A1–A3</th><td class="num">{{.Resource.A1A3Cons}}</td><td>{{if .Resource.ConsFactor}}factor {{.Resource.ConsFactor}}{{end}}</td></tr>
+        <tr><th>A4</th><td class="num">{{.Resource.A4}}</td><td>transport to site</td></tr>
+        <tr><th>A5.1</th><td class="num">{{.Resource.A51}}</td><td>waste on site{{if ne .Resource.Waste "—"}} · waste {{.Resource.Waste}}{{end}}</td></tr>
+        <tr><th>Biogenic carbon</th><td class="num">{{.Resource.Biogenic}}</td><td></td></tr>
+        <tr><th>Service life</th><td colspan="2">{{if .Resource.ServiceLife}}{{.Resource.ServiceLife}}{{else}}—{{end}}</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  {{if .Resource.Transports}}
+  <section aria-label="A4 transports">
+    <h2>A4 transports</h2>
+    <table class="hits">
+      <thead>
+        <tr><th>Leg</th><th>km</th><th>Type</th><th>Fuel</th><th>Energy</th></tr>
+      </thead>
+      <tbody>
+        {{range .Resource.Transports}}
+        <tr>
+          <td>{{.Name}}</td>
+          <td class="num">{{.DistanceKM}}</td>
+          <td>{{.Type}}</td>
+          <td>{{.Fuel}}</td>
+          <td>{{.EnergyUse}}</td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+  </section>
+  {{end}}
+
+  {{if .Resource.Description}}
+  <section>
+    <h2>Description</h2>
+    <p class="prose">{{.Resource.Description}}</p>
+  </section>
+  {{end}}
+  {{if .Resource.Applicability}}
+  <section>
+    <h2>Applicability</h2>
+    <p class="prose">{{.Resource.Applicability}}</p>
+  </section>
+  {{end}}
+  {{if .Resource.UseAdvice}}
+  <section>
+    <h2>Use advice</h2>
+    <p class="prose">{{.Resource.UseAdvice}}</p>
+  </section>
+  {{end}}
+
+  <dl class="kv">
+    {{if .Resource.StdName}}<div><dt>Standard</dt><dd>{{.Resource.StdName}}{{if .Resource.StdCalc}} · {{.Resource.StdCalc}}{{end}}</dd></div>{{end}}
+    {{if .Resource.Geography}}<div><dt>Geography</dt><dd>{{.Resource.Geography}}</dd></div>{{end}}
+    {{if .Resource.BK04}}<div><dt>BK04</dt><dd>{{.Resource.BK04}}</dd></div>{{end}}
+    {{if .Resource.Comment}}<div><dt>Comment</dt><dd>{{.Resource.Comment}}</dd></div>{{end}}
+  </dl>
+
+  <aside class="agent-hint">
+    <p>MCP <code>get_resource_details</code> · id <code>{{.Resource.DocID}}</code></p>
+    <p>REST <code>GET /api/resources/{{.Resource.DocID}}</code></p>
+  </aside>
+</article>
+{{else if not .Error}}
+<p class="empty-hits">No Resource loaded.</p>
+{{end}}
+{{end}}

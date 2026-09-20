@@ -1,0 +1,72 @@
+{{define "content"}}
+<section class="ingest">
+  <h1>Ingest</h1>
+  <p class="hint">Danish BR is file-only. Preview stashes the file for 30 minutes — map headers, then Apply. Or POST JSON to <code>/admin/resources</code>.</p>
+
+  <form class="command" method="post" action="/ingest" enctype="multipart/form-data">
+    <div class="frame">
+      <div class="frame-inner">
+        <div class="chrome">
+          <span>file</span>
+          <span class="lang">{{if .Catalog}}{{.Catalog}}{{else}}dkbr{{end}}</span>
+        </div>
+        <div class="filters ingest-fields">
+          <label>Catalog
+            <select name="catalog">
+              {{range .Catalogs}}
+              <option value="{{.ID}}" {{if eq $.Catalog .ID}}selected{{end}}>{{.ID}}{{if .FileOnly}} · file{{end}}</option>
+              {{end}}
+            </select>
+          </label>
+          <label>DatasetVersion
+            <input name="version" value="{{.Version}}" placeholder="BR25" />
+          </label>
+          {{if .PreviewID}}<input type="hidden" name="preview_id" value="{{.PreviewID}}" />{{end}}
+          <label>File
+            <input type="file" name="file" accept=".csv,.xlsx,.xls,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" {{if not .PreviewID}}required{{end}} />
+          </label>
+          {{if .NeedToken}}
+          <label>Admin token
+            <input type="password" name="token" autocomplete="off" />
+          </label>
+          {{end}}
+          <button type="submit" name="action" value="preview">Preview</button>
+          <button type="submit" name="action" value="apply">Apply</button>
+        </div>
+        {{if .FilePreview}}
+        <div class="map-grid">
+          <p class="hint">Column map — Resource field → file header. Leave blank to use built-in names.</p>
+          {{range .FilePreview.Schema}}
+          {{$field := .Field}}
+          <label>{{.Label}} <code>{{.Field}}</code>
+            <select name="map.{{.Field}}">
+              <option value="">(auto)</option>
+              {{range $.FilePreview.Headers}}
+              <option value="{{.}}" {{if and $.ColMap (eq (index $.ColMap $field) .)}}selected{{end}}>{{.}}</option>
+              {{end}}
+            </select>
+          </label>
+          {{end}}
+        </div>
+        {{end}}
+      </div>
+    </div>
+  </form>
+
+  {{if .Ingest}}
+  <section class="ingest-result" aria-label="Ingest result">
+    <h2>Result</h2>
+    <dl class="kv">
+      <div><dt>Catalog</dt><dd class="mono">{{.Ingest.Catalog}}</dd></div>
+      {{if .Filename}}<div><dt>File</dt><dd class="mono">{{.Filename}}</dd></div>{{end}}
+      <div><dt>Origin</dt><dd class="mono">{{.Ingest.Origin}}</dd></div>
+      {{if .Ingest.Version}}<div><dt>DatasetVersion</dt><dd class="mono">{{.Ingest.Version}}</dd></div>{{end}}
+      <div><dt>Seen</dt><dd class="mono">{{.Ingest.Seen}}</dd></div>
+      <div><dt>Upserted</dt><dd class="mono">{{.Ingest.Upserted}}</dd></div>
+      <div><dt>Skipped</dt><dd class="mono">{{.Ingest.Skipped}}</dd></div>
+    </dl>
+    <p class="units"><a href="/">Search</a> · REST <code>POST /admin/resources</code> for JSON Resource batches.</p>
+  </section>
+  {{end}}
+</section>
+{{end}}

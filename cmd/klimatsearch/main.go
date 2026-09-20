@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -18,6 +19,7 @@ import (
 	"github.com/mong-x/klimatsearch/internal/reranker"
 	"github.com/mong-x/klimatsearch/internal/search"
 	"github.com/mong-x/klimatsearch/internal/store"
+	"github.com/mong-x/klimatsearch/internal/web"
 )
 
 func main() {
@@ -69,6 +71,21 @@ func main() {
 
 	useVector := st.VectorEnabled()
 	useRerank := cfg.Reranker != "none"
+	quant := cfg.ONNXQuant
+	if p, err := embedder.ResolveONNX(filepath.Join(cfg.Models, cfg.EmbeddingModel), cfg.ONNXQuant); err == nil {
+		quant = embedder.QuantLabel(p)
+	}
+	ui := web.New(eng, st, cfg.Source, web.Status{
+		Tools:    []string{mcpserver.ToolSearch, mcpserver.ToolGet, mcpserver.ToolCompare},
+		Vector:   useVector,
+		Rerank:   useRerank,
+		Embedder: cfg.Embedder,
+		Reranker: cfg.Reranker,
+		Quant:    quant,
+	})
+	ui.Runner = runner
+	ui.AdminToken = cfg.AdminToken
+	ui.Register(mux)
 	mcpserver.New(eng, st, cfg.Source, useVector, useRerank).Mount(mux)
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)

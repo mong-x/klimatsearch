@@ -1,0 +1,45 @@
+{{define "content"}}
+<section class="lab">
+  <h1>Lab</h1>
+  <p class="hint">Ping this process, copy MCP config, fire the same calls the Query page builds.</p>
+
+  <div class="lab-grid">
+    <div class="panel">
+      <div class="panel-h">GET /healthz <button type="button" class="ghost" id="health-run">Ping</button></div>
+      <pre id="health-out" class="code"><code>click Ping</code></pre>
+    </div>
+    <div class="panel">
+      <div class="panel-h">mcp.json <button type="button" class="copy" data-copy="#mcp-json">Copy</button></div>
+      <pre id="mcp-json" class="code"><code>{{.MCPSnippet}}</code></pre>
+    </div>
+    <div class="panel">
+      <div class="panel-h">REST recipes</div>
+      <pre class="code"><code>GET /api/search?q=spånskiva&amp;lang=sv
+GET /api/search?q=particle+board&amp;lang=en&amp;vector=true
+GET /api/resources/boverket:6000000000
+GET /api/resources/compare?a=6000000029&amp;b=6000000028&amp;unit=kg
+POST /admin/ingest/preview
+POST /admin/ingest/file?catalog=dkbr
+POST /admin/resources</code></pre>
+    </div>
+    <div class="panel">
+      <div class="panel-h">MCP tools</div>
+      <dl class="kv tools-kv">
+        <div>
+          <dt><code>search_climate_data</code></dt>
+          <dd>Search. Optional vector / rerank / databases.</dd>
+        </div>
+        <div>
+          <dt><code>get_resource_details</code></dt>
+          <dd>One Resource by id or catalog:id.</dd>
+        </div>
+        <div>
+          <dt><code>compare_resources</code></dt>
+          <dd>Two Resources. impact=typical|conservative|a4|a5_1.</dd>
+        </div>
+      </dl>
+    </div>
+  </div>
+  <p class="hint">Playbook: <a href="https://github.com/mong-x/klimatsearch/blob/main/docs/AGENT-SELFHOST.md">AGENT-SELFHOST.md</a>. Cite Boverket Klimatdatabas on answers that use that Catalog.</p>
+</section>
+{{end}}

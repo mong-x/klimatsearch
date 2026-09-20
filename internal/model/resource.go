@@ -11,11 +11,6 @@ import (
 
 const BoverketOriginBase = "https://klimatdatabasen.boverket.se"
 
-const (
-	CatalogBoverket = "boverket"
-	CatalogBR25     = "br25"
-)
-
 // Ranked is a Resource at a 1-based position in an FTS or KNN list.
 type Ranked struct {
 	Resource Resource

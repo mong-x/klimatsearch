@@ -28,6 +28,7 @@ FTS5 BM25 → sqlite-vec KNN → RRF `k=60` → optional BGE-m3 INT8 rerank. Sel
 git clone https://github.com/mong-x/klimatsearch.git && cd klimatsearch
 make run                                          # fake embedder + fixture, no network
 # KLIMAT_LISTEN=:8081 make run                    # if :8080 is taken
+open http://127.0.0.1:8080/                       # operator console (Query, Data, Ingest, Lab)
 curl -sS 'http://127.0.0.1:8080/api/search?q=betong&lang=sv'
 ```
 
@@ -98,7 +99,7 @@ GET /api/search?q=spånskiva&lang=sv&vector=true
 }
 ```
 
-`match_source` is `fts` \| `vector` \| `both` \| `rerank` — not the citation. `GET {details}` is klimatsearch’s copy; `GET {details}/origin` **302**s to Boverket’s sheet.
+`match_source` is retrieval (`fts` \| `vector` \| `both`) — not the citation. When a Reranker ran, hits also have `reranked` and `rerank_score`. `GET {details}` is klimatsearch’s copy; `GET {details}/origin` **302**s to Boverket’s sheet.
 
 <p align="center">
   <img src="site/assets/og.jpg" alt="Same Spånskiva payload: 6000000000, A1–A3 0.39, A4 0.0629, A5.1 0.055" width="920" />
@@ -113,9 +114,13 @@ GET /api/search?q=spånskiva&lang=sv&vector=true
 | GET | `/api/resources?lang=&databases=` |
 | GET | `/api/resources/{id}` · `/api/resources/{id}/origin` |
 | GET | `/api/resources/compare?a=&b=&unit=&impact=` |
-| POST | `/admin/ingest/file?catalog=` |
+| POST | `/admin/ingest/file?catalog=&version=` (optional Column map `map.id`, `map.a1a3`, …) |
+| POST | `/admin/ingest/preview` (headers + Resource schema, no upsert) |
+| POST | `/admin/resources` JSON Resource batch |
 
-`vector` and `rerank` default **off**. `{id}` is `boverket:6000000000` or a bare id (**409** if ambiguous). Compare `unit` must apply to both or **400**. `databases=` filters Catalog IDs.
+The same process serves an **operator console** (not the GitHub Pages site): `GET /` Query, `/data` inspect, `/ingest` file + Column map, `/connect` Lab. Rank and ONNX quant show there.
+
+`vector` and `rerank` default **off**. `{id}` is `boverket:6000000000` or a bare id (**409** if ambiguous). Compare `unit` must apply to both or **400**. `databases=` filters Catalog IDs (`boverket`, `dkbr`; `br25` is an alias for `dkbr`).
 
 ```bash
 curl -sS 'http://127.0.0.1:8081/api/search?q=spånskiva&lang=sv&vector=true&rerank=true'
@@ -159,7 +164,7 @@ Hit@1 = labeled Resource is rank 1. Inversion = sibling above it. Miss@20 = not 
 
 ## Ingest
 
-`(catalog_id, resource_id)`. On start and every `168h`: Boverket JSON `GetAllResources/latest/{sv,en}/json`, merge by ResourceId, Excel fallback. ContentHash covers names, climate modules, and details — upserts re-embed and POST `catalog.changed`. BR25 file ingest is not mapped yet.
+`(catalog_id, resource_id)`. On start and every `168h`: Boverket JSON `GetAllResources/latest/{sv,en}/json`, merge by ResourceId, Excel fallback. ContentHash covers names, climate modules, and details — upserts re-embed and POST `catalog.changed`. Danish BR is Catalog `dkbr` (file-only); **DatasetVersion** is `BR18` / `BR25` / later. Preview headers, fill the Resource schema (`map.*`), or POST JSON Resources to `/admin/resources`.
 
 ## Self-host
 

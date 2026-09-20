@@ -47,6 +47,7 @@ type Result struct {
 // Runner hashes, embeds changed Resources, and upserts.
 type Runner struct {
 	Store    Store
+	Files    *FileStash
 	Embedder search.Embedder
 	Notify   Notifier
 	Source   string
@@ -75,6 +76,9 @@ func (r *Runner) Apply(ctx context.Context, batch Batch) (Result, error) {
 		if item.ResourceID == "" {
 			res.Skipped++
 			continue
+		}
+		if item.Version == "" && batch.Version != "" {
+			item.Version = batch.Version
 		}
 		h, err := item.ContentHash()
 		if err != nil {
@@ -112,8 +116,8 @@ func (r *Runner) Apply(ctx context.Context, batch Batch) (Result, error) {
 			res.Catalog = item.CatalogID
 		}
 	}
-	if batch.Version != "" {
-		if err := r.Store.SetMeta(ctx, "dataset_version", batch.Version); err != nil {
+	if batch.Version != "" && res.Catalog != "" {
+		if err := r.Store.SetMeta(ctx, model.DatasetVersionMetaKey(res.Catalog), batch.Version); err != nil {
 			return res, err
 		}
 	}

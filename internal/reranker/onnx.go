@@ -98,7 +98,6 @@ func (o *ONNX) Rerank(query string, docs []search.Hit) ([]search.Hit, error) {
 	for i, s := range rank {
 		h := docs[s.idx]
 		h.Score = float64(s.score)
-		h.Source = "rerank"
 		out[i] = h
 	}
 	return out, nil

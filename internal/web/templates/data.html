@@ -1,0 +1,134 @@
+{{define "content"}}
+<section class="data">
+  {{if .Embed}}
+  <p class="crumb"><a href="/data">Data</a> / embedding</p>
+  <h1>Embedding <span class="mono">{{.Embed.DocID}}</span></h1>
+  {{if .Resource}}
+  <p class="hint"><a href="/resources/{{.Resource.DocID}}?lang={{.Lang}}">{{.Resource.Name}}</a> · {{.Resource.Unit}} · A1–A3 {{.Resource.A1A3}}</p>
+  {{end}}
+  <dl class="kv">
+    <div><dt>Dim</dt><dd class="mono">{{.Embed.Dim}}</dd></div>
+    <div><dt>L2 norm</dt><dd class="mono">{{.Embed.Norm}}</dd></div>
+    <div><dt>Min / max</dt><dd class="mono">{{.Embed.Min}} / {{.Embed.Max}}</dd></div>
+    <div><dt>Mean</dt><dd class="mono">{{.Embed.Mean}}</dd></div>
+  </dl>
+  <h2>First {{len .Embed.Preview}} components</h2>
+  <p class="vec-line mono">{{range $i, $v := .Embed.Preview}}{{if $i}} {{end}}{{$v}}{{end}}</p>
+  {{if .Embed.Tail}}
+  <h2>Last {{len .Embed.Tail}}</h2>
+  <p class="vec-line mono">{{range $i, $v := .Embed.Tail}}{{if $i}} {{end}}{{$v}}{{end}}</p>
+  {{end}}
+  {{if .EmbedText}}
+  <h2>Embedded text</h2>
+  <pre class="code"><code>{{.EmbedText}}</code></pre>
+  {{end}}
+  {{else}}
+  <h1>Data</h1>
+  <p class="hint">SQLite objects in this process. Vectors are sqlite-vec blobs (little-endian float32). FTS5 indexes names and descriptions.</p>
+
+  {{if .Coverage}}
+  <div class="cov">
+    <div>
+      <span>Embeddings</span>
+      <strong class="mono">{{.Coverage.Vectors}} / {{.Coverage.Resources}}</strong>
+      <div class="bar" aria-hidden="true"><i style="width:{{.PctVec}}%"></i></div>
+      <p class="hint">{{.Coverage.Missing}} without a vector · dim {{.Coverage.Dim}}{{if not .Coverage.VectorOK}} · {{.Coverage.SkipReason}}{{end}}</p>
+    </div>
+    <div>
+      <span>FTS5</span>
+      <strong class="mono">{{.Coverage.FTS}} / {{.Coverage.Resources}}</strong>
+      <div class="bar" aria-hidden="true"><i style="width:{{.PctFTS}}%"></i></div>
+    </div>
+  </div>
+  {{end}}
+
+  <div class="table-tabs">
+    {{range .Tables}}
+    <a class="chip {{if eq $.Table .Name}}is-on{{end}}" href="/data?table={{.Name}}">{{.Name}} <span class="mono">{{.Rows}}</span></a>
+    {{end}}
+  </div>
+  {{range .Tables}}{{if eq $.Table .Name}}<p class="hint">{{.Note}} · {{.Kind}}</p>{{end}}{{end}}
+
+  {{if or (eq .Table "resources") (eq .Table "resources_fts") (eq .Table "resource_vec")}}
+  <form class="toolbar" method="get" action="/data">
+    <input type="hidden" name="table" value="{{.Table}}" />
+    <label class="sr-only" for="data-q">Filter</label>
+    <input id="data-q" name="q" type="search" value="{{.Q}}" placeholder="id or name" />
+    {{if eq .Table "resources"}}
+    <label>Catalog
+      <select name="catalog">
+        <option value="">all</option>
+        {{range $.Catalogs}}
+        <option value="{{.ID}}" {{if eq $.Catalog .ID}}selected{{end}}>{{.ID}}</option>
+        {{end}}
+      </select>
+    </label>
+    <label class="check"><input type="checkbox" name="missing" value="1" {{if .MissingOnly}}checked{{end}} /> missing vector</label>
+    {{end}}
+    <button type="submit">Filter</button>
+  </form>
+  {{end}}
+
+  {{if eq .Table "resources"}}
+  <p class="hint">{{.Total}} rows · offset {{.Offset}}</p>
+  <table class="hits">
+    <thead>
+      <tr>
+        <th>Doc</th>
+        <th>Name</th>
+        <th>A1–A3</th>
+        <th>Vec</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {{range .InspectRows}}
+      <tr>
+        <td>
+          <a class="mono" href="/resources/{{.DocID}}">{{.DocID}}</a>
+          <p class="hit-meta">{{.Category}}{{if .Unit}} · {{.Unit}}{{end}} · {{.Hash}}</p>
+        </td>
+        <td>{{.Name}}</td>
+        <td class="num">{{printf "%.4g" .A1A3}}</td>
+        <td>{{if .HasVec}}<span class="src src-vector">{{.BlobBytes}} B</span>{{else}}<span class="src">none</span>{{end}}</td>
+        <td>{{if .HasVec}}<a href="/data/embed/{{.DocID}}">inspect</a>{{end}}</td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+  {{else if eq .Table "meta"}}
+  <table class="hits">
+    <thead><tr><th>Key</th><th>Value</th></tr></thead>
+    <tbody>
+      {{range .MetaRows}}
+      <tr><td class="mono">{{.Key}}</td><td class="mono">{{.Value}}</td></tr>
+      {{end}}
+    </tbody>
+  </table>
+  {{else if .Headers}}
+  <p class="hint">{{.Total}} rows · offset {{.Offset}}</p>
+  <table class="hits">
+    <thead>
+      <tr>{{range .Headers}}<th>{{.}}</th>{{end}}</tr>
+    </thead>
+    <tbody>
+      {{range .Grid}}
+      <tr>
+        {{range $i, $c := .}}
+        <td class="mono">{{if and (eq $i 0) (eq $.Table "resource_vec")}}<a href="/data/embed/{{$c}}">{{$c}}</a>{{else}}{{$c}}{{end}}</td>
+        {{end}}
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+  {{end}}
+
+  {{if or .HasPrev .HasNext}}
+  <p class="pager">
+    {{if .HasPrev}}<a href="{{.PrevURL}}">Prev</a>{{end}}
+    {{if .HasNext}}<a href="{{.NextURL}}">Next</a>{{end}}
+  </p>
+  {{end}}
+  {{end}}
+</section>
+{{end}}

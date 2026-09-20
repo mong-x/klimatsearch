@@ -38,3 +38,14 @@ func ResolveONNX(dir, quant string) (string, error) {
 		return "", fmt.Errorf("unknown KLIMAT_ONNX_QUANT %q (auto|int8|fp32)", quant)
 	}
 }
+
+// QuantLabel is int8 or fp32 from a resolved ONNX path.
+func QuantLabel(path string) string {
+	if strings.Contains(filepath.Base(path), "int8") {
+		return "int8"
+	}
+	if path == "" {
+		return ""
+	}
+	return "fp32"
+}

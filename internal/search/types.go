@@ -18,9 +18,11 @@ type Query struct {
 // Hit is a Resource returned for a Query, plus retrieval fields.
 type Hit struct {
 	model.Resource
-	Lang   string
-	Score  float64
-	Source string // "fts" | "vector" | "both" | "rerank"
+	Lang        string
+	Score       float64
+	Source      string // retrieval: "fts" | "vector" | "both"
+	Reranked    bool
+	RerankScore float64
 }
 
 func HitFrom(r model.Resource, lang, source string, score float64) Hit {
@@ -34,6 +36,10 @@ func (h Hit) View(attribution string) map[string]any {
 	m["lang"] = h.Lang
 	m["score"] = h.Score
 	m["match_source"] = h.Source
+	if h.Reranked {
+		m["reranked"] = true
+		m["rerank_score"] = h.RerankScore
+	}
 	return m
 }
 

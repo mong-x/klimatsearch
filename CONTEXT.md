@@ -5,12 +5,12 @@ Glossary for climate-data retrieval: Resources in a Catalog, how they change, an
 ## Language
 
 **Catalog**:
-A national climate-data publication klimatsearch can ingest (Boverket Klimatdatabas, BR25).
+A national climate-data publication klimatsearch can ingest (Boverket Klimatdatabas, Danish BR).
 _Avoid_: source, namespace, database
 
 **Catalog ID**:
-The stable code for a Catalog (`boverket`, `br25`).
-_Avoid_: source_id, namespace, database name
+The stable code for a Catalog (`boverket`, `dkbr`). `br25` is a deprecated alias for `dkbr`.
+_Avoid_: source_id, namespace, database name, BR25 (as a Catalog)
 
 **Resource**:
 A generic construction product or energy carrier in a Catalog, identified by Catalog ID plus Resource ID.
@@ -64,8 +64,16 @@ The rest of Boverket's Resource payload klimatsearch surfaces (conservative A1â€
 _Avoid_: raw JSON dump
 
 **DatasetVersion**:
-The Klimatdatabas publication a Resource was ingested from (for example 02.07.000).
-_Avoid_: version (bare), schema version
+The publication of a Catalog a Resource was ingested from (Boverket `02.07.000`; Danish BR `BR18`, `BR25`). Unique per Catalog, not a Catalog ID.
+_Avoid_: version (bare), schema version, BR25 (as identity)
+
+**Column map**:
+Caller-supplied pairing of a file header to a Resource field before ingest. Danish workbooks vary; the Ingester does not guess new names.
+_Avoid_: auto-detect, LLM mapping (inside the process)
+
+**Resource batch**:
+Already-mapped Resources applied by the ingest Runner (JSON upsert). File bytes are not required.
+_Avoid_: bulk insert, raw SQL load
 
 **ContentHash**:
 The identity of a Resource's names, descriptions, Applicability, Synonyms, A1A3, Declared unit, Conversion, Category, and DatasetVersion, used to detect whether the Resource changed. Resource ID and Catalog ID are identity, not content.
