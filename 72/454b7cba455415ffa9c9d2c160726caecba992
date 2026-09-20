@@ -1,0 +1,46 @@
+CONTEXT.md
+  h_af7161f060dc1e 106
+README.md
+  h_af7161f060dc1e 235
+cmd/klimatsearch/main.go
+  h_af7161f060dc1e 67
+docs/AGENT-SELFHOST.md
+  h_af7161f060dc1e 27
+docs/LAUNCH.md
+  h_af7161f060dc1e 156-162
+internal/ingest/eventlog.go
+  h_af7161f060dc1e 1-29
+internal/ingest/http.go
+  h_af7161f060dc1e 61-68
+internal/ingest/ingest.go
+  h_af7161f060dc1e 6,54,132,135,144,146-182,185,189-195,199-203,209-213
+internal/ingest/unreachable.go
+  h_af7161f060dc1e 1-39
+internal/ingest/webhook.go
+  h_af7161f060dc1e 23,27-32,35-36,39,44-48
+internal/ingest/webhook_test.go
+  h_af7161f060dc1e 130-173
+internal/store/events.go
+  h_af7161f060dc1e 1-69
+internal/store/events_test.go
+  h_af7161f060dc1e 1-22
+internal/web/data.go
+  h_af7161f060dc1e 53-55
+internal/web/templates/data.html
+  h_af7161f060dc1e 29-48
+internal/web/view.go
+  h_af7161f060dc1e 51
+migrations/00005_events.sql
+  h_af7161f060dc1e 1-19
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "72454b7cba455415ffa9c9d2c160726caecba992",
+  "prompts": {},
+  "humans": {
+    "h_af7161f060dc1e": {
+      "author": "mjnong <marcusnagy@icloud.com>"
+    }
+  }
+}
