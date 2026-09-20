@@ -103,7 +103,7 @@ _Avoid_: auth middleware, billing proxy
 The fetch-and-map of one Catalog into Resources (JSON API, Excel, or an uploaded file).
 
 **Webhook**:
-The outbound POST klimatsearch sends after ingest upserts a Resource whose ContentHash changed (`catalog.changed`).
+The outbound POST klimatsearch sends to `KLIMAT_WEBHOOK_URL`. `catalog.changed` after a ContentHash upsert; `catalog.unreachable` when Boverket JSON and Excel both fail; `ingest.failed` when a scheduled or boot ingest errors. Events are also stored in SQLite (last 200).
 _Avoid_: listener, callback, inbound Boverket hook
 _Avoid_: crawler, importer, connector
 

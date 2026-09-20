@@ -64,6 +64,7 @@ func main() {
 	if wh := ingest.NewHTTPWebhook(cfg.WebhookURL, cfg.WebhookSecret); wh != nil {
 		runner.Notify = wh
 	}
+	runner.Events = ingest.LogTo(st)
 	h := api.New(eng, st, cfg.Source)
 	h.Runner = runner
 	h.AdminToken = cfg.AdminToken

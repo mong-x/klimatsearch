@@ -26,6 +26,26 @@
   <h1>Data</h1>
   <p class="hint">SQLite objects in this process. Vectors are sqlite-vec blobs (little-endian float32). FTS5 indexes names and descriptions.</p>
 
+  {{if .LogEvents}}
+  <h2>Ingest events</h2>
+  <p class="hint">Last 20. Success is <code>catalog.changed</code>. Boverket down is <code>catalog.unreachable</code>. Other job errors are <code>ingest.failed</code>. Same payload is POSTed to <code>KLIMAT_WEBHOOK_URL</code>.</p>
+  <table class="hits">
+    <thead>
+      <tr><th>When</th><th>Event</th><th>Catalog</th><th>Error</th></tr>
+    </thead>
+    <tbody>
+      {{range .LogEvents}}
+      <tr>
+        <td class="mono">{{.At.UTC.Format "2006-01-02 15:04"}}</td>
+        <td class="mono">{{.Event}}</td>
+        <td class="mono">{{.Catalog}}</td>
+        <td>{{.Error}}</td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+  {{end}}
+
   {{if .Coverage}}
   <div class="cov">
     <div>

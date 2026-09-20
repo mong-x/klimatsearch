@@ -20,23 +20,30 @@ const (
 	EventHeader         = "X-Klimat-Event"
 )
 
-// Event is posted when ingest upserts at least one Resource whose ContentHash changed.
+// Event is posted on ingest content change or ingest failure.
 type Event struct {
 	Event        string    `json:"event"`
 	Catalog      string    `json:"catalog"`
-	Version      string    `json:"version"`
-	IngestOrigin string    `json:"ingest_origin"`
-	Seen         int       `json:"seen"`
-	Upserted     int       `json:"upserted"`
-	Skipped      int       `json:"skipped"`
-	IDs          []string  `json:"ids"`
+	Version      string    `json:"version,omitempty"`
+	IngestOrigin string    `json:"ingest_origin,omitempty"`
+	Seen         int       `json:"seen,omitempty"`
+	Upserted     int       `json:"upserted,omitempty"`
+	Skipped      int       `json:"skipped,omitempty"`
+	IDs          []string  `json:"ids,omitempty"`
 	Source       string    `json:"source"`
 	At           time.Time `json:"at"`
+	Error        string    `json:"error,omitempty"`
+	Reason       string    `json:"reason,omitempty"`
 }
 
-// Notifier is called after a successful ingest that changed rows.
+// Notifier is called after ingest changes rows or ingest fails.
 type Notifier interface {
 	Notify(ctx context.Context, ev Event) error
+}
+
+// EventLog persists Events (bounded SQLite log).
+type EventLog interface {
+	AppendEvent(ctx context.Context, ev Event) error
 }
 
 // HTTPWebhook POSTs JSON to one or more URLs. Secret, if set, HMAC-SHA256s the body.

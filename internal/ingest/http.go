@@ -58,7 +58,14 @@ func (f *HTTPFetcher) Fetch(ctx context.Context) (Batch, error) {
 		return batch, nil
 	}
 	slog.Warn("json ingest failed, falling back to excel", "err", err, "resources", len(batch.Resources))
-	return f.fetchExcel(ctx)
+	batch, xerr := f.fetchExcel(ctx)
+	if xerr != nil {
+		return Batch{}, &UnreachableError{
+			Catalog: model.CatalogBoverket,
+			Err:     fmt.Errorf("json: %v; excel: %v", err, xerr),
+		}
+	}
+	return batch, nil
 }
 
 func (f *HTTPFetcher) fetchJSON(ctx context.Context) (Batch, error) {

@@ -127,6 +127,50 @@ func TestSignRoundTrip(t *testing.T) {
 	}
 }
 
+func TestRunUnreachableNotifiesAndStores(t *testing.T) {
+	if os.Getenv("CGO_ENABLED") == "0" {
+		t.Skip("CGO is disabled; sqlite store tests require CGO_ENABLED=1")
+	}
+	st, err := store.Open(filepath.Join(t.TempDir(), "wh3.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = st.Close() })
+	var last Event
+	var hits atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		_ = json.Unmarshal(body, &last)
+		hits.Add(1)
+		w.WriteHeader(http.StatusOK)
+	}))
+	t.Cleanup(srv.Close)
+	r := &Runner{
+		Store:  st,
+		Notify: NewHTTPWebhook(srv.URL, ""),
+		Events: LogTo(st),
+	}
+	_, err = r.Run(t.Context(), failFetch{err: &UnreachableError{Catalog: "boverket", Err: context.DeadlineExceeded}})
+	if err == nil {
+		t.Fatal("expected fetch error")
+	}
+	if hits.Load() != 1 || last.Event != EventCatalogUnreachable || last.Reason != ReasonUnreachable {
+		t.Fatalf("hits=%d event=%+v", hits.Load(), last)
+	}
+	evs, err := st.ListIngestEvents(t.Context(), 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(evs) != 1 || evs[0].Event != EventCatalogUnreachable {
+		t.Fatalf("stored %+v", evs)
+	}
+}
+
+type failFetch struct{ err error }
+
+func (failFetch) CatalogID() string                      { return model.CatalogBoverket }
+func (f failFetch) Fetch(context.Context) (Batch, error) { return Batch{}, f.err }
+
 func TestNewHTTPWebhookEmpty(t *testing.T) {
 	if NewHTTPWebhook("", "x") != nil {
 		t.Fatal("empty URL is no-op")

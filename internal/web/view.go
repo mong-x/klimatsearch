@@ -48,6 +48,7 @@ type page struct {
 	FilePreview *ingest.Preview
 	ColMap      map[string]string
 	PreviewID   string
+	LogEvents   []store.IngestEvent
 	Elapsed     string
 	RESTURL     string
 	MCPCall     string

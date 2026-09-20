@@ -232,7 +232,7 @@ Flags > env > `.env` > defaults.
 | `--reranker` / `KLIMAT_RERANKER` | `none` |
 | `--onnx-quant` / `KLIMAT_ONNX_QUANT` | `auto` → `model.int8.onnx` |
 | `--ingest-interval` | `168h` (`0` off) |
-| `KLIMAT_WEBHOOK_URL` | empty |
+| `KLIMAT_WEBHOOK_URL` | empty (comma-separated POSTs; HMAC if `KLIMAT_WEBHOOK_SECRET`) |
 
 ## Docs
 

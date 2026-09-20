@@ -3,6 +3,7 @@ package ingest
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -50,6 +51,7 @@ type Runner struct {
 	Files    *FileStash
 	Embedder search.Embedder
 	Notify   Notifier
+	Events   EventLog
 	Source   string
 	Log      *slog.Logger
 }
@@ -127,14 +129,10 @@ func (r *Runner) Apply(ctx context.Context, batch Batch) (Result, error) {
 }
 
 func (r *Runner) notifyChanged(ctx context.Context, res Result) {
-	if r.Notify == nil || res.Upserted == 0 {
+	if res.Upserted == 0 {
 		return
 	}
-	src := r.Source
-	if src == "" {
-		src = "Boverket Klimatdatabas"
-	}
-	ev := Event{
+	r.emit(ctx, Event{
 		Event:        EventCatalogChanged,
 		Catalog:      res.Catalog,
 		Version:      res.Version,
@@ -143,23 +141,76 @@ func (r *Runner) notifyChanged(ctx context.Context, res Result) {
 		Upserted:     res.Upserted,
 		Skipped:      res.Skipped,
 		IDs:          res.Changed,
-		Source:       src,
+		Source:       r.attribution(),
 		At:           time.Now().UTC(),
+	})
+}
+
+func (r *Runner) fail(ctx context.Context, catalog string, err error, reason string) {
+	if err == nil {
+		return
+	}
+	if reason == "" {
+		reason = ReasonFetch
+	}
+	ev := Event{
+		Event:   EventIngestFailed,
+		Catalog: catalog,
+		Error:   err.Error(),
+		Reason:  reason,
+		Source:  r.attribution(),
+		At:      time.Now().UTC(),
+	}
+	var u *UnreachableError
+	if errors.As(err, &u) {
+		ev.Event = EventCatalogUnreachable
+		ev.Reason = ReasonUnreachable
+		if ev.Catalog == "" && u != nil {
+			ev.Catalog = u.Catalog
+		}
+	}
+	r.emit(ctx, ev)
+}
+
+func (r *Runner) emit(ctx context.Context, ev Event) {
+	if r.Events != nil {
+		if err := r.Events.AppendEvent(ctx, ev); err != nil {
+			r.log().Error("persist ingest event", "err", err, "event", ev.Event)
+		}
+	}
+	if r.Notify == nil {
+		return
 	}
 	if err := r.Notify.Notify(ctx, ev); err != nil {
-		r.log().Error("webhook catalog.changed failed", "err", err, "catalog", res.Catalog, "upserted", res.Upserted)
+		r.log().Error("webhook failed", "err", err, "event", ev.Event, "catalog", ev.Catalog)
 	}
+}
+
+func (r *Runner) attribution() string {
+	if r.Source != "" {
+		return r.Source
+	}
+	return "Boverket Klimatdatabas"
 }
 
 func (r *Runner) Run(ctx context.Context, f Ingester) (Result, error) {
 	batch, err := f.Fetch(ctx)
 	if err != nil {
+		cat := ""
+		if f != nil {
+			cat = f.CatalogID()
+		}
+		r.fail(ctx, cat, err, ReasonFetch)
 		return Result{}, err
 	}
 	if batch.CatalogID == "" {
 		batch.CatalogID = f.CatalogID()
 	}
-	return r.Apply(ctx, batch)
+	res, err := r.Apply(ctx, batch)
+	if err != nil {
+		r.fail(ctx, batch.CatalogID, err, ReasonApply)
+	}
+	return res, err
 }
 
 // Loop runs ingest on interval. interval 0 means no ticker.

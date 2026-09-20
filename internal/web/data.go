@@ -50,6 +50,9 @@ func (h *Handler) data(w http.ResponseWriter, r *http.Request) {
 	p.Coverage = &cov
 	p.Tables = tables
 	p.MetaRows = meta
+	if evs, err := h.Store.ListIngestEvents(ctx, 20); err == nil {
+		p.LogEvents = evs
+	}
 	p.PctVec = pct(cov.Vectors, cov.Resources)
 	p.PctFTS = pct(cov.FTS, cov.Resources)
 
