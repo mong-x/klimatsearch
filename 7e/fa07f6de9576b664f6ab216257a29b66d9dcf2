@@ -1,0 +1,44 @@
+README.md
+  h_af7161f060dc1e 49
+cmd/klimatsearch/main.go
+  h_af7161f060dc1e 64-76
+internal/ingest/webhook.go
+  h_af7161f060dc1e 49-71,76,79,95-107,116-120,128-130,133,140-179
+internal/ingest/webhook_test.go
+  h_af7161f060dc1e 197-217
+internal/store/webhooks.go
+  h_af7161f060dc1e 1-151
+internal/store/webhooks_test.go
+  h_af7161f060dc1e 1-33
+internal/web/hooks.go
+  h_af7161f060dc1e 1-129
+internal/web/static/app.css
+  h_af7161f060dc1e 413-433
+internal/web/templates.go
+  h_af7161f060dc1e 19
+internal/web/templates/layout.html
+  h_af7161f060dc1e 37
+internal/web/templates/webhooks.html
+  h_af7161f060dc1e 1-60
+internal/web/view.go
+  h_af7161f060dc1e 52-53
+internal/web/web.go
+  h_af7161f060dc1e 65-66
+internal/web/web_test.go
+  h_af7161f060dc1e 185-193
+migrations/00006_webhooks.sql
+  h_af7161f060dc1e 1-17
+site/index.html
+  h_af7161f060dc1e 133
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "7efa07f6de9576b664f6ab216257a29b66d9dcf2",
+  "prompts": {},
+  "humans": {
+    "h_af7161f060dc1e": {
+      "author": "mjnong <marcusnagy@icloud.com>"
+    }
+  }
+}
