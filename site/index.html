@@ -34,8 +34,8 @@
 
   <header class="wrap hero">
     <div>
-      <h1>Search Klimatdatabas inside one process. <span>FTS, vectors, REST, and MCP in a binary you run.</span></h1>
-      <p class="lead">Generic Swedish construction resources, bilingual: typical and conservative A1–A3, A4, A5.1, transports. Agents and tools query it; every response cites Boverket. Not affiliated with Boverket.</p>
+      <h1>Search Klimatdatabas inside one process. <span>FTS, vectors, REST, MCP, and a console on the binary you run.</span></h1>
+      <p class="lead">Generic Swedish construction resources, bilingual: typical and conservative A1–A3, A4, A5.1, transports. Danish BR is a second Catalog (<code>dkbr</code>), file-only. Agents call REST/MCP; humans open <code>GET /</code> after <code>make run</code>. This Pages site is not that console. Cite Boverket. Not affiliated with Boverket.</p>
       <div class="hero-actions">
         <a class="btn-primary" href="https://github.com/mong-x/klimatsearch">github.com/mong-x/klimatsearch</a>
         <a class="btn-ghost" href="./swagger/">OpenAPI / Swagger</a>
@@ -94,11 +94,11 @@
     <dl class="defs">
       <div>
         <dt>Hybrid Hits</dt>
-        <dd>FTS5 BM25 always. sqlite-vec KNN when vectors exist. Reciprocal Rank Fusion <code>k=60</code>. <code>match_source</code> is <code>fts | vector | both | rerank</code>.</dd>
+        <dd>FTS5 BM25 always. sqlite-vec KNN when vectors exist. Reciprocal Rank Fusion <code>k=60</code>. <code>match_source</code> is retrieval <code>fts | vector | both</code>; rerank is a separate flag on the Hit.</dd>
       </div>
       <div>
         <dt>Catalog identity</dt>
-        <dd>Primary key is <code>(catalog_id, resource_id)</code>. vec0 id is <code>boverket:6000000000</code>. REST <code>databases=</code> filters Catalogs — not a citation.</dd>
+        <dd>Primary key is <code>(catalog_id, resource_id)</code>. Catalogs: <code>boverket</code> (JSON API) and <code>dkbr</code> (file; DatasetVersion BR18/BR25). <code>br25</code> aliases <code>dkbr</code>. REST <code>databases=</code> filters Catalogs — not a citation.</dd>
       </div>
       <div>
         <dt>MCP tools</dt>
@@ -108,7 +108,30 @@
         <dt>Self-hosted</dt>
         <dd>Default binary has no Unkey and no MPP. <code>/healthz</code> and <code>/api/*</code> are ungated. The hosted build we run adds Guard via <code>-tags hosted</code>.</dd>
       </div>
+      <div>
+        <dt>Operator console</dt>
+        <dd><code>html/template</code> on the running process: Query, Data inspect, Ingest (file + Column map), Lab. Open <code>http://127.0.0.1:8080/</code> after <code>make run</code>. This Pages site is marketing only.</dd>
+      </div>
     </dl>
+  </section>
+
+  <section class="wrap sec" id="console">
+    <div class="head">
+      <h2>Console on the process. <span>Not this site.</span></h2>
+      <p class="desc">After <code>make run</code>, open <code>GET /</code>. Same Engine as REST and MCP.
+        <span class="idx">1.1 Console →</span>
+      </p>
+    </div>
+    <table class="specs">
+      <thead><tr><th>GET</th><th>What it is</th></tr></thead>
+      <tbody>
+        <tr><td>/</td><td>Query — catalogs, vector, rerank, rank, REST/MCP inspector</td></tr>
+        <tr><td>/data</td><td>SQLite coverage, Resources, embeddings</td></tr>
+        <tr><td>/ingest</td><td>Preview a CSV/xlsx, map columns, Apply (file stashed 30 min)</td></tr>
+        <tr><td>/compare</td><td>Two Resource IDs</td></tr>
+        <tr><td>/connect</td><td>Lab — /healthz, mcp.json, curl</td></tr>
+      </tbody>
+    </table>
   </section>
 
   <section class="wrap sec" id="api">

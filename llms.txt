@@ -1,6 +1,6 @@
 # klimatsearch
 
-> Hybrid search and MCP server for Boverket Klimatdatabas. One Go binary: SQLite FTS5 + sqlite-vec, REST, MCP. Self-host is ungated (no Unkey, no MPP). Cite Boverket Klimatdatabas. Not affiliated with Boverket.
+> Hybrid search and MCP server for Boverket Klimatdatabas. One Go binary: SQLite FTS5 + sqlite-vec, REST, MCP, operator console at GET /. Self-host is ungated (no Unkey, no MPP). Cite Boverket Klimatdatabas. Not affiliated with Boverket.
 
 The running process also serves an operator console at `GET /` (`html/template`; Query, Data, Ingest, Lab). Catalog `dkbr` is Danish BR; DatasetVersion is BR18/BR25. Agents should still call MCP `/mcp` or REST `/api`, not scrape the HTML. JSON Resource upsert: `POST /admin/resources`.
 

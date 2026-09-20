@@ -18,9 +18,9 @@
 
 # klimatsearch
 
-Go binary: hybrid search + MCP over [Boverket Klimatdatabas](https://www.boverket.se/sv/klimatdeklaration/klimatdatabas/) (~230 bilingual construction resources). Cite **Boverket Klimatdatabas**. Not affiliated with Boverket.
+Go binary: hybrid search, REST, MCP, and an operator console over [Boverket Klimatdatabas](https://www.boverket.se/sv/klimatdeklaration/klimatdatabas/) (~230 bilingual construction resources) plus file-only Danish BR (`dkbr`). Cite **Boverket Klimatdatabas**. Not affiliated with Boverket.
 
-FTS5 BM25 → sqlite-vec KNN → RRF `k=60` → optional BGE-m3 INT8 rerank. Self-host has **no Unkey and no MPP**.
+FTS5 BM25 → sqlite-vec KNN → RRF `k=60` → optional BGE-m3 INT8 rerank. Self-host has **no Unkey and no MPP**. GitHub Pages is the marketing site; the console is `GET /` on the process you run.
 
 ## Quick start
 
@@ -33,6 +33,21 @@ curl -sS 'http://127.0.0.1:8080/api/search?q=betong&lang=sv'
 ```
 
 Go **1.27**, **CGO**, **gcc**. Always `-tags fts5` (`make test` / `make build`). Bare `go test ./...` fails with `no such module: fts5`.
+
+## Console
+
+Same binary as REST and MCP (`html/template`, no React). Not [GitHub Pages](https://mong-x.github.io/klimatsearch/).
+
+| GET | |
+| --- | --- |
+| `/` | Query — lang, catalogs, vector, rerank, rank column, REST/MCP inspector |
+| `/data` | SQLite coverage, Resources, embeddings |
+| `/ingest` | File preview + Column map + DatasetVersion |
+| `/resources/{id}` | Resource |
+| `/compare` | Two IDs |
+| `/connect` | Lab — healthz, mcp.json, curl |
+
+KPI strip: resource count, embedder, reranker, resolved ONNX quant.
 
 ## What a hit looks like
 
@@ -118,8 +133,6 @@ GET /api/search?q=spånskiva&lang=sv&vector=true
 | POST | `/admin/ingest/preview` (headers + Resource schema, no upsert) |
 | POST | `/admin/resources` JSON Resource batch |
 
-The same process serves an **operator console** (not the GitHub Pages site): `GET /` Query, `/data` inspect, `/ingest` file + Column map, `/connect` Lab. Rank and ONNX quant show there.
-
 `vector` and `rerank` default **off**. `{id}` is `boverket:6000000000` or a bare id (**409** if ambiguous). Compare `unit` must apply to both or **400**. `databases=` filters Catalog IDs (`boverket`, `dkbr`; `br25` is an alias for `dkbr`).
 
 ```bash
@@ -162,9 +175,25 @@ MCP reranks when the process loaded `KLIMAT_RERANKER=onnx`. Playbook: [docs/AGEN
 
 Hit@1 = labeled Resource is rank 1. Inversion = sibling above it. Miss@20 = not in the window. Snapshot: 2026-09-18, macOS CPU.
 
-## Ingest
+## Catalogs
 
-`(catalog_id, resource_id)`. On start and every `168h`: Boverket JSON `GetAllResources/latest/{sv,en}/json`, merge by ResourceId, Excel fallback. ContentHash covers names, climate modules, and details — upserts re-embed and POST `catalog.changed`. Danish BR is Catalog `dkbr` (file-only); **DatasetVersion** is `BR18` / `BR25` / later. Preview headers, fill the Resource schema (`map.*`), or POST JSON Resources to `/admin/resources`.
+Identity is `(catalog_id, resource_id)`. DatasetVersion is the publication, not the Catalog ID.
+
+| Catalog | How it arrives | DatasetVersion |
+| --- | --- | --- |
+| `boverket` | JSON `GetAllResources/latest/{sv,en}` on start and every `168h`; Excel fallback | e.g. `02.07.000` |
+| `dkbr` | File only (console `/ingest` or REST below). `br25` is an alias. | `BR18`, `BR25`, later |
+
+Danish workbooks change column names. Preview headers, map onto the Resource schema, then apply. Or POST already-mapped JSON. ContentHash covers names, climate modules, and details — upserts re-embed and POST `catalog.changed`.
+
+```bash
+# Web: open /ingest, Preview, map columns, Apply (file is stashed 30 min)
+curl -F file=@br.xlsx 'http://127.0.0.1:8080/admin/ingest/preview'
+curl -F preview_id=ID -F version=BR25 -F map.id=ID -F map.a1a3=GWP \
+  'http://127.0.0.1:8080/admin/ingest/file?catalog=dkbr'
+curl -H 'Content-Type: application/json' -d '{"catalog":"dkbr","version":"BR25","resources":[{"id":"x","name":"Beton","a1a3":0.11,"unit":"kg"}]}' \
+  http://127.0.0.1:8080/admin/resources
+```
 
 ## Self-host
 
