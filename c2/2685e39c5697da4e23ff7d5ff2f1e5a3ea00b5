@@ -1,0 +1,55 @@
+internal/store/inspect.go
+  s_8c7a933414e6b2::t_d5e7dd4101c8fb 1-377
+internal/store/inspect_test.go
+  s_2c29a5f33eb839::t_a052b6a3bf000a 1-85
+internal/web/data.go
+  s_e550be27647818::t_48cd689bc718fa 1-188
+internal/web/static/app.js
+  s_2c29a5f33eb839::t_0a6c03d617edbf 1-90
+internal/web/templates.go
+  s_2c29a5f33eb839::t_a9ba458cbc1523 1-66
+internal/web/templates/compare.html
+  s_2cccfedf5a7f2e::t_8613b4043e2673 1-78
+internal/web/templates/resource.html
+  s_2c29a5f33eb839::t_9ccf7a39277c6b 1-93
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "c22685e39c5697da4e23ff7d5ff2f1e5a3ea00b5",
+  "prompts": {},
+  "sessions": {
+    "s_2c29a5f33eb839": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "53c7b46f-cb10-48e6-a8bf-882aef18185c",
+        "model": "claude-fable-5-1"
+      },
+      "human_author": "mjnong <marcusnagy@icloud.com>"
+    },
+    "s_2cccfedf5a7f2e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f2a7131b-4486-4fdf-8582-9e01aef2f595",
+        "model": "claude-opus-5"
+      },
+      "human_author": "mjnong <marcusnagy@icloud.com>"
+    },
+    "s_8c7a933414e6b2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ef077e5e-ab75-48d3-88d6-ab56f98d24a9",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "mjnong <marcusnagy@icloud.com>"
+    },
+    "s_e550be27647818": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f16cbfa8-4352-4495-88f7-cd63777155d7",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "mjnong <marcusnagy@icloud.com>"
+    }
+  }
+}
