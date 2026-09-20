@@ -474,7 +474,7 @@ components:
           example: "6000000000"
         catalog:
           type: string
-          enum: [boverket, br25]
+          enum: [boverket, dkbr, br25]
         name_sv:
           type: string
         name_en:

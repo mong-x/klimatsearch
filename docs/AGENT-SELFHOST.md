@@ -24,7 +24,7 @@ Tools: `search_climate_data`, `get_resource_details`, `compare_resources`.
 
 Completion: a search for `spånskiva` / `lang=sv` returns Resource `6000000000` and a `details` path.
 
-Operator console (same process, humans — not Pages): `GET /` Query (rank + match_source), `GET /data` SQLite/embedding inspect, `GET /ingest` file + Column map, `GET /connect` Lab. Danish Catalog is `dkbr`; `br25` is an alias. DatasetVersion is `BR18`/`BR25`. JSON upsert: `POST /admin/resources`. Optional `KLIMAT_WEBHOOK_URL` POSTs `catalog.changed`, `catalog.unreachable` (Boverket JSON+Excel down), and `ingest.failed` (weekly/boot job error). Same rows in SQLite, last 200.
+Operator console (same process, humans — not Pages): `GET /` Query, `/data` inspect, `/ingest` file + Column map, `/webhooks` edit Slack/Discord/JSON destinations, `/connect` Lab. Danish Catalog is `dkbr`; `br25` is an alias. DatasetVersion is `BR18`/`BR25`. JSON upsert: `POST /admin/resources`. Webhooks POST `catalog.changed`, `catalog.unreachable`, `ingest.failed` (SQLite log, last 200).
 
 REST fallback (same process):
 

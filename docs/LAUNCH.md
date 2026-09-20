@@ -181,7 +181,7 @@ Optional: `KLIMAT_ADMIN_TOKEN` as header `X-Admin-Token` on `POST /admin/ingest/
 
 4. Search: `GET /api/search?q=beton&databases=dkbr` (`br25` still aliases to `dkbr`).
 
-Identity is already `(catalog_id, resource_id)`; vec0 id is `br25:…`.
+Identity is already `(catalog_id, resource_id)`; vec0 id is `dkbr:…` (`br25:` still matches as an alias).
 
 ---
 
@@ -230,7 +230,8 @@ Kind e2e uses `klimatsearch:e2e`, `imagePullPolicy: Never`, fake embedder, fixtu
 [ ] MPP_SECRET_KEY (`openssl rand -hex 32`) + MPP_RECIPIENT (Tempo address) in `.env`
 [ ] Unpaid search returns 402 + WWW-Authenticate: Payment; `npx mppx` can pay on testnet
 [ ] Confirm 401/402 with secrets set, 200 on /healthz without
-[ ] BR25 file via operator `GET /ingest` or `POST /admin/ingest/file?catalog=br25`
+[ ] Danish BR file via `GET /ingest` or `POST /admin/ingest/file?catalog=dkbr`
+[ ] Webhooks: `GET /webhooks` (Slack/Discord) or `KLIMAT_WEBHOOK_URL`
 [ ] Production image, Ingress, memory, secrets
 [ ] Attribution “Boverket Klimatdatabas” on every public surface
 ```

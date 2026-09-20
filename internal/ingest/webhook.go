@@ -213,10 +213,6 @@ func slackBody(ev Event) ([]byte, bool) {
 	return b, false
 }
 
-func slackWebhook(rawURL string) bool {
-	return HookKind(rawURL) == "slack"
-}
-
 func chatText(ev Event) string {
 	var b strings.Builder
 	b.WriteString("klimatsearch ")
