@@ -2,7 +2,7 @@
 
 > Hybrid search and MCP server for Boverket Klimatdatabas. One Go binary: SQLite FTS5 + sqlite-vec, REST, MCP, operator console at GET /. Self-host is ungated (no Unkey, no MPP). Cite Boverket Klimatdatabas. Not affiliated with Boverket.
 
-The running process also serves an operator console at `GET /` (`html/template`; Query, Data, Ingest, Lab). Catalog `dkbr` is Danish BR; DatasetVersion is BR18/BR25. Agents should still call MCP `/mcp` or REST `/api`, not scrape the HTML. JSON Resource upsert: `POST /admin/resources`.
+The running process also serves an operator console at `GET /` (`html/template`; Query, Data, Ingest, Webhooks, Lab). Catalog `dkbr` is Danish BR; DatasetVersion is BR18/BR25. Agents should still call MCP `/mcp` or REST `/api`, not scrape the HTML. JSON Resource upsert: `POST /admin/resources`. Webhooks: `GET /webhooks` or `KLIMAT_WEBHOOK_URL` (Slack text, Discord content, else JSON). Events: `catalog.changed`, `catalog.unreachable`, `ingest.failed`.
 
 An agent setting up a client or a self-host instance should load [docs/AGENT-SELFHOST.md](https://github.com/mong-x/klimatsearch/blob/main/docs/AGENT-SELFHOST.md) first. Search with the cheapest path that can hit the labeled Resource: FTS, then hybrid (`vector=true`), then rerank (`rerank=true`) only for sibling grades. REST defaults vector and rerank off. MCP uses whatever the process loaded (`KLIMAT_RERANKER=onnx` means MCP always reranks). Scale by replica-local SQLite plus HPA; do not share one SQLite WAL across writers. Do not load zerank-2.
 

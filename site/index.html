@@ -110,7 +110,7 @@
       </div>
       <div>
         <dt>Operator console</dt>
-        <dd><code>html/template</code> on the running process: Query, Data inspect, Ingest (file + Column map), Lab. Open <code>http://127.0.0.1:8080/</code> after <code>make run</code>. This Pages site is marketing only.</dd>
+        <dd><code>html/template</code> on the running process: Query, Data, Ingest, Webhooks, Lab. Open <code>http://127.0.0.1:8080/</code> after <code>make run</code>. This Pages site is marketing only.</dd>
       </div>
     </dl>
   </section>
@@ -130,7 +130,32 @@
         <tr><td>/ingest</td><td>Preview a CSV/xlsx, map columns, Apply (file stashed 30 min)</td></tr>
         <tr><td>/compare</td><td>Two Resource IDs</td></tr>
         <tr><td>/connect</td><td>Lab — /healthz, mcp.json, curl</td></tr>
-        <tr><td>/webhooks</td><td>Add, disable, and test Slack or JSON receivers</td></tr>
+        <tr><td>/webhooks</td><td>Add and edit Slack, Discord, and JSON destinations</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="wrap sec" id="webhooks">
+    <div class="head">
+      <h2>Webhooks. <span>Slack, Discord, and JSON together.</span></h2>
+      <p class="desc">On the process: <code>GET /webhooks</code>. Edit URL, events, secret, enabled. Env <code>KLIMAT_WEBHOOK_URL</code> is extra, not a replacement.
+        <span class="idx">1.2 Notify →</span>
+      </p>
+    </div>
+    <table class="specs">
+      <thead><tr><th>Event</th><th>When</th></tr></thead>
+      <tbody>
+        <tr><td>catalog.changed</td><td>Ingest upserted a Resource whose ContentHash changed</td></tr>
+        <tr><td>catalog.unreachable</td><td>Boverket JSON and Excel both fail</td></tr>
+        <tr><td>ingest.failed</td><td>Boot or weekly ingest errors</td></tr>
+      </tbody>
+    </table>
+    <table class="specs">
+      <thead><tr><th>Destination</th><th>Body</th></tr></thead>
+      <tbody>
+        <tr><td>Slack hooks.slack.com</td><td><code>{"text":"klimatsearch catalog.unreachable …"}</code></td></tr>
+        <tr><td>Discord discord.com/api/webhooks</td><td><code>{"content":"…"}</code></td></tr>
+        <tr><td>Anything else</td><td>JSON Event; optional HMAC <code>X-Klimat-Signature</code></td></tr>
       </tbody>
     </table>
   </section>

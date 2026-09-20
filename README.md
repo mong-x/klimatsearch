@@ -50,6 +50,24 @@ Same binary as REST and MCP (`html/template`, no React). Not [GitHub Pages](http
 
 KPI strip: resource count, embedder, reranker, resolved ONNX quant.
 
+## Webhooks
+
+Outbound POSTs when ingest changes content or the weekly Boverket job fails. Manage destinations in the console (`GET /webhooks`): add, edit URL/events/secret/enabled, Test, Delete. Env `KLIMAT_WEBHOOK_URL` still fires and is read-only in the UI.
+
+| Event | When |
+| --- | --- |
+| `catalog.changed` | A Resource ContentHash changed |
+| `catalog.unreachable` | Boverket JSON **and** Excel both fail |
+| `ingest.failed` | Boot or `168h` ingest errors otherwise |
+
+Every enabled URL is notified. Slack (`hooks.slack.com`) gets `{"text":…}`, Discord (`discord.com/api/webhooks`) gets `{"content":…}`, anything else the JSON Event. One failure does not skip the rest. Same events are stored in SQLite (last 200) and listed on `/data`.
+
+```bash
+export KLIMAT_WEBHOOK_URL="https://hooks.slack.com/services/T/B/x,https://discord.com/api/webhooks/ID/TOKEN"
+# optional HMAC for JSON receivers:
+export KLIMAT_WEBHOOK_SECRET=…
+```
+
 ## What a hit looks like
 
 Every search hit **is** the Resource. `a1a3` is typical GWP-GHG (Compare uses this). Conservative A1–A3, A4, A5.1, transports are extra Boverket modules — omitted on energy carriers.
