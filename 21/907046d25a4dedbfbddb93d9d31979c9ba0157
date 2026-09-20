@@ -1,0 +1,28 @@
+README.md
+  h_af7161f060dc1e 236
+docs/LAUNCH.md
+  h_af7161f060dc1e 162
+internal/ingest/webhook.go
+  h_af7161f060dc1e 129,170,174-207,209,217,220,242-257
+internal/ingest/webhook_test.go
+  h_af7161f060dc1e 176,179-186,200-212
+internal/store/webhooks.go
+  h_af7161f060dc1e 23
+internal/web/hooks.go
+  h_af7161f060dc1e 4,14-15,48-59,104-106
+internal/web/templates/webhooks.html
+  h_af7161f060dc1e 4,16,26,31,37
+internal/web/web_test.go
+  h_af7161f060dc1e 190
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "21907046d25a4dedbfbddb93d9d31979c9ba0157",
+  "prompts": {},
+  "humans": {
+    "h_af7161f060dc1e": {
+      "author": "mjnong <marcusnagy@icloud.com>"
+    }
+  }
+}
