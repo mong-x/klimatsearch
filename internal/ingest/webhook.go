@@ -46,14 +46,37 @@ type EventLog interface {
 	AppendEvent(ctx context.Context, ev Event) error
 }
 
-// HTTPWebhook POSTs JSON to one or more URLs. Secret, if set, HMAC-SHA256s the body.
+// DeliveryHook is one outbound URL (env or SQLite).
+type DeliveryHook struct {
+	URL    string
+	Secret string
+	Events string // empty = all events
+}
+
+// HookSource is SQLite-backed operator webhooks.
+type HookSource interface {
+	DeliveryHooks(ctx context.Context) ([]DeliveryHook, error)
+}
+
+// HooksFunc adapts a function to HookSource.
+type HooksFunc func(ctx context.Context) ([]DeliveryHook, error)
+
+func (f HooksFunc) DeliveryHooks(ctx context.Context) ([]DeliveryHook, error) {
+	if f == nil {
+		return nil, nil
+	}
+	return f(ctx)
+}
+
+// HTTPWebhook POSTs JSON (or Slack text) to env URLs plus HookSource.
 type HTTPWebhook struct {
 	URLs   []string
 	Secret string
 	Client *http.Client
+	Hooks  HookSource
 }
 
-// NewHTTPWebhook parses a comma-separated URL list. Empty input is a no-op notifier.
+// NewHTTPWebhook parses a comma-separated URL list. Always non-nil so a HookSource can be attached.
 func NewHTTPWebhook(urls, secret string) *HTTPWebhook {
 	var out []string
 	for _, u := range strings.Split(urls, ",") {
@@ -62,14 +85,24 @@ func NewHTTPWebhook(urls, secret string) *HTTPWebhook {
 			out = append(out, u)
 		}
 	}
-	if len(out) == 0 {
-		return nil
-	}
 	return &HTTPWebhook{
 		URLs:   out,
 		Secret: strings.TrimSpace(secret),
 		Client: &http.Client{Timeout: 10 * time.Second},
 	}
+}
+
+func WantsEvent(spec, event string) bool {
+	spec = strings.TrimSpace(spec)
+	if spec == "" || event == "webhook.test" {
+		return true
+	}
+	for _, p := range strings.Split(spec, ",") {
+		if strings.TrimSpace(p) == event {
+			return true
+		}
+	}
+	return false
 }
 
 func (h *HTTPWebhook) client() *http.Client {
@@ -80,7 +113,11 @@ func (h *HTTPWebhook) client() *http.Client {
 }
 
 func (h *HTTPWebhook) Notify(ctx context.Context, ev Event) error {
-	if h == nil || len(h.URLs) == 0 {
+	if h == nil {
+		return nil
+	}
+	targets := h.targets(ctx, ev.Event)
+	if len(targets) == 0 {
 		return nil
 	}
 	body, err := json.Marshal(ev)
@@ -88,16 +125,56 @@ func (h *HTTPWebhook) Notify(ctx context.Context, ev Event) error {
 		return err
 	}
 	var first error
-	for _, u := range h.URLs {
-		payload, sign := body, h.Secret != ""
-		if slackWebhook(u) {
+	for _, t := range targets {
+		payload, sign := body, t.Secret != ""
+		if slackWebhook(t.URL) {
 			payload, sign = slackBody(ev)
 		}
-		if err := h.post(ctx, u, payload, ev.Event, sign); err != nil && first == nil {
+		if err := h.post(ctx, t.URL, payload, ev.Event, sign); err != nil && first == nil {
 			first = err
 		}
 	}
 	return first
+}
+
+func (h *HTTPWebhook) targets(ctx context.Context, event string) []DeliveryHook {
+	var out []DeliveryHook
+	for _, u := range h.URLs {
+		out = append(out, DeliveryHook{URL: u, Secret: h.Secret})
+	}
+	if h.Hooks == nil {
+		return out
+	}
+	extra, err := h.Hooks.DeliveryHooks(ctx)
+	if err != nil {
+		return out
+	}
+	for _, t := range extra {
+		if t.URL == "" || !WantsEvent(t.Events, event) {
+			continue
+		}
+		if t.Secret == "" {
+			t.Secret = h.Secret
+		}
+		out = append(out, t)
+	}
+	return out
+}
+
+// PostURL sends one Event to a single URL (console Test).
+func (h *HTTPWebhook) PostURL(ctx context.Context, rawURL, secret string, ev Event) error {
+	if h == nil {
+		h = NewHTTPWebhook("", secret)
+	}
+	body, err := json.Marshal(ev)
+	if err != nil {
+		return err
+	}
+	payload, sign := body, secret != ""
+	if slackWebhook(rawURL) {
+		payload, sign = slackBody(ev)
+	}
+	return h.post(ctx, rawURL, payload, ev.Event, sign)
 }
 
 func slackBody(ev Event) ([]byte, bool) {

@@ -16,7 +16,7 @@ type pageTmpl struct {
 }
 
 func mustParse() map[string]*pageTmpl {
-	pages := []string{"search", "resource", "compare", "connect", "ingest", "data"}
+	pages := []string{"search", "resource", "compare", "connect", "ingest", "data", "webhooks"}
 	out := make(map[string]*pageTmpl, len(pages))
 	for _, name := range pages {
 		t, err := template.New("").Funcs(template.FuncMap{

@@ -62,6 +62,8 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	mux.HandleFunc("POST /ingest", h.ingestPost)
 	mux.HandleFunc("GET /data", h.data)
 	mux.HandleFunc("GET /data/embed/{id}", h.embed)
+	mux.HandleFunc("GET /webhooks", h.webhooksGet)
+	mux.HandleFunc("POST /webhooks", h.webhooksPost)
 	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.FS(h.static))))
 }
 

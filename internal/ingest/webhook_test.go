@@ -194,7 +194,26 @@ func TestSlackIncomingWebhookShape(t *testing.T) {
 }
 
 func TestNewHTTPWebhookEmpty(t *testing.T) {
-	if NewHTTPWebhook("", "x") != nil {
-		t.Fatal("empty URL is no-op")
+	h := NewHTTPWebhook("", "x")
+	if h == nil {
+		t.Fatal("constructor is always non-nil")
+	}
+	if err := h.Notify(t.Context(), Event{Event: EventCatalogChanged}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestWantsEvent(t *testing.T) {
+	if !WantsEvent("", "catalog.changed") {
+		t.Fatal("empty spec is all")
+	}
+	if !WantsEvent("catalog.unreachable", "catalog.unreachable") {
+		t.Fatal("match")
+	}
+	if WantsEvent("catalog.changed", "ingest.failed") {
+		t.Fatal("filter")
+	}
+	if !WantsEvent("catalog.changed", "webhook.test") {
+		t.Fatal("test always allowed")
 	}
 }

@@ -49,6 +49,8 @@ type page struct {
 	ColMap      map[string]string
 	PreviewID   string
 	LogEvents   []store.IngestEvent
+	Hooks       []store.Webhook
+	EnvHooks    []string
 	Elapsed     string
 	RESTURL     string
 	MCPCall     string

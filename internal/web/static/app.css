@@ -410,6 +410,27 @@ main { padding: 16px 20px 40px; min-width: 0; }
 .chip.is-on { border-color: var(--accent); color: var(--text); }
 .vec-line { font-size: 12px; line-height: 1.6; word-break: break-all; }
 .pager { display: flex; gap: 16px; margin-top: 12px; }
+.inline-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.inline-actions button {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 4px 8px;
+  font: 500 12px var(--sans);
+  cursor: pointer;
+  min-height: 28px;
+}
+.toolbar input[type="url"] {
+  flex: 1 1 280px;
+  min-width: 180px;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font: 13px var(--mono);
+}
 
 @media (max-width: 960px) {
   .cov { grid-template-columns: 1fr; }

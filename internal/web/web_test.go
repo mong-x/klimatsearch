@@ -182,6 +182,15 @@ func TestOperatorUI(t *testing.T) {
 			t.Fatal("missing embedding view")
 		}
 	})
+	t.Run("webhooks page", func(t *testing.T) {
+		body, code, _ := get(t, srv.URL+"/webhooks")
+		if code != 200 {
+			t.Fatalf("status=%d", code)
+		}
+		if !strings.Contains(body, "Webhooks") || !strings.Contains(body, "hooks.slack.com") {
+			t.Fatal("missing webhooks form")
+		}
+	})
 	t.Run("ingest form", func(t *testing.T) {
 		body, code, _ := get(t, srv.URL+"/ingest")
 		if code != 200 {

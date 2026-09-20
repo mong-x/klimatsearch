@@ -1,0 +1,60 @@
+{{define "content"}}
+<section class="hooks">
+  <h1>Webhooks</h1>
+  <p class="hint">Outbound POSTs on ingest. Slack <code>hooks.slack.com</code> URLs get a text message. Others get JSON. Process env URLs are read-only here.</p>
+
+  {{if .EnvHooks}}
+  <h2>From process env</h2>
+  <ul class="tools">
+    {{range .EnvHooks}}<li><code>{{.}}</code></li>{{end}}
+  </ul>
+  {{end}}
+
+  <form class="toolbar" method="post" action="/webhooks">
+    <input type="hidden" name="action" value="add" />
+    <label class="sr-only" for="hook-url">URL</label>
+    <input id="hook-url" name="url" type="url" required placeholder="https://hooks.slack.com/services/…" />
+    {{if .NeedToken}}
+    <label>Admin token <input type="password" name="token" autocomplete="off" /></label>
+    {{end}}
+    <label class="check"><input type="checkbox" name="events" value="catalog.changed" /> changed</label>
+    <label class="check"><input type="checkbox" name="events" value="catalog.unreachable" /> unreachable</label>
+    <label class="check"><input type="checkbox" name="events" value="ingest.failed" /> failed</label>
+    <label>HMAC <input name="secret" type="password" autocomplete="off" placeholder="optional" /></label>
+    <button type="submit">Add</button>
+  </form>
+  <p class="hint">Leave event boxes empty to receive all. HMAC is skipped for Slack.</p>
+
+  {{if .Hooks}}
+  <table class="hits">
+    <thead>
+      <tr><th>URL</th><th>Events</th><th>On</th><th></th></tr>
+    </thead>
+    <tbody>
+      {{range .Hooks}}
+      <tr>
+        <td class="mono">{{.URL}}{{if .HasSecret}} · secret{{end}}</td>
+        <td class="mono">{{if .Events}}{{.Events}}{{else}}all{{end}}</td>
+        <td>{{if .Enabled}}on{{else}}off{{end}}</td>
+        <td>
+          <form method="post" action="/webhooks" class="inline-actions">
+            {{if $.NeedToken}}<input type="password" name="token" placeholder="token" autocomplete="off" />{{end}}
+            <input type="hidden" name="id" value="{{.ID}}" />
+            {{if .Enabled}}
+            <button type="submit" name="action" value="disable">Disable</button>
+            {{else}}
+            <button type="submit" name="action" value="enable">Enable</button>
+            {{end}}
+            <button type="submit" name="action" value="test">Test</button>
+            <button type="submit" name="action" value="delete">Delete</button>
+          </form>
+        </td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+  {{else}}
+  <p class="hint">No operator webhooks yet. Add a Slack incoming URL or any HTTPS receiver.</p>
+  {{end}}
+</section>
+{{end}}

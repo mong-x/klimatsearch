@@ -61,9 +61,19 @@ func main() {
 	eng := search.New(st, st, emb, rr)
 	mux := http.NewServeMux()
 	runner := &ingest.Runner{Store: st, Embedder: emb, Log: log, Source: cfg.Source}
-	if wh := ingest.NewHTTPWebhook(cfg.WebhookURL, cfg.WebhookSecret); wh != nil {
-		runner.Notify = wh
-	}
+	wh := ingest.NewHTTPWebhook(cfg.WebhookURL, cfg.WebhookSecret)
+	wh.Hooks = ingest.HooksFunc(func(ctx context.Context) ([]ingest.DeliveryHook, error) {
+		rows, err := st.DeliveryWebhooks(ctx)
+		if err != nil {
+			return nil, err
+		}
+		out := make([]ingest.DeliveryHook, 0, len(rows))
+		for _, r := range rows {
+			out = append(out, ingest.DeliveryHook{URL: r.URL, Secret: r.Secret, Events: r.Events})
+		}
+		return out, nil
+	})
+	runner.Notify = wh
 	runner.Events = ingest.LogTo(st)
 	h := api.New(eng, st, cfg.Source)
 	h.Runner = runner
