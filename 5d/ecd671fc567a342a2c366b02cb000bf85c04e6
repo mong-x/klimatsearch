@@ -1,0 +1,26 @@
+README.md
+  h_af7161f060dc1e 49
+internal/store/webhooks.go
+  h_af7161f060dc1e 129-179
+internal/store/webhooks_test.go
+  h_af7161f060dc1e 30-49
+internal/web/hooks.go
+  h_af7161f060dc1e 44,68-69,83-86,90-120,124-130
+internal/web/static/app.css
+  h_af7161f060dc1e 424-482
+internal/web/templates/webhooks.html
+  h_af7161f060dc1e 4,7,9,13-32,34-86,88-89
+internal/web/view.go
+  h_af7161f060dc1e 54
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "5decd671fc567a342a2c366b02cb000bf85c04e6",
+  "prompts": {},
+  "humans": {
+    "h_af7161f060dc1e": {
+      "author": "mjnong <marcusnagy@icloud.com>"
+    }
+  }
+}
