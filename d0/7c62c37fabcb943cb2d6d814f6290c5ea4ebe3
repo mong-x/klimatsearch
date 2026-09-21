@@ -1,0 +1,20 @@
+internal/guard/guard_test.go
+  s_546f0a9ec1bffd::t_c5cd6ffd61ce74 6
+  s_546f0a9ec1bffd::t_efb09ad838cf60 7
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "d07c62c37fabcb943cb2d6d814f6290c5ea4ebe3",
+  "prompts": {},
+  "sessions": {
+    "s_546f0a9ec1bffd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "01a0af4f-5c78-7b63-b802-9a718213d37a",
+        "model": "unknown"
+      },
+      "human_author": "mjnong <marcusnagy@icloud.com>"
+    }
+  }
+}
