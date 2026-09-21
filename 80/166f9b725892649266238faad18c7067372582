@@ -1,0 +1,14 @@
+internal/reranker/onnx_daulet_test.go
+  h_af7161f060dc1e 1-42
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "80166f9b725892649266238faad18c7067372582",
+  "prompts": {},
+  "humans": {
+    "h_af7161f060dc1e": {
+      "author": "mjnong <marcusnagy@icloud.com>"
+    }
+  }
+}
