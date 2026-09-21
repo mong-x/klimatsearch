@@ -540,3 +540,91 @@ func TestHTTPFetcherCatalogID(t *testing.T) {
 		t.Fatal(f.CatalogID())
 	}
 }
+
+func TestResourceJSONConversionsRoundTrip(t *testing.T) {
+	a4, a51, cons := 0.04, 0.02, 1.25
+	j := ResourceJSON{
+		ID: "x1", Name: "X", Unit: "kg", A1A3: 0.1,
+		Conversions:      map[string]float64{"kg/m³": 2400},
+		A4:               &a4,
+		A51:              &a51,
+		A1A3Conservative: &cons,
+	}
+	r := j.Resource("boverket", "02.07.000")
+	if r.Unit != "kg" || r.Conversions["kg/m³"] != 2400 {
+		t.Fatalf("unit/conversions lost: %+v", r)
+	}
+	if r.Details.A4 == nil || *r.Details.A4 != 0.04 {
+		t.Fatalf("a4 lost: %+v", r.Details)
+	}
+	if r.Details.A51 == nil || *r.Details.A51 != 0.02 {
+		t.Fatalf("a5_1 lost: %+v", r.Details)
+	}
+	if r.Details.A1A3Conservative != 1.25 {
+		t.Fatalf("a1a3_conservative lost: %+v", r.Details)
+	}
+}
+
+// TestCrossPathUnitConsistency pins the invariant the Comparison module
+// depends on: the same Boverket Resource parsed from the JSON API, the
+// Excel fallback, or a Resource batch carries the same Declared unit
+// ("kg"), and Conversions survive the batch path.
+func TestCrossPathUnitConsistency(t *testing.T) {
+	raw, err := os.ReadFile(filepath.Join("..", "..", "testdata", "fixtures", "boverket-v2-one.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	jb, err := ParseJSON(raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	jr := jb.Resources[0]
+	if jr.ResourceID != "6000000000" {
+		t.Fatalf("fixture id=%s", jr.ResourceID)
+	}
+
+	xb := writeXLSX(t, []string{
+		"Resurs-ID", "Produktnamn", "Kategori", "Version",
+		"Enhet för klimatpåverkan",
+		"A1-A3 byggproduktens klimatpåverkan GWP-GHG, typiskt värde",
+		"Omräkningsfaktor", "Enhet för omräkningsfaktor", "Teknisk beskrivning",
+	}, [][]string{
+		{"6000000000", "Betong", "Betong", "02.07.000", "kg CO₂e/kg", "0.12", "700", "kg/m³", ""},
+	})
+	eb, err := ParseExcel(xb, "sv")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var er model.Resource
+	for _, r := range eb.Resources {
+		if r.ResourceID == "6000000000" {
+			er = r
+		}
+	}
+
+	// The batch path is caller-responsible (same philosophy as the Column
+	// map): the caller sends the clean Declared unit.
+	br := ResourceJSON{ID: "6000000000", Name: "Betong", Unit: "kg", A1A3: 0.12, Conversions: map[string]float64{"kg/m³": 700}}.Resource("boverket", "02.07.000")
+
+	if jr.Unit != "kg" || er.Unit != "kg" || br.Unit != "kg" {
+		t.Fatalf("paths disagree on the Declared unit: json=%q excel=%q batch=%q", jr.Unit, er.Unit, br.Unit)
+	}
+	if er.Conversions["kg/m³"] != 700 || br.Conversions["kg/m³"] != 700 {
+		t.Fatalf("conversion lost: excel=%v batch=%v", er.Conversions, br.Conversions)
+	}
+}
+
+func TestDeclaredUnitTable(t *testing.T) {
+	for _, tc := range []struct{ in, want string }{
+		{"kg CO₂e/kg", "kg"},
+		{"kg", "kg"},
+		{"kWh", "kWh"},
+		{"MJ", "MJ"},
+		{"m²", "m²"},
+		{"", ""},
+	} {
+		if got := declaredUnit(tc.in); got != tc.want {
+			t.Errorf("declaredUnit(%q)=%q, want %q", tc.in, got, tc.want)
+		}
+	}
+}

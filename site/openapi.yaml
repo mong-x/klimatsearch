@@ -690,6 +690,22 @@ components:
                 type: string
               description:
                 type: string
+              conversions:
+                type: object
+                additionalProperties:
+                  type: number
+                description: Conversion factors restating the declared unit (e.g. kg per m3). Send them on update or the stored ones are replaced.
+                example:
+                  kg/m3: 2400
+              a4:
+                type: number
+                description: Transport-to-site GWP-GHG (kg CO2e per declared unit); omitted unless published.
+              a5_1:
+                type: number
+                description: Construction-site waste GWP-GHG (module A5.1); omitted unless published.
+              a1a3_conservative:
+                type: number
+                description: Conservative A1-A3 (~25% above typical), used in climate declarations.
 security:
   - {}
   - unkey: []

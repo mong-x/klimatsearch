@@ -439,3 +439,52 @@ func TestAdminTokenRequired(t *testing.T) {
 	// The form-field idiom is console-only; this endpoint takes JSON bodies,
 	// where FormValue cannot read a token (unchanged from the old adminOK).
 }
+
+// TestAdminResourcesBatchConversions pins that a batch upsert can carry
+// Conversions and the Comparison impacts, and that GET returns them.
+func TestAdminResourcesBatchConversions(t *testing.T) {
+	if os.Getenv("CGO_ENABLED") == "0" {
+		t.Skip("CGO is disabled; sqlite store tests require CGO_ENABLED=1")
+	}
+	st, err := store.Open(filepath.Join(t.TempDir(), "batch-conv.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = st.Close() })
+	var fake embedder.Fake
+	st.ConfigureVector(fake.Dim())
+	h := api.New(nil, st, "Boverket Klimatdatabas")
+	h.Runner = &ingest.Runner{Store: st, Embedder: fake}
+	mux := http.NewServeMux()
+	h.Register(mux)
+	srv := httptest.NewServer(mux)
+	t.Cleanup(srv.Close)
+
+	payload := `{"catalog":"boverket","resources":[{"id":"c1","name":"Betong","unit":"kg","a1a3":0.12,` +
+		`"conversions":{"kg/m³":2400},"a4":0.04,"a5_1":0.02,"a1a3_conservative":0.15}]}`
+	resp, err := http.Post(srv.URL+"/admin/resources", "application/json", strings.NewReader(payload))
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := io.ReadAll(resp.Body)
+	_ = resp.Body.Close()
+	if resp.StatusCode != 200 {
+		t.Fatalf("upsert: %d %s", resp.StatusCode, body)
+	}
+
+	gresp := get(t, srv.URL+"/api/resources/boverket:c1")
+	gbody, _ := io.ReadAll(gresp.Body)
+	_ = gresp.Body.Close()
+	res := string(gbody)
+	if gresp.StatusCode != 200 {
+		t.Fatalf("get: %d %s", gresp.StatusCode, res)
+	}
+	if !strings.Contains(res, `"kg/m³":2400`) {
+		t.Fatalf("conversions missing from view: %s", res)
+	}
+	for _, want := range []string{`"a4"`, `"a5_1"`, `"a1a3_conservative"`} {
+		if !strings.Contains(res, want) {
+			t.Fatalf("%s missing from view: %s", want, res)
+		}
+	}
+}

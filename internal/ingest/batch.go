@@ -28,6 +28,13 @@ type ResourceJSON struct {
 	Category    string  `json:"category"`
 	Version     string  `json:"version"`
 	Description string  `json:"description"`
+	// Conversions and the Comparison impact modules. Without them a lean
+	// upsert of an existing Resource erased its stored Conversions and
+	// Details (Upsert is a full-column replace).
+	Conversions      map[string]float64 `json:"conversions,omitempty"`
+	A4               *float64           `json:"a4,omitempty"`
+	A51              *float64           `json:"a5_1,omitempty"`
+	A1A3Conservative *float64           `json:"a1a3_conservative,omitempty"`
 }
 
 func (b ResourceBatch) CatalogID() string {
@@ -75,17 +82,27 @@ func (b ResourceBatch) Fetch(context.Context) (Batch, error) {
 
 func (j ResourceJSON) Resource(catalog, version string) model.Resource {
 	r := model.Resource{
-		CatalogID:  model.NormalizeCatalogID(first(j.Catalog, catalog)),
-		ResourceID: strings.TrimSpace(j.ID),
-		NameSV:     first(j.NameSV, j.Name),
-		NameEN:     j.NameEN,
-		A1A3:       j.A1A3,
-		Unit:       j.Unit,
-		Category:   j.Category,
-		Version:    first(j.Version, version),
+		CatalogID:   model.NormalizeCatalogID(first(j.Catalog, catalog)),
+		ResourceID:  strings.TrimSpace(j.ID),
+		NameSV:      first(j.NameSV, j.Name),
+		NameEN:      j.NameEN,
+		A1A3:        j.A1A3,
+		Unit:        j.Unit,
+		Category:    j.Category,
+		Version:     first(j.Version, version),
+		Conversions: j.Conversions,
 	}
 	if j.Description != "" {
 		r.DescriptionSV = j.Description
+	}
+	if j.A4 != nil {
+		r.Details.A4 = j.A4
+	}
+	if j.A51 != nil {
+		r.Details.A51 = j.A51
+	}
+	if j.A1A3Conservative != nil {
+		r.Details.A1A3Conservative = *j.A1A3Conservative
 	}
 	return r
 }
