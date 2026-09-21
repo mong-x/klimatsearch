@@ -25,8 +25,10 @@ build:
 build-hosted:
 	CGO_ENABLED=1 go build -tags "$(GO_TAGS) hosted" -o bin/klimatsearch-hosted ./cmd/klimatsearch
 
+# go mod tidy walks every build configuration, so hosted-only module deps
+# stay in go.mod without tags (Go 1.27 removed -tags from this subcommand).
 tidy:
-	go mod tidy -tags "fts5 hosted"
+	go mod tidy
 
 run: build
 	./bin/klimatsearch --embedder=fake --demo-fixture --listen=:8080
