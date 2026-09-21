@@ -264,3 +264,36 @@ func (j *testJar) Cookies(u *url.URL) []*http.Cookie {
 	}
 	return out
 }
+
+// TestStaticKeyStaleCookieRecoveredByQueryLink pins the rotation recovery:
+// a browser holding a stale cookie must regain access (and a fresh cookie)
+// from a pasted ?api_key= link, and an invalid Bearer must not lock out a
+// valid X-Api-Key.
+func TestStaticKeyStaleCookieRecoveredByQueryLink(t *testing.T) {
+	srv := newKeyTestServer(t)
+	req, _ := http.NewRequest("GET", srv.URL+"/api/search?api_key=key-one", nil)
+	req.AddCookie(&http.Cookie{Name: "klimat_api_key", Value: "rotated-away"})
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != 200 {
+		t.Fatalf("stale cookie + valid query key: got %d, want 200 (paste must recover)", resp.StatusCode)
+	}
+	if sc := resp.Header.Get("Set-Cookie"); !strings.Contains(sc, "klimat_api_key=key-one") {
+		t.Fatalf("stale cookie must be replaced: %q", sc)
+	}
+
+	req, _ = http.NewRequest("GET", srv.URL+"/api/search", nil)
+	req.Header.Set("Authorization", "Bearer wrong")
+	req.Header.Set("X-Api-Key", "key-two")
+	resp, err = http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != 200 {
+		t.Fatalf("invalid Bearer + valid X-Api-Key: got %d, want 200", resp.StatusCode)
+	}
+}

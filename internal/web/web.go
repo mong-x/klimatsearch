@@ -151,6 +151,10 @@ func (h *Handler) compare(w http.ResponseWriter, r *http.Request) {
 		h.render(w, "compare", p)
 		return
 	}
+	if h.Store == nil {
+		h.render(w, "compare", p.withErr(errNotConfigured))
+		return
+	}
 	cmp, err := compare.Resources(r.Context(), h.Store, idA, idB, h.Source, p.Unit, p.Impact)
 	if err != nil {
 		var side *compare.SideError

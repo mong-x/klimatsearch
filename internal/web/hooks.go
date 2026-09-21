@@ -11,7 +11,10 @@ import (
 	"github.com/mong-x/klimatsearch/internal/store"
 )
 
-var errHookURL = errors.New("webhook URL is required")
+var (
+	errHookURL   = errors.New("webhook URL is required")
+	errNoDeliver = errors.New("test delivery is not configured")
+)
 
 func (h *Handler) webhooksGet(w http.ResponseWriter, r *http.Request) {
 	p := h.hookPage(r)
@@ -151,8 +154,11 @@ func (h *Handler) hookAuth(r *http.Request) bool {
 }
 
 func (h *Handler) testHook(r *http.Request, id int64) error {
-	if h.Store == nil || h.TestDeliver == nil {
+	if h.Store == nil {
 		return errNotConfigured
+	}
+	if h.TestDeliver == nil {
+		return errNoDeliver
 	}
 	w, err := h.Store.GetWebhook(r.Context(), id)
 	if err != nil {

@@ -61,33 +61,25 @@ func newStaticLane(keys []string) Lane {
 	return &staticLane{keys: keys}
 }
 
-// staticKey reads the caller's key: Authorization Bearer, X-Api-Key header,
-// the klimat_api_key cookie, or api_key query parameter. A browser opens the
-// portal with a query-key link once and keeps running on the cookie.
-func staticKey(r *http.Request) (string, bool) {
-	if tok, ok := bearerToken(r); ok {
-		return tok, true
-	}
-	if tok := strings.TrimSpace(r.Header.Get("X-Api-Key")); tok != "" {
-		return tok, true
-	}
-	if c, err := r.Cookie(cookieName); err == nil && c.Value != "" {
-		return c.Value, true
-	}
-	if tok := strings.TrimSpace(r.URL.Query().Get("api_key")); tok != "" {
-		return tok, true
-	}
-	return "", false
-}
-
+// Present reports whether the request carries any static credential:
+// Authorization Bearer, X-Api-Key header, the klimat_api_key cookie, or the
+// api_key query parameter. A browser opens the portal with a query-key link
+// once and keeps running on the cookie.
 func (s *staticLane) Present(r *http.Request) bool {
-	_, ok := staticKey(r)
-	return ok
+	return len(staticCandidates(r)) > 0
 }
 
 func (s *staticLane) Check(r *http.Request) Decision {
-	tok, ok := staticKey(r)
-	if !ok || !s.match(tok) {
+	// Try every presented credential, not just the first: a stale cookie
+	// (e.g. after a key rotation) must not lock out a fresh ?api_key= link.
+	var allowed bool
+	for _, tok := range staticCandidates(r) {
+		if s.match(tok) {
+			allowed = true
+			break
+		}
+	}
+	if !allowed {
 		return deny(http.StatusUnauthorized, "unauthorized")
 	}
 	d := Decision{OK: true, Header: http.Header{}}
@@ -98,6 +90,24 @@ func (s *staticLane) Check(r *http.Request) Decision {
 		d.Header.Add("Set-Cookie", sessionCookie(q, r.TLS != nil))
 	}
 	return d
+}
+
+// staticCandidates lists every credential the request presents.
+func staticCandidates(r *http.Request) []string {
+	var out []string
+	if tok, ok := bearerToken(r); ok {
+		out = append(out, tok)
+	}
+	if tok := strings.TrimSpace(r.Header.Get("X-Api-Key")); tok != "" {
+		out = append(out, tok)
+	}
+	if c, err := r.Cookie(cookieName); err == nil && c.Value != "" {
+		out = append(out, c.Value)
+	}
+	if tok := strings.TrimSpace(r.URL.Query().Get("api_key")); tok != "" {
+		out = append(out, tok)
+	}
+	return out
 }
 
 func (s *staticLane) match(tok string) bool {

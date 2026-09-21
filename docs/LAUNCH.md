@@ -151,7 +151,7 @@ Stripe metered billing is configured in the Unkey dashboard, not in this repo. S
 
    Agents retry with `Authorization: Payment …` (`github.com/tempoxyz/mpp-go/pkg/client`, or `npx mppx`). Developer `Authorization: Bearer` Unkey keys still work on the same origin.
 
-**The moment Unkey or MPP secret is set, the Guard is fail-closed.** `/healthz` stays public. Paid: `/api/*`, `/mcp`, `/admin/*`.
+**The moment Unkey or MPP secret is set, the Guard is fail-closed.** `/healthz` stays public. Paid: `/api/*`, `/mcp`, `/admin/*`. Note: setting `KLIMAT_API_KEYS` on the hosted build replaces the paid lanes entirely (requests pass on a static key, no Unkey metering, no MPP charge) — use it only if you deliberately want key-gated instead of billed access.
 
 **Webhook** — optional. Set `KLIMAT_WEBHOOK_URL` (and `KLIMAT_WEBHOOK_SECRET` to HMAC the body). klimatsearch POSTs:
 

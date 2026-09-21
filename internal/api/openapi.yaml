@@ -696,7 +696,7 @@ components:
                   type: number
                 description: Conversion factors restating the declared unit (e.g. kg per m3). Send them on update or the stored ones are replaced.
                 example:
-                  kg/m3: 2400
+                  kg/m³: 2400
               a4:
                 type: number
                 description: Transport-to-site GWP-GHG (kg CO2e per declared unit); omitted unless published.
