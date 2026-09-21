@@ -1,0 +1,26 @@
+cmd/klimatsearch/main.go
+  h_af7161f060dc1e 98-99
+docs/LAUNCH.md
+  h_af7161f060dc1e 164-165
+internal/ingest/webhook.go
+  h_af7161f060dc1e 129,160-186,188-191,197,215-217,220-222,263-264,270-272,281
+internal/ingest/webhook_test.go
+  h_af7161f060dc1e 189,197,233-388
+internal/web/hooks.go
+  h_af7161f060dc1e 135,161,173
+internal/web/web.go
+  h_af7161f060dc1e 4,30-41
+internal/web/web_test.go
+  h_af7161f060dc1e 9,13,356-426
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "3f34dc2adf1636b28e1818f36fea77ec9dce3500",
+  "prompts": {},
+  "humans": {
+    "h_af7161f060dc1e": {
+      "author": "mjnong <marcusnagy@icloud.com>"
+    }
+  }
+}
