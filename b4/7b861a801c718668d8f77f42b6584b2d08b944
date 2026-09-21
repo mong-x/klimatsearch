@@ -1,0 +1,53 @@
+internal/api/api.go
+  s_c9240697dd2297::t_489775a9758906 20-22
+  s_c9240697dd2297::t_abffb519b1f471 23-24
+  h_af7161f060dc1e 11,220,256,285
+internal/guard/guard_test.go
+  s_c9240697dd2297::t_30c6d584d7ce2b 7
+  h_af7161f060dc1e 69-71
+  s_c9240697dd2297::t_f768d6075a880c 6
+  h_af7161f060dc1e 68,172-266
+CONTEXT.md
+  h_af7161f060dc1e 99
+cmd/klimatsearch/main.go
+  h_af7161f060dc1e 80,100
+docs/AGENT-SELFHOST.md
+  h_af7161f060dc1e 25,109
+docs/LAUNCH.md
+  h_af7161f060dc1e 166
+internal/api/api_test.go
+  h_af7161f060dc1e 6,17,393-441
+internal/guard/admin.go
+  h_af7161f060dc1e 1-29
+internal/guard/lane.go
+  h_af7161f060dc1e 65-66,74-76,90,93-103,106,109-122
+internal/web/hooks.go
+  h_af7161f060dc1e 150
+internal/web/view.go
+  h_af7161f060dc1e 183
+internal/web/web.go
+  h_af7161f060dc1e 12,40,216-220
+internal/web/web_test.go
+  h_af7161f060dc1e 16,18,429-565
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "b47b861a801c718668d8f77f42b6584b2d08b944",
+  "prompts": {},
+  "humans": {
+    "h_af7161f060dc1e": {
+      "author": "mjnong <marcusnagy@icloud.com>"
+    }
+  },
+  "sessions": {
+    "s_c9240697dd2297": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "01a0afd9-c373-7383-a213-24f4fb5a9e04",
+        "model": "unknown"
+      },
+      "human_author": "mjnong <marcusnagy@icloud.com>"
+    }
+  }
+}
