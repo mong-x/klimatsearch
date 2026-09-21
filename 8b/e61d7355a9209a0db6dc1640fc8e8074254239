@@ -1,0 +1,22 @@
+internal/ingest/batch.go
+  h_af7161f060dc1e 31-37,85-93,98-106
+internal/ingest/ingest_test.go
+  h_af7161f060dc1e 543-630
+site/openapi.yaml
+  h_af7161f060dc1e 693-708
+internal/api/openapi.yaml
+  h_af7161f060dc1e 693-708
+internal/api/api_test.go
+  h_af7161f060dc1e 442-490
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "8be61d7355a9209a0db6dc1640fc8e8074254239",
+  "prompts": {},
+  "humans": {
+    "h_af7161f060dc1e": {
+      "author": "mjnong <marcusnagy@icloud.com>"
+    }
+  }
+}
