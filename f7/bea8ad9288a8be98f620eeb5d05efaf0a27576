@@ -1,0 +1,20 @@
+cmd/klimatsearch/main.go
+  h_af7161f060dc1e 89,91,103
+internal/ingest/ingest.go
+  h_af7161f060dc1e 144,161
+internal/mcp/server.go
+  h_af7161f060dc1e 104,107,111,114
+internal/web/templates/search.html
+  h_af7161f060dc1e 100
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "f7bea8ad9288a8be98f620eeb5d05efaf0a27576",
+  "prompts": {},
+  "humans": {
+    "h_af7161f060dc1e": {
+      "author": "mjnong <marcusnagy@icloud.com>"
+    }
+  }
+}
