@@ -95,6 +95,8 @@ func main() {
 		Quant:    quant,
 	})
 	ui.Runner = runner
+	ui.EnvHooks = wh.URLs
+	ui.TestDeliver = wh.PostHook
 	ui.AdminToken = cfg.AdminToken
 	ui.Register(mux)
 	mcpserver.New(eng, st, cfg.Source, useVector, useRerank).Mount(mux)

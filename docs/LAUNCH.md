@@ -161,6 +161,8 @@ Stripe metered billing is configured in the Unkey dashboard, not in this repo. S
 
 The same events are stored in SQLite (`ingest_events`, last 200) and listed on `GET /data`. Every enabled destination is notified: Slack (`hooks.slack.com` → `{"text":…}`), Discord (`discord.com/api/webhooks` → `{"content":…}`), anything else JSON Event. Add several in the console (`GET /webhooks`) or comma-separate `KLIMAT_WEBHOOK_URL`. HMAC is skipped for Slack and Discord. One destination failing does not skip the others. Boverket has no inbound hook.
 
+Signing is per destination: a console-managed secret signs that destination's deliveries; a destination without one inherits `KLIMAT_WEBHOOK_SECRET`. Before 2026-09, a per-destination secret was ignored and the process secret signed every delivery — receivers that validated a destination's signature with the process secret must re-verify with the destination's own secret.
+
 Optional: `KLIMAT_ADMIN_TOKEN` as header `X-Admin-Token` on `POST /admin/ingest/file`.
 
 ---

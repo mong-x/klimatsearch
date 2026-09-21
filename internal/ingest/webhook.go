@@ -126,8 +126,7 @@ func (h *HTTPWebhook) Notify(ctx context.Context, ev Event) error {
 	}
 	var first error
 	for _, t := range targets {
-		payload, sign := payloadFor(t.URL, ev, body, t.Secret)
-		if err := h.post(ctx, t.URL, payload, ev.Event, sign); err != nil && first == nil {
+		if err := h.deliver(ctx, shape(t, ev, body)); err != nil && first == nil {
 			first = err
 		}
 	}
@@ -158,28 +157,44 @@ func (h *HTTPWebhook) targets(ctx context.Context, event string) []DeliveryHook 
 	return out
 }
 
-// PostURL sends one Event to a single URL (console Test).
-func (h *HTTPWebhook) PostURL(ctx context.Context, rawURL, secret string, ev Event) error {
+// delivery is one shaped outbound POST. The signing secret travels with the
+// body it covers; secret "" means unsigned.
+type delivery struct {
+	url    string
+	body   []byte
+	event  string
+	secret string
+}
+
+// shape builds the POST for one target. Chat targets (Slack, Discord) are
+// never signed: their webhook URL is itself the bearer credential, and an
+// HMAC header would expose a shared secret to a third-party edge.
+func shape(t DeliveryHook, ev Event, canonical []byte) delivery {
+	d := delivery{url: t.URL, body: canonical, event: ev.Event, secret: t.Secret}
+	switch HookKind(t.URL) {
+	case "slack":
+		d.body, d.secret = slackBody(ev), ""
+	case "discord":
+		d.body, d.secret = discordBody(ev), ""
+	}
+	return d
+}
+
+// PostHook sends one Event to a single hook (console Test). It applies the
+// same inheritance as scheduled delivery: an empty hook secret inherits the
+// process secret.
+func (h *HTTPWebhook) PostHook(ctx context.Context, hook DeliveryHook, ev Event) error {
 	if h == nil {
-		h = NewHTTPWebhook("", secret)
+		h = &HTTPWebhook{}
+	}
+	if hook.Secret == "" {
+		hook.Secret = h.Secret
 	}
 	body, err := json.Marshal(ev)
 	if err != nil {
 		return err
 	}
-	payload, sign := payloadFor(rawURL, ev, body, secret)
-	return h.post(ctx, rawURL, payload, ev.Event, sign)
-}
-
-func payloadFor(rawURL string, ev Event, canonical []byte, secret string) ([]byte, bool) {
-	switch HookKind(rawURL) {
-	case "slack":
-		return slackBody(ev)
-	case "discord":
-		return discordBody(ev)
-	default:
-		return canonical, secret != ""
-	}
+	return h.deliver(ctx, shape(hook, ev, body))
 }
 
 // HookKind is slack, discord, or json.
@@ -197,20 +212,14 @@ func HookKind(rawURL string) string {
 	return "json"
 }
 
-func discordBody(ev Event) ([]byte, bool) {
-	b, err := json.Marshal(map[string]string{"content": chatText(ev)})
-	if err != nil {
-		return nil, false
-	}
-	return b, false
+func discordBody(ev Event) []byte {
+	b, _ := json.Marshal(map[string]string{"content": chatText(ev)})
+	return b
 }
 
-func slackBody(ev Event) ([]byte, bool) {
-	b, err := json.Marshal(map[string]string{"text": chatText(ev)})
-	if err != nil {
-		return nil, false
-	}
-	return b, false
+func slackBody(ev Event) []byte {
+	b, _ := json.Marshal(map[string]string{"text": chatText(ev)})
+	return b
 }
 
 func chatText(ev Event) string {
@@ -251,16 +260,16 @@ func SplitHookURLs(raw string) []string {
 	return out
 }
 
-func (h *HTTPWebhook) post(ctx context.Context, rawURL string, body []byte, event string, sign bool) error {
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, rawURL, bytes.NewReader(body))
+func (h *HTTPWebhook) deliver(ctx context.Context, d delivery) error {
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, d.url, bytes.NewReader(d.body))
 	if err != nil {
 		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("User-Agent", "klimatsearch")
-	req.Header.Set(EventHeader, event)
-	if sign && h.Secret != "" {
-		req.Header.Set(SignatureHeader, "sha256="+Sign(h.Secret, body))
+	req.Header.Set(EventHeader, d.event)
+	if d.secret != "" {
+		req.Header.Set(SignatureHeader, "sha256="+Sign(d.secret, d.body))
 	}
 	resp, err := h.client().Do(req)
 	if err != nil {
@@ -269,7 +278,7 @@ func (h *HTTPWebhook) post(ctx context.Context, rawURL string, body []byte, even
 	defer resp.Body.Close()
 	_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 1<<16))
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return fmt.Errorf("%s: HTTP %d", rawURL, resp.StatusCode)
+		return fmt.Errorf("%s: HTTP %d", d.url, resp.StatusCode)
 	}
 	return nil
 }

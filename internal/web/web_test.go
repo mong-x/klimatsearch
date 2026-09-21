@@ -6,9 +6,11 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"testing"
 
 	"github.com/mong-x/klimatsearch/internal/embedder"
@@ -351,3 +353,74 @@ func get(t *testing.T, url string) (string, int, string) {
 }
 
 func ptr(v float64) *float64 { return &v }
+
+func TestWebhookTestDeliversToTarget(t *testing.T) {
+	if os.Getenv("CGO_ENABLED") == "0" {
+		t.Skip("CGO is disabled; sqlite store tests require CGO_ENABLED=1")
+	}
+	st, err := store.Open(filepath.Join(t.TempDir(), "wh-test.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = st.Close() })
+
+	var sig, event string
+	var body []byte
+	var hits atomic.Int32
+	rec := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ = io.ReadAll(r.Body)
+		sig = r.Header.Get("X-Klimat-Signature")
+		event = r.Header.Get("X-Klimat-Event")
+		hits.Add(1)
+		w.WriteHeader(http.StatusOK)
+	}))
+	t.Cleanup(rec.Close)
+
+	wh := ingest.NewHTTPWebhook("", "env")
+	mux := http.NewServeMux()
+	h := web.New(nil, st, "Boverket Klimatdatabas", web.Status{})
+	h.TestDeliver = wh.PostHook
+	h.EnvHooks = []string{"https://example.com/env-hook"}
+	h.Register(mux)
+	srv := httptest.NewServer(mux)
+	t.Cleanup(srv.Close)
+
+	// The console lists the env-configured hook.
+	page, code, _ := get(t, srv.URL+"/webhooks")
+	if code != 200 || !strings.Contains(page, "https://example.com/env-hook") {
+		t.Fatalf("env hook not rendered: %d", code)
+	}
+
+	noRedirect := &http.Client{CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
+	postForm := func(form url.Values) *http.Response {
+		t.Helper()
+		resp, err := noRedirect.PostForm(srv.URL+"/webhooks", form)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, _ = io.Copy(io.Discard, resp.Body)
+		_ = resp.Body.Close()
+		return resp
+	}
+
+	// Add a hook with its own secret, then fire the console Test button.
+	if resp := postForm(url.Values{"action": []string{"add"}, "url": []string{rec.URL}, "secret": []string{"hook"}}); resp.StatusCode != 303 {
+		t.Fatalf("add status=%d", resp.StatusCode)
+	}
+	resp := postForm(url.Values{"action": []string{"test"}, "id": []string{"1"}})
+	if resp.StatusCode != 303 {
+		t.Fatalf("test status=%d", resp.StatusCode)
+	}
+	if hits.Load() != 1 {
+		t.Fatalf("test deliveries=%d", hits.Load())
+	}
+	if event != "webhook.test" {
+		t.Fatalf("event=%s", event)
+	}
+	if !ingest.Valid("hook", sig, body) {
+		t.Fatalf("console Test must sign with the hook's own secret, got %q", sig)
+	}
+	if ingest.Valid("env", sig, body) {
+		t.Fatal("console Test must not sign with the process secret")
+	}
+}

@@ -1,6 +1,7 @@
 package web
 
 import (
+	"context"
 	"errors"
 	"io/fs"
 	"net/http"
@@ -26,14 +27,18 @@ type Status struct {
 
 // Handler is the html/template operator UI on the same ServeMux as REST and MCP.
 type Handler struct {
-	Engine     search.SearchEngine
-	Store      *store.Store
-	Source     string
-	Status     Status
-	Runner     *ingest.Runner
-	AdminToken string
-	pages      map[string]*pageTmpl
-	static     fs.FS
+	Engine   search.SearchEngine
+	Store    *store.Store
+	Source   string
+	Status   Status
+	Runner   *ingest.Runner
+	EnvHooks []string
+	// TestDeliver sends one test Event to a webhook (console Test button).
+	// Wired in main to the delivery adapter; nil disables the button.
+	TestDeliver func(ctx context.Context, hook ingest.DeliveryHook, ev ingest.Event) error
+	AdminToken  string
+	pages       map[string]*pageTmpl
+	static      fs.FS
 }
 
 func New(eng search.SearchEngine, st *store.Store, source string, status Status) *Handler {

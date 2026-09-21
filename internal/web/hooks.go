@@ -132,12 +132,7 @@ func (h *Handler) hookPage(r *http.Request) page {
 }
 
 func (h *Handler) loadHooks(r *http.Request) ([]store.Webhook, []string) {
-	var env []string
-	if h.Runner != nil {
-		if wh, ok := h.Runner.Notify.(*ingest.HTTPWebhook); ok {
-			env = append(env, wh.URLs...)
-		}
-	}
+	env := append([]string(nil), h.EnvHooks...)
 	if h.Store == nil {
 		return nil, env
 	}
@@ -163,28 +158,17 @@ func (h *Handler) hookAuth(r *http.Request) bool {
 }
 
 func (h *Handler) testHook(r *http.Request, id int64) error {
-	if h.Store == nil {
+	if h.Store == nil || h.TestDeliver == nil {
 		return errNotConfigured
 	}
 	w, err := h.Store.GetWebhook(r.Context(), id)
 	if err != nil {
 		return err
 	}
-	secret := w.Secret
-	var wh *ingest.HTTPWebhook
-	if h.Runner != nil {
-		wh, _ = h.Runner.Notify.(*ingest.HTTPWebhook)
-		if secret == "" && wh != nil {
-			secret = wh.Secret
-		}
-	}
-	if wh == nil {
-		wh = ingest.NewHTTPWebhook("", secret)
-	}
 	ev := ingest.Event{
 		Event:  "webhook.test",
 		Source: h.Source,
 		At:     time.Now().UTC(),
 	}
-	return wh.PostURL(r.Context(), w.URL, secret, ev)
+	return h.TestDeliver(r.Context(), ingest.DeliveryHook{URL: w.URL, Secret: w.Secret}, ev)
 }
