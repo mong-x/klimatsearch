@@ -1,0 +1,26 @@
+docs/LAUNCH.md
+  h_af7161f060dc1e 154
+internal/api/openapi.yaml
+  h_af7161f060dc1e 699
+internal/guard/guard_test.go
+  h_af7161f060dc1e 267-299
+internal/guard/lane.go
+  h_af7161f060dc1e 64-67,69,73-82,95-112
+internal/web/hooks.go
+  h_af7161f060dc1e 14-17,157,160-162
+internal/web/web.go
+  h_af7161f060dc1e 154-157
+site/openapi.yaml
+  h_af7161f060dc1e 699
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "4eded4f0c1e06165a908591ddf1f92277e69f8b5",
+  "prompts": {},
+  "humans": {
+    "h_af7161f060dc1e": {
+      "author": "mjnong <marcusnagy@icloud.com>"
+    }
+  }
+}
