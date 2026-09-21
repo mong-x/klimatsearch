@@ -9,9 +9,12 @@ import (
 )
 
 // New builds a Guard from process config.
-// No Unkey and no MPP secret → AllowAll.
-// Either set → fail-closed.
+// Static operator keys (KLIMAT_API_KEYS) gate everything when set.
+// Otherwise: no Unkey and no MPP secret → AllowAll; either set → fail-closed.
 func New(cfg config.Config) (*Guard, error) {
+	if lane := newStaticLane(cfg.APIKeys); lane != nil {
+		return &Guard{Static: lane}, nil
+	}
 	unkeyKey := strings.TrimSpace(cfg.UnkeyRootKey)
 	mppSecret := strings.TrimSpace(cfg.MPPSecretKey)
 	if unkeyKey == "" && mppSecret == "" {

@@ -22,6 +22,8 @@ Process must already be listening. Streamable HTTP:
 
 Tools: `search_climate_data`, `get_resource_details`, `compare_resources`.
 
+If the operator set `KLIMAT_API_KEYS`, attach one of the keys as a header (`"headers": {"Authorization": "Bearer <key>"}` on the MCP entry, or `X-Api-Key` on REST); `?api_key=<key>` also works for browser pages.
+
 Completion: a search for `spånskiva` / `lang=sv` returns Resource `6000000000` and a `details` path.
 
 Operator console (same process, humans — not Pages): `GET /` Query, `/data` inspect, `/ingest` file + Column map, `/webhooks` edit Slack/Discord/JSON destinations, `/connect` Lab. Danish Catalog is `dkbr`; `br25` is an alias. DatasetVersion is `BR18`/`BR25`. JSON upsert: `POST /admin/resources`. Webhooks POST `catalog.changed`, `catalog.unreachable`, `ingest.failed` (SQLite log, last 200).
@@ -104,5 +106,6 @@ Completion: `kubectl get hpa klimatsearch` shows a target; two pods do not open 
 ## 5. Guardrails
 
 - Self-host binary has no Unkey and no MPP. Do not add those env vars to this lane.
+- Self-managed keys are the self-host gate: `KLIMAT_API_KEYS=key1,key2` requires one of them (`Authorization: Bearer`, `X-Api-Key`, or `?api_key=`) on every path except `/healthz`, `/openapi.yaml`, `/docs`. Unset means open — default self-host stays friction-free. Query-param keys end up in access logs; prefer headers for API clients.
 - Kind e2e (`512Mi`, fake embedder) is not the production shape.
 - `make eval-golden` after ONNX ingest if you change embedder, quant, or reranker.

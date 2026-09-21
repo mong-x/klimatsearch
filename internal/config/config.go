@@ -43,6 +43,8 @@ type Config struct {
 	DemoFixture             bool
 	FixturePath             string
 	AdminToken              string
+	APIKeysRaw              string
+	APIKeys                 []string
 	WebhookURL              string
 	WebhookSecret           string
 	hosted
@@ -70,6 +72,7 @@ func Parse(args []string) (Config, error) {
 		DemoFixture:             envBool("KLIMAT_DEMO_FIXTURE", false),
 		FixturePath:             env("KLIMAT_FIXTURE_PATH", DefaultFixtureJSON),
 		AdminToken:              env("KLIMAT_ADMIN_TOKEN", ""),
+		APIKeysRaw:              env("KLIMAT_API_KEYS", ""),
 		WebhookURL:              env("KLIMAT_WEBHOOK_URL", ""),
 		WebhookSecret:           env("KLIMAT_WEBHOOK_SECRET", ""),
 	}
@@ -98,6 +101,7 @@ func Parse(args []string) (Config, error) {
 	fs.StringVar(&c.Source, "source", c.Source, "attribution string in JSON responses")
 	fs.BoolVar(&c.DemoFixture, "demo-fixture", c.DemoFixture, "ingest testdata fixtures, no network")
 	fs.StringVar(&c.FixturePath, "fixture-path", c.FixturePath, "JSON fixture path when --demo-fixture")
+	fs.StringVar(&c.APIKeysRaw, "api-keys", c.APIKeysRaw, "comma-separated self-managed API keys gating web+REST+MCP (`KLIMAT_API_KEYS`)")
 	if err := fs.Parse(args); err != nil {
 		return Config{}, err
 	}
@@ -122,7 +126,29 @@ func Parse(args []string) (Config, error) {
 	default:
 		return Config{}, fmt.Errorf("invalid --reranker %q (none|fake|onnx)", c.Reranker)
 	}
+	c.APIKeys = ParseAPIKeys(c.APIKeysRaw)
 	return c, nil
+}
+
+// ParseAPIKeys splits a comma (or whitespace) separated key list, trimming
+// each entry and dropping empties. An empty list disables key gating.
+func ParseAPIKeys(raw string) []string {
+	if strings.TrimSpace(raw) == "" {
+		return nil
+	}
+	fields := strings.FieldsFunc(raw, func(r rune) bool {
+		return r == ',' || r == ' ' || r == '\t' || r == '\n'
+	})
+	keys := make([]string, 0, len(fields))
+	for _, f := range fields {
+		if k := strings.TrimSpace(f); k != "" {
+			keys = append(keys, k)
+		}
+	}
+	if len(keys) == 0 {
+		return nil
+	}
+	return keys
 }
 
 func env(key, fallback string) string {

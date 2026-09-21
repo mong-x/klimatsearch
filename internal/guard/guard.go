@@ -2,7 +2,9 @@
 
 package guard
 
-// Guard is a pass-through in the self-hosted build.
+// Guard gates the self-hosted deployment. With no KLIMAT_API_KEYS it is a
+// pass-through; with keys set every non-public path requires one of them.
 type Guard struct {
 	AllowAll bool
+	Static   Lane
 }

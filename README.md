@@ -252,6 +252,7 @@ Flags > env > `.env` > defaults.
 | `--onnx-quant` / `KLIMAT_ONNX_QUANT` | `auto` → `model.int8.onnx` |
 | `--ingest-interval` | `168h` (`0` off) |
 | `KLIMAT_WEBHOOK_URL` | empty (comma-separated; Slack `text`, Discord `content`, else JSON; HMAC if `KLIMAT_WEBHOOK_SECRET`) |
+| `--api-keys` / `KLIMAT_API_KEYS` | empty (comma-separated self-managed keys gating the portal, REST, and MCP; unset = no gating) |
 
 ## Docs
 
