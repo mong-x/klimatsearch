@@ -1,0 +1,38 @@
+README.md
+  h_af7161f060dc1e 255
+cmd/klimatsearch/main.go
+  h_af7161f060dc1e 133
+docs/AGENT-SELFHOST.md
+  h_af7161f060dc1e 25-26,109
+internal/config/config.go
+  h_af7161f060dc1e 46-47,75,104,129,133-153
+internal/config/config_test.go
+  h_af7161f060dc1e 3-6,33-80
+internal/guard/guard.go
+  h_af7161f060dc1e 5-6,9
+internal/guard/guard_test.go
+  h_af7161f060dc1e 58-165
+internal/guard/lane.go
+  h_af7161f060dc1e 1-138
+internal/guard/new.go
+  h_af7161f060dc1e 12-14,19-21
+internal/guard/new_hosted.go
+  h_af7161f060dc1e 12-13,15-17
+internal/guard/types_hosted.go
+  h_af7161f060dc1e 11-12,15
+internal/guard/wrap.go
+  h_af7161f060dc1e 7-10,12-21
+internal/guard/wrap_hosted.go
+  h_af7161f060dc1e 9-11,22-25
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "60c17d98c5a9674f32754d3db33667808ca7a745",
+  "prompts": {},
+  "humans": {
+    "h_af7161f060dc1e": {
+      "author": "mjnong <marcusnagy@icloud.com>"
+    }
+  }
+}
