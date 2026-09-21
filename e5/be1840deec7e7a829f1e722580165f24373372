@@ -1,0 +1,16 @@
+internal/mcp/server.go
+  h_af7161f060dc1e 54-68,73,78,83
+internal/mcp/server_test.go
+  h_af7161f060dc1e 4,19-22,57-86,90,100-218,220
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "e5be1840deec7e7a829f1e722580165f24373372",
+  "prompts": {},
+  "humans": {
+    "h_af7161f060dc1e": {
+      "author": "mjnong <marcusnagy@icloud.com>"
+    }
+  }
+}
