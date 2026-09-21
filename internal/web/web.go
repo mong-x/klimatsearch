@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/mong-x/klimatsearch/internal/compare"
 	"github.com/mong-x/klimatsearch/internal/config"
 	"github.com/mong-x/klimatsearch/internal/guard"
 	"github.com/mong-x/klimatsearch/internal/ingest"
@@ -100,12 +101,6 @@ func (h *Handler) search(w http.ResponseWriter, r *http.Request) {
 	hits, err := h.Engine.Search(r.Context(), qreq)
 	p.Elapsed = time.Since(start).Truncate(time.Microsecond).String()
 	if err != nil {
-		var bad search.ErrBadLang
-		if errors.As(err, &bad) {
-			p.Error = err.Error()
-			h.render(w, "search", p)
-			return
-		}
 		p.Error = err.Error()
 		h.render(w, "search", p)
 		return
@@ -160,28 +155,13 @@ func (h *Handler) compare(w http.ResponseWriter, r *http.Request) {
 		h.render(w, "compare", p)
 		return
 	}
-	ra, err := h.load(r, idA)
+	cmp, err := compare.Resources(r.Context(), h.Store, idA, idB, h.Source, p.Unit, p.Impact)
 	if err != nil {
-		h.render(w, "compare", p.withErr(err))
-		return
-	}
-	rb, err := h.load(r, idB)
-	if err != nil {
-		h.render(w, "compare", p.withErr(err))
-		return
-	}
-	cmp, err := model.Compare(*ra, *rb, h.Source, p.Unit, p.Impact)
-	if err != nil {
-		var uerr model.ErrUnitUnavailable
-		if errors.As(err, &uerr) {
-			p.Error = err.Error()
-			h.render(w, "compare", p)
-			return
-		}
-		var ierr model.ErrImpactUnknown
-		if errors.As(err, &ierr) {
-			p.Error = err.Error()
-			h.render(w, "compare", p)
+		var side *compare.SideError
+		if errors.As(err, &side) {
+			// Load failures keep the page error mapping (404/409/500);
+			// unit and impact errors render the banner at 200, as before.
+			h.render(w, "compare", p.withErr(side.Err))
 			return
 		}
 		p.Error = err.Error()

@@ -9,8 +9,8 @@ import (
 
 	mcpsdk "github.com/modelcontextprotocol/go-sdk/mcp"
 
+	"github.com/mong-x/klimatsearch/internal/compare"
 	"github.com/mong-x/klimatsearch/internal/config"
-	"github.com/mong-x/klimatsearch/internal/model"
 	"github.com/mong-x/klimatsearch/internal/search"
 	"github.com/mong-x/klimatsearch/internal/store"
 )
@@ -163,24 +163,16 @@ type compareIn struct {
 }
 
 func (s *Server) compareTool(ctx context.Context, _ *mcpsdk.CallToolRequest, in compareIn) (*mcpsdk.CallToolResult, map[string]any, error) {
-	cmp, err := Compare(ctx, s.st, in.IDA, in.IDB, s.source, in.Unit, in.Impact)
+	cmp, err := compare.Resources(ctx, s.st, in.IDA, in.IDB, s.source, in.Unit, in.Impact)
 	if err != nil {
+		var side *compare.SideError
+		if errors.As(err, &side) {
+			return nil, nil, fmt.Errorf("id_%s: %w", side.Side, err)
+		}
 		return nil, nil, err
 	}
 	view := cmp.View()
 	return textResult(view), view, nil
-}
-
-func Compare(ctx context.Context, st *store.Store, idA, idB, source, unit, impact string) (model.Comparison, error) {
-	a, err := st.Get(ctx, idA)
-	if err != nil {
-		return model.Comparison{}, fmt.Errorf("id_a: %w", err)
-	}
-	b, err := st.Get(ctx, idB)
-	if err != nil {
-		return model.Comparison{}, fmt.Errorf("id_b: %w", err)
-	}
-	return model.Compare(*a, *b, source, unit, impact)
 }
 
 func textResult(v any) *mcpsdk.CallToolResult {

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	mcpsdk "github.com/modelcontextprotocol/go-sdk/mcp"
@@ -195,56 +196,28 @@ func TestCompareResourcesTool(t *testing.T) {
 	}
 }
 
-func TestCompare(t *testing.T) {
-	if os.Getenv("CGO_ENABLED") == "0" {
-		t.Skip("CGO is disabled; sqlite store tests require CGO_ENABLED=1")
-	}
-	st, err := store.Open(filepath.Join(t.TempDir(), "mcp.db"))
+// TestCompareResourcesToolErrorPrefix pins the MCP-side rendering of a
+// missing side: the tool result errors with the id_a:/id_b: prefix built
+// from compare.SideError.
+func TestCompareResourcesToolErrorPrefix(t *testing.T) {
+	cs := newTestServer(t)
+	res, err := cs.CallTool(t.Context(), &mcpsdk.CallToolParams{
+		Name:      "compare_resources",
+		Arguments: map[string]any{"id_a": "a", "id_b": "missing"},
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { _ = st.Close() })
-	var fake embedder.Fake
-	st.ConfigureVector(fake.Dim())
-	a := model.Resource{ResourceID: "a", NameSV: "Betong", NameEN: "Concrete", A1A3: 0.12, Unit: "kg", Conversions: map[string]float64{"kg/m³": 2400}}
-	b := model.Resource{ResourceID: "b", NameSV: "Stål", NameEN: "Steel", A1A3: 1.5, Unit: "kg", Conversions: map[string]float64{"kg/m³": 7800}}
-	for _, r := range []model.Resource{a, b} {
-		h, _ := r.ContentHash()
-		r.Hash = h
-		vec, _ := fake.Embed(r.EmbeddingText())
-		if err := st.Upsert(t.Context(), r, vec); err != nil {
-			t.Fatal(err)
+	if !res.IsError {
+		t.Fatalf("expected tool error, got %+v", res.Content)
+	}
+	var text string
+	for _, c := range res.Content {
+		if tc, ok := c.(*mcpsdk.TextContent); ok {
+			text = tc.Text
 		}
 	}
-
-	ctx := t.Context()
-	cmp, err := mcp.Compare(ctx, st, "a", "b", "Boverket Klimatdatabas", "", "")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if cmp.LowerImpactID != "a" {
-		t.Fatalf("lower=%s", cmp.LowerImpactID)
-	}
-	if cmp.DeltaA1A3 != 0.12-1.5 {
-		t.Fatalf("delta=%v", cmp.DeltaA1A3)
-	}
-	if cmp.Incomparable {
-		t.Fatal("same kg unit should be comparable")
-	}
-	if cmp.Unit != "kg" {
-		t.Fatalf("unit=%s", cmp.Unit)
-	}
-
-	_, err = mcp.Compare(ctx, st, "a", "b", "Boverket Klimatdatabas", "m²", "")
-	if err == nil {
-		t.Fatal("explicit missing unit should error")
-	}
-
-	cmp, err = mcp.Compare(ctx, st, "a", "b", "Boverket Klimatdatabas", "m³", "")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if cmp.Unit != "m³" {
-		t.Fatalf("unit=%s", cmp.Unit)
+	if !strings.Contains(text, "id_b:") {
+		t.Fatalf("error text %q must name the failing side", text)
 	}
 }

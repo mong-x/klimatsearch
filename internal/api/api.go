@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/mong-x/klimatsearch/internal/compare"
 	"github.com/mong-x/klimatsearch/internal/config"
 	"github.com/mong-x/klimatsearch/internal/guard"
 	"github.com/mong-x/klimatsearch/internal/ingest"
@@ -174,32 +175,31 @@ func (h *Handler) compare(w http.ResponseWriter, r *http.Request) {
 	}
 	unit := strings.TrimSpace(r.URL.Query().Get("unit"))
 	impact := strings.TrimSpace(r.URL.Query().Get("impact"))
-	ra, status, err := h.loadResource(r, idA)
+	cmp, err := compare.Resources(r.Context(), h.Store, idA, idB, h.Source, unit, impact)
 	if err != nil {
-		writeJSON(w, status, map[string]string{"error": err.Error()})
-		return
-	}
-	rb, status, err := h.loadResource(r, idB)
-	if err != nil {
-		writeJSON(w, status, map[string]string{"error": err.Error()})
-		return
-	}
-	cmp, err := model.Compare(*ra, *rb, h.Source, unit, impact)
-	if err != nil {
-		var uerr model.ErrUnitUnavailable
-		if errors.As(err, &uerr) {
-			writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
-			return
+		var side *compare.SideError
+		if errors.As(err, &side) {
+			err = side.Err // REST drops the side prefix; status mapping follows the store error
 		}
-		var ierr model.ErrImpactUnknown
-		if errors.As(err, &ierr) {
+		switch {
+		case errors.Is(err, store.ErrNotFound):
+			writeJSON(w, http.StatusNotFound, map[string]string{"error": "not found"})
+		case errors.Is(err, store.ErrAmbiguous):
+			writeJSON(w, http.StatusConflict, map[string]string{"error": err.Error()})
+		case isCompareInputError(err):
 			writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
-			return
+		default:
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		}
-		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return
 	}
 	writeJSON(w, http.StatusOK, cmp.View())
+}
+
+func isCompareInputError(err error) bool {
+	var uerr model.ErrUnitUnavailable
+	var ierr model.ErrImpactUnknown
+	return errors.As(err, &uerr) || errors.As(err, &ierr)
 }
 
 func (h *Handler) loadResource(r *http.Request, id string) (*model.Resource, int, error) {
