@@ -51,18 +51,36 @@ func New(eng search.SearchEngine, st *store.Store, source string, useVector, use
 	return s
 }
 
+// ReadOnlyAnnotations describes the klimatsearch tools: every tool reads the
+// local Klimatdatabas store and never mutates it or reaches the network, so
+// the four hints must stay read-only, non-destructive, idempotent, closed
+// world. OpenAI's tool directory rejects tools where any hint is missing or
+// non-boolean, so all four are set explicitly.
+func ReadOnlyAnnotations() *mcpsdk.ToolAnnotations {
+	no := false
+	return &mcpsdk.ToolAnnotations{
+		ReadOnlyHint:    true,
+		DestructiveHint: &no,
+		IdempotentHint:  true,
+		OpenWorldHint:   &no,
+	}
+}
+
 func (s *Server) register() {
 	mcpsdk.AddTool(s.MCP, &mcpsdk.Tool{
 		Name:        ToolSearch,
 		Description: "Search Klimatdatabas. Hits are full Resources (typical A1A3, conservative A1A3, A4, A5.1, transports when published). Optional vector/rerank override the process defaults (omit to use server config).",
+		Annotations: ReadOnlyAnnotations(),
 	}, s.searchTool)
 	mcpsdk.AddTool(s.MCP, &mcpsdk.Tool{
 		Name:        ToolGet,
 		Description: "Get one Klimatdatabas Resource by Resource ID or catalog:id. Includes origin (Boverket product sheet URL) when known. HTTP GET {details}/origin 302s there.",
+		Annotations: ReadOnlyAnnotations(),
 	}, s.getTool)
 	mcpsdk.AddTool(s.MCP, &mcpsdk.Tool{
 		Name:        ToolCompare,
 		Description: "Compare climate impact of two Resources in a shared unit. impact=typical (default)|conservative|a4|a5_1",
+		Annotations: ReadOnlyAnnotations(),
 	}, s.compareTool)
 	s.ToolNames = []string{ToolSearch, ToolGet, ToolCompare}
 }
