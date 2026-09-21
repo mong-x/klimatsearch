@@ -1,0 +1,24 @@
+internal/api/api.go
+  h_af7161f060dc1e 10,178,180-182,184-189,191-192,199-204
+internal/compare/compare.go
+  h_af7161f060dc1e 1-42
+internal/compare/compare_test.go
+  h_af7161f060dc1e 1-85
+internal/mcp/server.go
+  h_af7161f060dc1e 12,166,168-171
+internal/mcp/server_test.go
+  h_af7161f060dc1e 7,199-207,211-212,214-218,220-221
+internal/web/web.go
+  h_af7161f060dc1e 11,158,160-164
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "e1e03d281512cc3e7f94428cfcbc7164b79b2bb9",
+  "prompts": {},
+  "humans": {
+    "h_af7161f060dc1e": {
+      "author": "mjnong <marcusnagy@icloud.com>"
+    }
+  }
+}
