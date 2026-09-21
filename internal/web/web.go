@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/mong-x/klimatsearch/internal/compare"
-	"github.com/mong-x/klimatsearch/internal/config"
 	"github.com/mong-x/klimatsearch/internal/guard"
 	"github.com/mong-x/klimatsearch/internal/ingest"
 	"github.com/mong-x/klimatsearch/internal/model"
@@ -44,9 +43,6 @@ type Handler struct {
 }
 
 func New(eng search.SearchEngine, st *store.Store, source string, status Status) *Handler {
-	if source == "" {
-		source = config.Attribution
-	}
 	if status.Tools == nil {
 		status.Tools = []string{}
 	}

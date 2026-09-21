@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/mong-x/klimatsearch/internal/compare"
-	"github.com/mong-x/klimatsearch/internal/config"
 	"github.com/mong-x/klimatsearch/internal/guard"
 	"github.com/mong-x/klimatsearch/internal/ingest"
 	"github.com/mong-x/klimatsearch/internal/model"
@@ -26,9 +25,6 @@ type Handler struct {
 }
 
 func New(eng search.SearchEngine, st *store.Store, source string) *Handler {
-	if source == "" {
-		source = config.Attribution
-	}
 	return &Handler{Engine: eng, Store: st, Source: source}
 }
 

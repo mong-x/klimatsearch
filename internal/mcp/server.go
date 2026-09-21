@@ -10,7 +10,6 @@ import (
 	mcpsdk "github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/mong-x/klimatsearch/internal/compare"
-	"github.com/mong-x/klimatsearch/internal/config"
 	"github.com/mong-x/klimatsearch/internal/search"
 	"github.com/mong-x/klimatsearch/internal/store"
 )
@@ -33,9 +32,6 @@ type Server struct {
 }
 
 func New(eng search.SearchEngine, st *store.Store, source string, useVector, useRerank bool) *Server {
-	if source == "" {
-		source = config.Attribution
-	}
 	s := &Server{
 		MCP: mcpsdk.NewServer(&mcpsdk.Implementation{
 			Name:    "klimatsearch",
@@ -105,30 +101,17 @@ type searchIn struct {
 	Rerank    *bool    `json:"rerank,omitempty" jsonschema:"Override process default; BGE INT8 is slow"`
 }
 
-type searchOut struct {
-	Source  string           `json:"source"`
-	Query   string           `json:"query"`
-	Lang    string           `json:"lang"`
-	Results []map[string]any `json:"results"`
-}
-
-func (s *Server) searchTool(ctx context.Context, _ *mcpsdk.CallToolRequest, in searchIn) (*mcpsdk.CallToolResult, searchOut, error) {
+func (s *Server) searchTool(ctx context.Context, _ *mcpsdk.CallToolRequest, in searchIn) (*mcpsdk.CallToolResult, map[string]any, error) {
 	q, err := search.FromMCP(in.Query, in.Lang, in.Databases, in.Vector, in.Rerank, search.Defaults{Vector: s.useVector, Rerank: s.useRerank})
 	if err != nil {
-		return nil, searchOut{}, err
+		return nil, nil, err
 	}
 	hits, err := s.engine.Search(ctx, q)
 	if err != nil {
-		return nil, searchOut{}, err
+		return nil, nil, err
 	}
 	env := search.Envelope(s.source, q, hits)
-	out := searchOut{
-		Source:  s.source,
-		Query:   in.Query,
-		Lang:    q.Lang,
-		Results: env["results"].([]map[string]any),
-	}
-	return textResult(out), out, nil
+	return textResult(env), env, nil
 }
 
 type getIn struct {

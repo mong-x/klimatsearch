@@ -141,7 +141,7 @@ func (r *Runner) notifyChanged(ctx context.Context, res Result) {
 		Upserted:     res.Upserted,
 		Skipped:      res.Skipped,
 		IDs:          res.Changed,
-		Source:       r.attribution(),
+		Source:       r.Source,
 		At:           time.Now().UTC(),
 	})
 }
@@ -158,7 +158,7 @@ func (r *Runner) fail(ctx context.Context, catalog string, err error, reason str
 		Catalog: catalog,
 		Error:   err.Error(),
 		Reason:  reason,
-		Source:  r.attribution(),
+		Source:  r.Source,
 		At:      time.Now().UTC(),
 	}
 	var u *UnreachableError
@@ -184,13 +184,6 @@ func (r *Runner) emit(ctx context.Context, ev Event) {
 	if err := r.Notify.Notify(ctx, ev); err != nil {
 		r.log().Error("webhook failed", "err", err, "event", ev.Event, "catalog", ev.Catalog)
 	}
-}
-
-func (r *Runner) attribution() string {
-	if r.Source != "" {
-		return r.Source
-	}
-	return "Boverket Klimatdatabas"
 }
 
 func (r *Runner) Run(ctx context.Context, f Ingester) (Result, error) {

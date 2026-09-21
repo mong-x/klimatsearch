@@ -19,7 +19,6 @@ const (
 	DefaultSource         = "Boverket Klimatdatabas"
 	DefaultAPIBase        = "https://api.boverket.se/klimatdatabas"
 	DefaultIngestInterval = 168 * time.Hour
-	Attribution           = "Boverket Klimatdatabas"
 	ExcelSV               = "https://www.boverket.se/contentassets/4668ed4cc3da447385788ed30bff7d49/boverkets-klimatdatabas-version-02.07.000-sv-se.xlsx"
 	ExcelEN               = "https://www.boverket.se/contentassets/4668ed4cc3da447385788ed30bff7d49/boverkets-climate-database-version-02.07.000-en-gb.xlsx"
 	DefaultFixtureJSON    = "testdata/fixtures/resources.json"

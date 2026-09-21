@@ -86,8 +86,9 @@ func main() {
 	if p, err := embedder.ResolveONNX(filepath.Join(cfg.Models, cfg.EmbeddingModel), cfg.ONNXQuant); err == nil {
 		quant = embedder.QuantLabel(p)
 	}
+	mcpSrv := mcpserver.New(eng, st, cfg.Source, useVector, useRerank)
 	ui := web.New(eng, st, cfg.Source, web.Status{
-		Tools:    []string{mcpserver.ToolSearch, mcpserver.ToolGet, mcpserver.ToolCompare},
+		Tools:    mcpSrv.ToolNames,
 		Vector:   useVector,
 		Rerank:   useRerank,
 		Embedder: cfg.Embedder,
@@ -99,7 +100,7 @@ func main() {
 	ui.TestDeliver = wh.PostHook
 	ui.Admin = guard.Admin{Token: cfg.AdminToken}
 	ui.Register(mux)
-	mcpserver.New(eng, st, cfg.Source, useVector, useRerank).Mount(mux)
+	mcpSrv.Mount(mux)
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
