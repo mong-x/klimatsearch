@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/mong-x/klimatsearch/internal/config"
+	"github.com/mong-x/klimatsearch/internal/guard"
 	"github.com/mong-x/klimatsearch/internal/ingest"
 	"github.com/mong-x/klimatsearch/internal/model"
 	"github.com/mong-x/klimatsearch/internal/search"
@@ -16,11 +17,11 @@ import (
 
 // Handler serves REST on a ServeMux.
 type Handler struct {
-	Engine     search.SearchEngine
-	Store      *store.Store
-	Source     string
-	Runner     *ingest.Runner
-	AdminToken string
+	Engine search.SearchEngine
+	Store  *store.Store
+	Source string
+	Runner *ingest.Runner
+	Admin  guard.Admin
 }
 
 func New(eng search.SearchEngine, st *store.Store, source string) *Handler {
@@ -216,7 +217,7 @@ func (h *Handler) loadResource(r *http.Request, id string) (*model.Resource, int
 }
 
 func (h *Handler) ingestFile(w http.ResponseWriter, r *http.Request) {
-	if !h.adminOK(r) {
+	if !h.Admin.OK(r) {
 		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
 		return
 	}
@@ -252,7 +253,7 @@ func (h *Handler) ingestFile(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) ingestPreview(w http.ResponseWriter, r *http.Request) {
-	if !h.adminOK(r) {
+	if !h.Admin.OK(r) {
 		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
 		return
 	}
@@ -281,7 +282,7 @@ func (h *Handler) ingestPreview(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) upsertResources(w http.ResponseWriter, r *http.Request) {
-	if !h.adminOK(r) {
+	if !h.Admin.OK(r) {
 		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
 		return
 	}
@@ -307,17 +308,6 @@ func (h *Handler) upsertResources(w http.ResponseWriter, r *http.Request) {
 		"upserted": res.Upserted,
 		"skipped":  res.Skipped,
 	})
-}
-
-func (h *Handler) adminOK(r *http.Request) bool {
-	if h.AdminToken == "" {
-		return true
-	}
-	tok := strings.TrimSpace(r.Header.Get("X-Admin-Token"))
-	if tok == "" {
-		tok = strings.TrimSpace(r.FormValue("token"))
-	}
-	return tok == h.AdminToken
 }
 
 func ingestStatus(err error) int {

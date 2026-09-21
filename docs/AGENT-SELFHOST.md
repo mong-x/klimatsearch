@@ -22,7 +22,7 @@ Process must already be listening. Streamable HTTP:
 
 Tools: `search_climate_data`, `get_resource_details`, `compare_resources`.
 
-If the operator set `KLIMAT_API_KEYS`, attach one of the keys as a header (`"headers": {"Authorization": "Bearer <key>"}` on the MCP entry, or `X-Api-Key` on REST); `?api_key=<key>` also works for browser pages.
+If the operator set `KLIMAT_API_KEYS`, attach one of the keys as a header (`"headers": {"Authorization": "Bearer <key>"}` on the MCP entry, or `X-Api-Key` on REST). For the operator console, open any page once with `?api_key=<key>` — the server exchanges it for an HttpOnly session cookie, so links, forms, and redirects keep working; API clients should prefer headers.
 
 Completion: a search for `spånskiva` / `lang=sv` returns Resource `6000000000` and a `details` path.
 
@@ -106,6 +106,6 @@ Completion: `kubectl get hpa klimatsearch` shows a target; two pods do not open 
 ## 5. Guardrails
 
 - Self-host binary has no Unkey and no MPP. Do not add those env vars to this lane.
-- Self-managed keys are the self-host gate: `KLIMAT_API_KEYS=key1,key2` requires one of them (`Authorization: Bearer`, `X-Api-Key`, or `?api_key=`) on every path except `/healthz`, `/openapi.yaml`, `/docs`. Unset means open — default self-host stays friction-free. Query-param keys end up in access logs; prefer headers for API clients.
+- Self-managed keys are the self-host gate: `KLIMAT_API_KEYS=key1,key2` requires one of them (`Authorization: Bearer`, `X-Api-Key`, the `klimat_api_key` cookie, or `?api_key=`) on every path except `/healthz`, `/openapi.yaml`, `/docs`. A valid `?api_key=` hit is exchanged for an HttpOnly SameSite=Lax session cookie so the console stays usable across links and form POSTs; unset means open — default self-host stays friction-free. `KLIMAT_ADMIN_TOKEN` composes: the key gates the portal, the token additionally gates mutations (ingest, webhooks, `/admin/*`).
 - Kind e2e (`512Mi`, fake embedder) is not the production shape.
 - `make eval-golden` after ONNX ingest if you change embedder, quant, or reranker.

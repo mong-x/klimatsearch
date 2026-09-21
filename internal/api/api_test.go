@@ -3,6 +3,7 @@ package api_test
 import (
 	"bytes"
 	"encoding/json"
+	"io"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
@@ -13,6 +14,7 @@ import (
 
 	"github.com/mong-x/klimatsearch/internal/api"
 	"github.com/mong-x/klimatsearch/internal/embedder"
+	"github.com/mong-x/klimatsearch/internal/guard"
 	"github.com/mong-x/klimatsearch/internal/ingest"
 	"github.com/mong-x/klimatsearch/internal/model"
 	"github.com/mong-x/klimatsearch/internal/reranker"
@@ -387,4 +389,53 @@ func get(t *testing.T, url string) *http.Response {
 		t.Fatal(err)
 	}
 	return resp
+}
+
+func TestAdminTokenRequired(t *testing.T) {
+	if os.Getenv("CGO_ENABLED") == "0" {
+		t.Skip("CGO is disabled; sqlite store tests require CGO_ENABLED=1")
+	}
+	st, err := store.Open(filepath.Join(t.TempDir(), "admin.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = st.Close() })
+	var fake embedder.Fake
+	st.ConfigureVector(fake.Dim())
+	h := api.New(nil, st, "Boverket Klimatdatabas")
+	h.Runner = &ingest.Runner{Store: st, Embedder: fake}
+	h.Admin = guard.Admin{Token: "t0k"}
+	mux := http.NewServeMux()
+	h.Register(mux)
+	srv := httptest.NewServer(mux)
+	t.Cleanup(srv.Close)
+
+	payload := `{"catalog":"boverket","resources":[{"id":"x1","name":"X","unit":"kg","a1a3":0.1}]}`
+	post := func(contentType, body, token string) int {
+		req, _ := http.NewRequest("POST", srv.URL+"/admin/resources", strings.NewReader(body))
+		if contentType != "" {
+			req.Header.Set("Content-Type", contentType)
+		}
+		if token != "" {
+			req.Header.Set("X-Admin-Token", token)
+		}
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, _ = io.Copy(io.Discard, resp.Body)
+		_ = resp.Body.Close()
+		return resp.StatusCode
+	}
+	if got := post("application/json", payload, ""); got != 401 {
+		t.Fatalf("no token: got %d", got)
+	}
+	if got := post("application/json", payload, "wrong"); got != 401 {
+		t.Fatalf("wrong token: got %d", got)
+	}
+	if got := post("application/json", payload, "t0k"); got != 200 {
+		t.Fatalf("header token: got %d", got)
+	}
+	// The form-field idiom is console-only; this endpoint takes JSON bodies,
+	// where FormValue cannot read a token (unchanged from the old adminOK).
 }

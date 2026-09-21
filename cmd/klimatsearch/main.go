@@ -77,7 +77,7 @@ func main() {
 	runner.Events = ingest.LogTo(st)
 	h := api.New(eng, st, cfg.Source)
 	h.Runner = runner
-	h.AdminToken = cfg.AdminToken
+	h.Admin = guard.Admin{Token: cfg.AdminToken}
 	h.Register(mux)
 
 	useVector := st.VectorEnabled()
@@ -97,7 +97,7 @@ func main() {
 	ui.Runner = runner
 	ui.EnvHooks = wh.URLs
 	ui.TestDeliver = wh.PostHook
-	ui.AdminToken = cfg.AdminToken
+	ui.Admin = guard.Admin{Token: cfg.AdminToken}
 	ui.Register(mux)
 	mcpserver.New(eng, st, cfg.Source, useVector, useRerank).Mount(mux)
 

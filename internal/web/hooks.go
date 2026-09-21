@@ -147,14 +147,7 @@ func (h *Handler) loadHooks(r *http.Request) ([]store.Webhook, []string) {
 }
 
 func (h *Handler) hookAuth(r *http.Request) bool {
-	if h.AdminToken == "" {
-		return true
-	}
-	tok := strings.TrimSpace(r.Header.Get("X-Admin-Token"))
-	if tok == "" {
-		tok = strings.TrimSpace(r.FormValue("token"))
-	}
-	return tok == h.AdminToken
+	return h.Admin.OK(r)
 }
 
 func (h *Handler) testHook(r *http.Request, id int64) error {

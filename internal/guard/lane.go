@@ -62,13 +62,17 @@ func newStaticLane(keys []string) Lane {
 }
 
 // staticKey reads the caller's key: Authorization Bearer, X-Api-Key header,
-// or api_key query parameter (so a browser can open the portal with a link).
+// the klimat_api_key cookie, or api_key query parameter. A browser opens the
+// portal with a query-key link once and keeps running on the cookie.
 func staticKey(r *http.Request) (string, bool) {
 	if tok, ok := bearerToken(r); ok {
 		return tok, true
 	}
 	if tok := strings.TrimSpace(r.Header.Get("X-Api-Key")); tok != "" {
 		return tok, true
+	}
+	if c, err := r.Cookie(cookieName); err == nil && c.Value != "" {
+		return c.Value, true
 	}
 	if tok := strings.TrimSpace(r.URL.Query().Get("api_key")); tok != "" {
 		return tok, true
@@ -83,15 +87,39 @@ func (s *staticLane) Present(r *http.Request) bool {
 
 func (s *staticLane) Check(r *http.Request) Decision {
 	tok, ok := staticKey(r)
-	if !ok {
+	if !ok || !s.match(tok) {
 		return deny(http.StatusUnauthorized, "unauthorized")
 	}
+	d := Decision{OK: true, Header: http.Header{}}
+	// Exchange a valid query key for a session cookie so console
+	// navigation (links, forms, redirects) survives past the first URL —
+	// browsers cannot set headers on form POSTs.
+	if q := r.URL.Query().Get("api_key"); q != "" && s.match(q) {
+		d.Header.Add("Set-Cookie", sessionCookie(q, r.TLS != nil))
+	}
+	return d
+}
+
+func (s *staticLane) match(tok string) bool {
 	for _, k := range s.keys {
 		if subtle.ConstantTimeCompare([]byte(k), []byte(tok)) == 1 {
-			return Decision{OK: true}
+			return true
 		}
 	}
-	return deny(http.StatusUnauthorized, "unauthorized")
+	return false
+}
+
+// cookieName is the static-key session cookie. SameSite=Lax is load-bearing:
+// it keeps the cookie off cross-site POSTs (CSRF) while allowing top-level
+// navigation. Session lifetime — the raw key dies with the browser.
+const cookieName = "klimat_api_key"
+
+func sessionCookie(v string, secure bool) string {
+	c := &http.Cookie{Name: cookieName, Value: v, Path: "/", HttpOnly: true, SameSite: http.SameSiteLaxMode}
+	if secure {
+		c.Secure = true
+	}
+	return c.String()
 }
 
 func passOrDeny(w http.ResponseWriter, r *http.Request, d Decision, next http.Handler) {

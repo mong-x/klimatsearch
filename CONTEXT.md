@@ -96,7 +96,7 @@ The required citation of a Catalog as origin, for example "Boverket Klimatdataba
 _Avoid_: source (bare — overloaded with how a Hit was matched and with Catalog)
 
 **Guard**:
-Paid-endpoint check in the **hosted** build only (`-tags hosted`): MPP `Authorization: Payment`, then Unkey Bearer. The self-hosted build has no Guard lanes.
+Endpoint check wrapping the whole mux. The **hosted** build (`-tags hosted`) runs the dual-lane Guard: MPP `Authorization: Payment`, then Unkey Bearer. Both builds honor self-managed static keys (`KLIMAT_API_KEYS`): `Authorization: Bearer`, `X-Api-Key`, or `?api_key=`; unset means no gating. `/healthz`, `/openapi.yaml`, `/docs` stay public.
 _Avoid_: auth middleware, billing proxy
 
 **Ingester**:

@@ -180,7 +180,7 @@ func (h *Handler) base(r *http.Request, active, title string) page {
 		Examples:   examples,
 		MCPSnippet: mcpSnippet,
 		Status:     http.StatusOK,
-		NeedToken:  h.AdminToken != "",
+		NeedToken:  h.Admin.Required(),
 		Catalog:    model.CatalogDKBR,
 		Catalogs:   model.Catalogs(),
 	}

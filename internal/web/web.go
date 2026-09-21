@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/mong-x/klimatsearch/internal/config"
+	"github.com/mong-x/klimatsearch/internal/guard"
 	"github.com/mong-x/klimatsearch/internal/ingest"
 	"github.com/mong-x/klimatsearch/internal/model"
 	"github.com/mong-x/klimatsearch/internal/search"
@@ -36,7 +37,7 @@ type Handler struct {
 	// TestDeliver sends one test Event to a webhook (console Test button).
 	// Wired in main to the delivery adapter; nil disables the button.
 	TestDeliver func(ctx context.Context, hook ingest.DeliveryHook, ev ingest.Event) error
-	AdminToken  string
+	Admin       guard.Admin
 	pages       map[string]*pageTmpl
 	static      fs.FS
 }
@@ -212,17 +213,11 @@ func (h *Handler) ingestPost(w http.ResponseWriter, r *http.Request) {
 		h.render(w, "ingest", p)
 		return
 	}
-	if h.AdminToken != "" {
-		tok := strings.TrimSpace(r.Header.Get("X-Admin-Token"))
-		if tok == "" {
-			tok = strings.TrimSpace(r.FormValue("token"))
-		}
-		if tok != h.AdminToken {
-			p.Error = "unauthorized"
-			p.Status = http.StatusUnauthorized
-			h.render(w, "ingest", p)
-			return
-		}
+	if !h.Admin.OK(r) {
+		p.Error = "unauthorized"
+		p.Status = http.StatusUnauthorized
+		h.render(w, "ingest", p)
+		return
 	}
 	up, err := ingest.ReadMultipart(r)
 	if err != nil && !errors.Is(err, ingest.ErrFileRequired) {

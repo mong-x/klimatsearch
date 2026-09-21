@@ -3,6 +3,8 @@ package guard
 import (
 	"net/http"
 	"net/http/httptest"
+	"net/url"
+	"strings"
 	"testing"
 
 	"github.com/mong-x/klimatsearch/internal/config"
@@ -60,6 +62,10 @@ func newKeyTestServer(t *testing.T) *httptest.Server {
 	t.Helper()
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/search", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"ok":true}`))
+	})
+	mux.HandleFunc("POST /api/search", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte(`{"ok":true}`))
 	})
@@ -162,4 +168,99 @@ func TestStaticKeysPublicPathsStayOpen(t *testing.T) {
 			t.Fatalf("public %s: got %d, want 200", path, resp.StatusCode)
 		}
 	}
+}
+
+func TestStaticKeyCookieSetFromQuery(t *testing.T) {
+	srv := newKeyTestServer(t)
+	jar := &testJar{cookies: map[string]string{}}
+	client := &http.Client{Jar: jar}
+	resp, err := client.Get(srv.URL + "/api/search?api_key=key-one")
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != 200 {
+		t.Fatalf("query key: got %d", resp.StatusCode)
+	}
+	sc := resp.Header.Get("Set-Cookie")
+	if !strings.Contains(sc, "klimat_api_key=key-one") || !strings.Contains(sc, "HttpOnly") || !strings.Contains(sc, "SameSite=Lax") {
+		t.Fatalf("Set-Cookie=%q", sc)
+	}
+}
+
+func TestStaticKeyCookiePasses(t *testing.T) {
+	srv := newKeyTestServer(t)
+	req, _ := http.NewRequest("GET", srv.URL+"/api/search", nil)
+	req.AddCookie(&http.Cookie{Name: "klimat_api_key", Value: "key-two"})
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != 200 {
+		t.Fatalf("cookie key: got %d", resp.StatusCode)
+	}
+	// A header hit must not mint a cookie.
+	if sc := resp.Header.Get("Set-Cookie"); sc != "" {
+		t.Fatalf("header hit set a cookie: %q", sc)
+	}
+}
+
+func TestStaticKeyWrongCookieIs401(t *testing.T) {
+	srv := newKeyTestServer(t)
+	req, _ := http.NewRequest("GET", srv.URL+"/api/search", nil)
+	req.AddCookie(&http.Cookie{Name: "klimat_api_key", Value: "wrong"})
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != 401 {
+		t.Fatalf("wrong cookie: got %d", resp.StatusCode)
+	}
+}
+
+func TestStaticKeyQueryOnPostSetsCookie(t *testing.T) {
+	srv := newKeyTestServer(t)
+	resp, err := http.PostForm(srv.URL+"/api/search?key=1&api_key=key-one", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != 200 {
+		t.Fatalf("POST with query key: got %d", resp.StatusCode)
+	}
+	if sc := resp.Header.Get("Set-Cookie"); !strings.Contains(sc, "klimat_api_key=key-one") {
+		t.Fatalf("POST must exchange the query key for a cookie: %q", sc)
+	}
+}
+
+func TestStaticKeysPublicPathsSetNoCookie(t *testing.T) {
+	srv := newKeyTestServer(t)
+	resp, err := http.Get(srv.URL + "/healthz?api_key=key-one")
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != 200 {
+		t.Fatalf("healthz: got %d", resp.StatusCode)
+	}
+	if sc := resp.Header.Get("Set-Cookie"); sc != "" {
+		t.Fatalf("public path must not set a cookie: %q", sc)
+	}
+}
+
+type testJar struct{ cookies map[string]string }
+
+func (j *testJar) SetCookies(u *url.URL, cookies []*http.Cookie) {
+	for _, c := range cookies {
+		j.cookies[c.Name] = c.Value
+	}
+}
+func (j *testJar) Cookies(u *url.URL) []*http.Cookie {
+	var out []*http.Cookie
+	for k, v := range j.cookies {
+		out = append(out, &http.Cookie{Name: k, Value: v})
+	}
+	return out
 }

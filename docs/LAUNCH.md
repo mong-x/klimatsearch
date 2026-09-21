@@ -163,7 +163,7 @@ The same events are stored in SQLite (`ingest_events`, last 200) and listed on `
 
 Signing is per destination: a console-managed secret signs that destination's deliveries; a destination without one inherits `KLIMAT_WEBHOOK_SECRET`. Before 2026-09, a per-destination secret was ignored and the process secret signed every delivery — receivers that validated a destination's signature with the process secret must re-verify with the destination's own secret.
 
-Optional: `KLIMAT_ADMIN_TOKEN` as header `X-Admin-Token` on `POST /admin/ingest/file`.
+Optional: `KLIMAT_ADMIN_TOKEN` as header `X-Admin-Token` on `POST /admin/ingest/file` (and the console's ingest/webhooks forms). It composes with `KLIMAT_API_KEYS`: the API key gates every non-public path, the admin token additionally gates mutations.
 
 ---
 

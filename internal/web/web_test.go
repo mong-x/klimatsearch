@@ -13,7 +13,9 @@ import (
 	"sync/atomic"
 	"testing"
 
+	"github.com/mong-x/klimatsearch/internal/config"
 	"github.com/mong-x/klimatsearch/internal/embedder"
+	"github.com/mong-x/klimatsearch/internal/guard"
 	"github.com/mong-x/klimatsearch/internal/ingest"
 	"github.com/mong-x/klimatsearch/internal/model"
 	"github.com/mong-x/klimatsearch/internal/reranker"
@@ -423,4 +425,141 @@ func TestWebhookTestDeliversToTarget(t *testing.T) {
 	if ingest.Valid("env", sig, body) {
 		t.Fatal("console Test must not sign with the process secret")
 	}
+}
+
+// TestConsoleBehindGuardWithKeys composes the operator console with the
+// Guard static lane and an admin token at once: the query key is exchanged
+// for a session cookie (so links, redirects, and form POSTs survive), the
+// console form still needs its own admin token, and the open default holds.
+func TestConsoleBehindGuardWithKeys(t *testing.T) {
+	if os.Getenv("CGO_ENABLED") == "0" {
+		t.Skip("CGO is disabled; sqlite store tests require CGO_ENABLED=1")
+	}
+	st, err := store.Open(filepath.Join(t.TempDir(), "guard-console.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = st.Close() })
+	var fake embedder.Fake
+	st.ConfigureVector(fake.Dim())
+
+	mux := http.NewServeMux()
+	h := web.New(nil, st, "Boverket Klimatdatabas", web.Status{})
+	h.Admin = guard.Admin{Token: "t0k"}
+	h.Register(mux)
+	g, err := guard.New(config.Config{APIKeys: []string{"key-one"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	srv := httptest.NewServer(g.Wrap(mux))
+	t.Cleanup(srv.Close)
+
+	// Bare request is gated by the static lane.
+	resp, err := http.Get(srv.URL + "/ingest")
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != 401 {
+		t.Fatalf("bare GET /ingest: got %d, want 401", resp.StatusCode)
+	}
+
+	// One query-key hit mints the session cookie...
+	jar := &cookieJar{cookies: map[string]string{}}
+	client := &http.Client{Jar: jar}
+	resp, err = client.Get(srv.URL + "/ingest?api_key=key-one")
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != 200 {
+		t.Fatalf("GET /ingest?api_key: got %d", resp.StatusCode)
+	}
+	if jar.cookies["klimat_api_key"] != "key-one" {
+		t.Fatalf("cookie jar=%v", jar.cookies)
+	}
+
+	// ...and navigation then runs on the cookie alone.
+	for _, path := range []string{"/", "/data", "/compare", "/connect", "/webhooks", "/ingest"} {
+		resp, err = client.Get(srv.URL + path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		resp.Body.Close()
+		if resp.StatusCode != 200 {
+			t.Fatalf("GET %s on cookie: got %d", path, resp.StatusCode)
+		}
+	}
+
+	// Console form POST passes the Guard on the cookie and the handler on
+	// the admin token; dropping either must fail.
+	noRedirect := &http.Client{Jar: jar, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
+	postWebhooks := func(form url.Values) int {
+		resp, err := noRedirect.PostForm(srv.URL+"/webhooks", form)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, _ = io.Copy(io.Discard, resp.Body)
+		_ = resp.Body.Close()
+		return resp.StatusCode
+	}
+	if got := postWebhooks(url.Values{"action": []string{"add"}, "url": []string{"https://example.com/h"}, "token": []string{"t0k"}}); got != 303 {
+		t.Fatalf("add with cookie+token: got %d, want 303", got)
+	}
+	if got := postWebhooks(url.Values{"action": []string{"add"}, "url": []string{"https://example.com/h2"}, "token": []string{"wrong"}}); got != 401 {
+		t.Fatalf("add with wrong token: got %d, want 401", got)
+	}
+	jar.cookies = map[string]string{} // drop the key: the Guard must 401
+	if got := postWebhooks(url.Values{"action": []string{"add"}, "url": []string{"https://example.com/h3"}, "token": []string{"t0k"}}); got != 401 {
+		t.Fatalf("add without cookie: got %d, want 401", got)
+	}
+}
+
+// TestConsoleOpenWithoutKeys pins the friction-free default: no keys, no
+// gating, no cookie.
+func TestConsoleOpenWithoutKeys(t *testing.T) {
+	if os.Getenv("CGO_ENABLED") == "0" {
+		t.Skip("CGO is disabled; sqlite store tests require CGO_ENABLED=1")
+	}
+	st, err := store.Open(filepath.Join(t.TempDir(), "open-console.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = st.Close() })
+	mux := http.NewServeMux()
+	web.New(nil, st, "Boverket Klimatdatabas", web.Status{}).Register(mux)
+	g, err := guard.New(config.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	srv := httptest.NewServer(g.Wrap(mux))
+	t.Cleanup(srv.Close)
+	for _, path := range []string{"/", "/webhooks", "/ingest"} {
+		resp, err := http.Get(srv.URL + path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		resp.Body.Close()
+		if resp.StatusCode != 200 {
+			t.Fatalf("GET %s without keys: got %d", path, resp.StatusCode)
+		}
+		if sc := resp.Header.Get("Set-Cookie"); sc != "" {
+			t.Fatalf("open default must not set cookies: %q", sc)
+		}
+	}
+}
+
+type cookieJar struct{ cookies map[string]string }
+
+func (j *cookieJar) SetCookies(u *url.URL, cookies []*http.Cookie) {
+	for _, c := range cookies {
+		j.cookies[c.Name] = c.Value
+	}
+}
+func (j *cookieJar) Cookies(u *url.URL) []*http.Cookie {
+	var out []*http.Cookie
+	for k, v := range j.cookies {
+		out = append(out, &http.Cookie{Name: k, Value: v})
+	}
+	return out
 }
