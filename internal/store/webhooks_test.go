@@ -37,7 +37,7 @@ func TestWebhookCRUD(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.URL != "https://discord.com/api/webhooks/1/tok" || got.Secret != "sekret" || !got.HasEvent("ingest.failed") || got.HasEvent("catalog.changed") {
+	if got.URL != "https://discord.com/api/webhooks/1/tok" || got.Secret != "sekret" || got.Events != "ingest.failed" {
 		t.Fatalf("%+v", got)
 	}
 	if err := st.UpdateWebhook(ctx, w.ID, got.URL, "", "ingest.failed", true, true); err != nil {

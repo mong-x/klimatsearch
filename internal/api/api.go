@@ -125,21 +125,12 @@ func (h *Handler) get(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
 		return
 	}
-	it, err := h.Store.Get(r.Context(), id)
-	if errors.Is(err, store.ErrNotFound) {
-		writeJSON(w, http.StatusNotFound, map[string]string{"error": "not found"})
-		return
-	}
-	if errors.Is(err, store.ErrAmbiguous) {
-		writeJSON(w, http.StatusConflict, map[string]string{"error": err.Error()})
-		return
-	}
+	it, status, err := h.loadResource(r, id)
 	if err != nil {
-		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		writeJSON(w, status, map[string]string{"error": err.Error()})
 		return
 	}
-	body := it.View(h.Source)
-	writeJSON(w, http.StatusOK, body)
+	writeJSON(w, http.StatusOK, it.View(h.Source))
 }
 
 func (h *Handler) origin(w http.ResponseWriter, r *http.Request) {

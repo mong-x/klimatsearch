@@ -164,19 +164,6 @@ func (s *Store) UpdateWebhook(ctx context.Context, id int64, rawURL, secret, eve
 	return nil
 }
 
-func (w Webhook) HasEvent(name string) bool {
-	spec := strings.TrimSpace(w.Events)
-	if spec == "" {
-		return true
-	}
-	for _, p := range strings.Split(spec, ",") {
-		if strings.TrimSpace(p) == name {
-			return true
-		}
-	}
-	return false
-}
-
 func (s *Store) SetWebhookEnabled(ctx context.Context, id int64, on bool) error {
 	en := 0
 	if on {

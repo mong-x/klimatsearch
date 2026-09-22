@@ -101,6 +101,8 @@ Split pools if MCP load is high:
 1. **Hot** — `KLIMAT_RERANKER=none`, 1–2 Gi, FTS + hybrid, many replicas.
 2. **Precise** — `KLIMAT_RERANKER=onnx`, 4 Gi, fewer replicas, only sibling queries.
 
+`preview_id` from the console file-ingest flow is replica-local memory: behind HPA without sticky sessions, the apply POST can land on another replica and report `preview expired; upload the file again`. Keep `replicas: 1` for console file ingest or re-upload — the JSON Resource batch (`POST /admin/resources`) has no such limit.
+
 Completion: `kubectl get hpa klimatsearch` shows a target; two pods do not open the same sqlite file.
 
 ## 5. Guardrails
