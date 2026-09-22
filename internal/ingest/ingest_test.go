@@ -628,3 +628,48 @@ func TestDeclaredUnitTable(t *testing.T) {
 		}
 	}
 }
+
+// TestBackfillVectorsRepairsEmbedderlessIngest: a boot without an embedder
+// lands rows with hashes but no vectors (the hash-skip would then hide them
+// from vector search forever); BackfillVectors re-embeds without touching
+// ContentHash, and a second run is a no-op.
+func TestBackfillVectorsRepairsEmbedderlessIngest(t *testing.T) {
+	if os.Getenv("CGO_ENABLED") == "0" {
+		t.Skip("CGO is disabled; sqlite store tests require CGO_ENABLED=1")
+	}
+	st, err := store.Open(filepath.Join(t.TempDir(), "backfill.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = st.Close() })
+	var fake embedder.Fake
+	st.ConfigureVector(fake.Dim())
+
+	bare := &Runner{Store: st}
+	res, err := bare.Apply(t.Context(), Batch{
+		Origin: "fixture", Version: "1", CatalogID: model.CatalogBoverket,
+		Resources: []model.Resource{{CatalogID: model.CatalogBoverket, ResourceID: "b1", NameSV: "Betong", A1A3: 0.1, Unit: "kg"}},
+	})
+	if err != nil || res.Upserted != 1 {
+		t.Fatalf("embedder-less apply: %+v %v", res, err)
+	}
+	h, _ := st.Hash(t.Context(), model.CatalogBoverket, "b1")
+	if h == "" {
+		t.Fatal("hash must be recorded")
+	}
+	if missing, _ := st.MissingVectors(t.Context()); len(missing) != 1 {
+		t.Fatalf("missing=%d", len(missing))
+	}
+
+	r := &Runner{Store: st, Embedder: fake}
+	n, err := r.BackfillVectors(t.Context())
+	if err != nil || n != 1 {
+		t.Fatalf("backfill: n=%d err=%v", n, err)
+	}
+	if h2, _ := st.Hash(t.Context(), model.CatalogBoverket, "b1"); h2 != h {
+		t.Fatalf("backfill changed the hash: %q -> %q", h, h2)
+	}
+	if n, err = r.BackfillVectors(t.Context()); err != nil || n != 0 {
+		t.Fatalf("second backfill must be a no-op: n=%d err=%v", n, err)
+	}
+}

@@ -18,6 +18,8 @@ type Store interface {
 	Hash(ctx context.Context, catalogID, id string) (string, error)
 	Upsert(ctx context.Context, r model.Resource, embedding []float32) error
 	SetMeta(ctx context.Context, key, value string) error
+	MissingVectors(ctx context.Context) ([]model.Resource, error)
+	PutVector(ctx context.Context, catalogID, id string, embedding []float32) error
 }
 
 // Ingester is fetch-and-map for one Catalog.
@@ -184,6 +186,35 @@ func (r *Runner) emit(ctx context.Context, ev Event) {
 	if err := r.Notify.Notify(ctx, ev); err != nil {
 		r.log().Error("webhook failed", "err", err, "event", ev.Event, "catalog", ev.Catalog)
 	}
+}
+
+// BackfillVectors embeds Resources whose vector row is missing and writes
+// the vectors without touching ContentHash (the content did not change).
+// This is the repair path for embedder-less ingest and for a model-dim
+// change after meta.embedding_dim is migrated.
+func (r *Runner) BackfillVectors(ctx context.Context) (int, error) {
+	if r.Store == nil {
+		return 0, errors.New("store is not configured")
+	}
+	if r.Embedder == nil {
+		return 0, fmt.Errorf("backfill requires an embedder")
+	}
+	missing, err := r.Store.MissingVectors(ctx)
+	if err != nil {
+		return 0, err
+	}
+	n := 0
+	for _, item := range missing {
+		vec, err := r.Embedder.Embed(item.EmbeddingText())
+		if err != nil {
+			return n, fmt.Errorf("embed %s: %w", item.DocID(), err)
+		}
+		if err := r.Store.PutVector(ctx, item.CatalogID, item.ResourceID, vec); err != nil {
+			return n, err
+		}
+		n++
+	}
+	return n, nil
 }
 
 func (r *Runner) Run(ctx context.Context, f Ingester) (Result, error) {

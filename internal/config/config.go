@@ -35,6 +35,7 @@ type Config struct {
 	RerankerModel           string
 	ONNXQuant               string
 	IngestOnStart           bool
+	BackfillVectors         bool
 	IngestInterval          time.Duration
 	BoverketAPIBase         string
 	BoverketSubscriptionKey string
@@ -64,6 +65,7 @@ func Parse(args []string) (Config, error) {
 		RerankerModel:           env("KLIMAT_RERANKER_MODEL", DefaultRerankerModel),
 		ONNXQuant:               env("KLIMAT_ONNX_QUANT", DefaultONNXQuant),
 		IngestOnStart:           envBool("KLIMAT_INGEST_ON_START", true),
+		BackfillVectors:         envBool("KLIMAT_BACKFILL_VECTORS", false),
 		IngestInterval:          DefaultIngestInterval,
 		BoverketAPIBase:         env("BOVERKET_API_BASE", env("KLIMAT_BOVERKET_API_BASE", DefaultAPIBase)),
 		BoverketSubscriptionKey: env("BOVERKET_SUBSCRIPTION_KEY", ""),
@@ -94,6 +96,7 @@ func Parse(args []string) (Config, error) {
 	fs.StringVar(&c.RerankerModel, "reranker-model", c.RerankerModel, "reranker directory under --models (`KLIMAT_RERANKER_MODEL`)")
 	fs.StringVar(&c.ONNXQuant, "onnx-quant", c.ONNXQuant, "onnx file pick: auto|int8|fp32 (`KLIMAT_ONNX_QUANT`)")
 	fs.BoolVar(&c.IngestOnStart, "ingest-on-start", c.IngestOnStart, "run ingest once at boot")
+	fs.BoolVar(&c.BackfillVectors, "backfill-vectors", c.BackfillVectors, "embed Resources missing vectors, then exit (`KLIMAT_BACKFILL_VECTORS`)")
 	fs.DurationVar(&c.IngestInterval, "ingest-interval", c.IngestInterval, "repeat ingest interval (0 disables ticker)")
 	fs.StringVar(&c.BoverketAPIBase, "boverket-api-base", c.BoverketAPIBase, "Boverket APIM base URL")
 	fs.StringVar(&c.BoverketSubscriptionKey, "boverket-subscription-key", c.BoverketSubscriptionKey, "APIM subscription key")

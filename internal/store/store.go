@@ -191,7 +191,16 @@ func (s *Store) Upsert(ctx context.Context, r model.Resource, embedding []float3
 	if err != nil {
 		return fmt.Errorf("marshal details: %w", err)
 	}
-	_, err = s.db.ExecContext(ctx, `
+	// One transaction: the resources row (FTS rides its triggers) and the
+	// vector are a single logical write. Committing the row without its
+	// vector would let the ContentHash skip permanently hide the Resource
+	// from vector search.
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("begin upsert %s: %w", r.DocID(), err)
+	}
+	defer func() { _ = tx.Rollback() }()
+	_, err = tx.ExecContext(ctx, `
 INSERT INTO resources (
     catalog_id, id, name_sv, name_en, description_sv, description_en,
     applicability_sv, applicability_en, synonyms,
@@ -223,26 +232,76 @@ ON CONFLICT(catalog_id, id) DO UPDATE SET
 		return fmt.Errorf("upsert resource %s: %w", r.DocID(), err)
 	}
 	if len(embedding) > 0 {
-		if err := s.upsertVec(ctx, r.CatalogID, r.ResourceID, embedding); err != nil {
+		if err := upsertVec(ctx, tx, r.CatalogID, r.ResourceID, embedding); err != nil {
 			return err
 		}
+	}
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit upsert %s: %w", r.DocID(), err)
 	}
 	return nil
 }
 
-func (s *Store) upsertVec(ctx context.Context, catalogID, id string, embedding []float32) error {
+// execer is the statement surface *sql.DB and *sql.Tx share.
+type execer interface {
+	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
+}
+
+func upsertVec(ctx context.Context, q execer, catalogID, id string, embedding []float32) error {
 	blob, err := sqlite_vec.SerializeFloat32(embedding)
 	if err != nil {
 		return fmt.Errorf("serialize embedding: %w", err)
 	}
 	docID := model.DocID(catalogID, id)
-	if _, err := s.db.ExecContext(ctx, `DELETE FROM resource_vec WHERE doc_id = ?`, docID); err != nil {
+	if _, err := q.ExecContext(ctx, `DELETE FROM resource_vec WHERE doc_id = ?`, docID); err != nil {
 		return fmt.Errorf("delete vec %s: %w", docID, err)
 	}
-	if _, err := s.db.ExecContext(ctx, `INSERT INTO resource_vec(doc_id, embedding, catalog_id) VALUES (?, ?, ?)`, docID, blob, catalogID); err != nil {
+	if _, err := q.ExecContext(ctx, `INSERT INTO resource_vec(doc_id, embedding, catalog_id) VALUES (?, ?, ?)`, docID, blob, catalogID); err != nil {
 		return fmt.Errorf("insert vec %s: %w", docID, err)
 	}
 	return nil
+}
+
+// PutVector writes one Resource's vector without touching the row or its
+// ContentHash (the content did not change) - the backfill path.
+func (s *Store) PutVector(ctx context.Context, catalogID, id string, embedding []float32) error {
+	return upsertVec(ctx, s.db, catalogID, id, embedding)
+}
+
+// MissingVectors lists Resources whose vector row is absent: embedder-less
+// ingest, a torn write from before the Upsert transaction, or rows left
+// behind by an embedder-dim change. Keys are drained before the per-row
+// Get because the pool holds one connection.
+func (s *Store) MissingVectors(ctx context.Context) ([]model.Resource, error) {
+	rows, err := s.db.QueryContext(ctx, `SELECT catalog_id, id FROM resources
+WHERE NOT EXISTS (SELECT 1 FROM resource_vec WHERE doc_id = catalog_id || ':' || id)`)
+	if err != nil {
+		return nil, fmt.Errorf("missing vectors: %w", err)
+	}
+	type key struct{ catalog, id string }
+	var keys []key
+	for rows.Next() {
+		var k key
+		if err := rows.Scan(&k.catalog, &k.id); err != nil {
+			rows.Close()
+			return nil, err
+		}
+		keys = append(keys, k)
+	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return nil, err
+	}
+	rows.Close()
+	out := make([]model.Resource, 0, len(keys))
+	for _, k := range keys {
+		r, err := s.Get(ctx, model.DocID(k.catalog, k.id))
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, *r)
+	}
+	return out, nil
 }
 
 func (s *Store) Get(ctx context.Context, id string) (*model.Resource, error) {

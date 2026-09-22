@@ -213,3 +213,89 @@ func fixtureSteel() model.Resource {
 		Version:       "02.07.000-fixture",
 	}
 }
+
+// TestUpsertAtomicOnVecFailure pins the Upsert transaction: when the vector
+// write fails (here: a dim-mismatched embedding), nothing commits - the row
+// and its ContentHash stay absent (or, on update, unchanged), so the next
+// ingest retries instead of permanently skipping a hole.
+func TestUpsertAtomicOnVecFailure(t *testing.T) {
+	if os.Getenv("CGO_ENABLED") == "0" {
+		t.Skip("CGO is disabled; sqlite store tests require CGO_ENABLED=1")
+	}
+	st, err := Open(filepath.Join(t.TempDir(), "atomic.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = st.Close() })
+	var fake embedder.Fake
+	st.ConfigureVector(fake.Dim())
+
+	r := model.Resource{CatalogID: model.CatalogBoverket, ResourceID: "x1", NameSV: "Betong", A1A3: 0.1, Unit: "kg"}
+	h, _ := r.ContentHash()
+	r.Hash = h
+	wrong := make([]float32, fake.Dim()+64)
+	if err := st.Upsert(t.Context(), r, wrong); err == nil {
+		t.Fatal("dim-mismatched embedding must fail Upsert")
+	}
+	if got, err := st.Hash(t.Context(), r.CatalogID, r.ResourceID); err != nil || got != "" {
+		t.Fatalf("hash after failed upsert: %q %v - the row must not be committed", got, err)
+	}
+	if _, err := st.Get(t.Context(), "boverket:x1"); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("row after failed upsert: %v - want ErrNotFound", err)
+	}
+
+	// Update path: a failed vec write on an existing row leaves the old
+	// content and hash intact, so the change is retried next ingest.
+	good, _ := fake.Embed(r.EmbeddingText())
+	if err := st.Upsert(t.Context(), r, good); err != nil {
+		t.Fatal(err)
+	}
+	r.A1A3 = 0.2
+	h2, _ := r.ContentHash()
+	r.Hash = h2
+	if err := st.Upsert(t.Context(), r, wrong); err == nil {
+		t.Fatal("dim-mismatched embedding must fail the update too")
+	}
+	if got, _ := st.Hash(t.Context(), r.CatalogID, r.ResourceID); got != h {
+		t.Fatalf("hash changed to %q on a failed update; want the old %q", got, h)
+	}
+}
+
+func TestMissingVectorsAndPutVector(t *testing.T) {
+	if os.Getenv("CGO_ENABLED") == "0" {
+		t.Skip("CGO is disabled; sqlite store tests require CGO_ENABLED=1")
+	}
+	st, err := Open(filepath.Join(t.TempDir(), "missing.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = st.Close() })
+	var fake embedder.Fake
+	st.ConfigureVector(fake.Dim())
+
+	// Embedder-less ingest: row lands with a hash but no vector.
+	r := model.Resource{CatalogID: model.CatalogBoverket, ResourceID: "x2", NameSV: "Stål", A1A3: 1.5, Unit: "kg"}
+	h, _ := r.ContentHash()
+	r.Hash = h
+	if err := st.Upsert(t.Context(), r, nil); err != nil {
+		t.Fatal(err)
+	}
+	missing, err := st.MissingVectors(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(missing) != 1 || missing[0].ResourceID != "x2" {
+		t.Fatalf("missing=%+v", missing)
+	}
+
+	vec, _ := fake.Embed(r.EmbeddingText())
+	if err := st.PutVector(t.Context(), r.CatalogID, r.ResourceID, vec); err != nil {
+		t.Fatal(err)
+	}
+	if missing, err = st.MissingVectors(t.Context()); err != nil || len(missing) != 0 {
+		t.Fatalf("after backfill: %v %d", err, len(missing))
+	}
+	if got, _ := st.Hash(t.Context(), r.CatalogID, r.ResourceID); got != h {
+		t.Fatalf("backfill must not touch the hash: %q", got)
+	}
+}

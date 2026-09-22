@@ -105,6 +105,16 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
+	if cfg.BackfillVectors {
+		n, err := runner.BackfillVectors(ctx)
+		if err != nil {
+			log.Error("backfill vectors", "err", err)
+			os.Exit(1)
+		}
+		log.Info("vector backfill complete", "embedded", n)
+		return
+	}
+
 	var fetcher ingest.Ingester
 	if cfg.DemoFixture {
 		fetcher = ingest.FixtureFetcher{Path: cfg.FixturePath}
