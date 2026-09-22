@@ -7,56 +7,19 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/mong-x/klimatsearch/internal/api"
-	"github.com/mong-x/klimatsearch/internal/embedder"
 	"github.com/mong-x/klimatsearch/internal/guard"
 	"github.com/mong-x/klimatsearch/internal/ingest"
 	"github.com/mong-x/klimatsearch/internal/model"
-	"github.com/mong-x/klimatsearch/internal/reranker"
-	"github.com/mong-x/klimatsearch/internal/search"
-	"github.com/mong-x/klimatsearch/internal/store"
+	"github.com/mong-x/klimatsearch/internal/testworld"
 )
 
 func TestHTTP(t *testing.T) {
-	if os.Getenv("CGO_ENABLED") == "0" {
-		t.Skip("CGO is disabled; sqlite store tests require CGO_ENABLED=1")
-	}
-	st, err := store.Open(filepath.Join(t.TempDir(), "http.db"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _ = st.Close() })
-	var fake embedder.Fake
-	st.ConfigureVector(fake.Dim())
-	a := model.Resource{
-		CatalogID:       model.CatalogBoverket,
-		ResourceID:      "6000000991",
-		NameSV:          "Betong",
-		NameEN:          "Concrete",
-		DescriptionSV:   "Generisk betong",
-		ApplicabilitySV: "Stomme",
-		A1A3:            0.12,
-		Unit:            "kg",
-		Conversions:     map[string]float64{"kg/m³": 2400},
-		Category:        "Betong",
-		CategoryCode:    "6",
-		Version:         "t",
-	}
-	b := model.Resource{CatalogID: model.CatalogBoverket, ResourceID: "6000000992", NameSV: "Konstruktionsstål", NameEN: "Structural steel", A1A3: 1.55, Unit: "kg", Version: "t"}
-	for _, r := range []model.Resource{a, b} {
-		h, _ := r.ContentHash()
-		r.Hash = h
-		vec, _ := fake.Embed(r.EmbeddingText())
-		if err := st.Upsert(t.Context(), r, vec); err != nil {
-			t.Fatal(err)
-		}
-	}
-	eng := search.New(st, st, fake, reranker.None{})
+	st, eng, fake := testworld.Seed(t)
+
 	mux := http.NewServeMux()
 	h := api.New(eng, st, "Boverket Klimatdatabas")
 	h.Runner = &ingest.Runner{Store: st, Embedder: fake}
@@ -330,26 +293,14 @@ func TestHTTP(t *testing.T) {
 }
 
 func TestAmbiguousResourceHTTP(t *testing.T) {
-	if os.Getenv("CGO_ENABLED") == "0" {
-		t.Skip("CGO is disabled; sqlite store tests require CGO_ENABLED=1")
+	st, fake := testworld.Open(t)
+	for _, r := range []model.Resource{
+		{CatalogID: "boverket", ResourceID: "same", NameSV: "A", A1A3: 0.1, Unit: "kg"},
+		{CatalogID: "br25", ResourceID: "same", NameSV: "B", A1A3: 0.2, Unit: "kg"},
+	} {
+		testworld.Put(t, st, fake, r)
 	}
-	st, err := store.Open(filepath.Join(t.TempDir(), "amb.db"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _ = st.Close() })
-	var fake embedder.Fake
-	st.ConfigureVector(fake.Dim())
-	a := model.Resource{CatalogID: "boverket", ResourceID: "same", NameSV: "A", A1A3: 0.1, Unit: "kg"}
-	b := model.Resource{CatalogID: "br25", ResourceID: "same", NameSV: "B", A1A3: 0.2, Unit: "kg"}
-	for _, r := range []model.Resource{a, b} {
-		hsh, _ := r.ContentHash()
-		r.Hash = hsh
-		if err := st.Upsert(t.Context(), r, nil); err != nil {
-			t.Fatal(err)
-		}
-	}
-	eng := search.New(st, st, fake, reranker.None{})
+	eng := testworld.Engine(st, fake)
 	mux := http.NewServeMux()
 	h := api.New(eng, st, "Boverket Klimatdatabas")
 	h.Runner = &ingest.Runner{Store: st, Embedder: fake}
@@ -392,16 +343,7 @@ func get(t *testing.T, url string) *http.Response {
 }
 
 func TestAdminTokenRequired(t *testing.T) {
-	if os.Getenv("CGO_ENABLED") == "0" {
-		t.Skip("CGO is disabled; sqlite store tests require CGO_ENABLED=1")
-	}
-	st, err := store.Open(filepath.Join(t.TempDir(), "admin.db"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _ = st.Close() })
-	var fake embedder.Fake
-	st.ConfigureVector(fake.Dim())
+	st, fake := testworld.Open(t)
 	h := api.New(nil, st, "Boverket Klimatdatabas")
 	h.Runner = &ingest.Runner{Store: st, Embedder: fake}
 	h.Admin = guard.Admin{Token: "t0k"}
@@ -443,16 +385,7 @@ func TestAdminTokenRequired(t *testing.T) {
 // TestAdminResourcesBatchConversions pins that a batch upsert can carry
 // Conversions and the Comparison impacts, and that GET returns them.
 func TestAdminResourcesBatchConversions(t *testing.T) {
-	if os.Getenv("CGO_ENABLED") == "0" {
-		t.Skip("CGO is disabled; sqlite store tests require CGO_ENABLED=1")
-	}
-	st, err := store.Open(filepath.Join(t.TempDir(), "batch-conv.db"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _ = st.Close() })
-	var fake embedder.Fake
-	st.ConfigureVector(fake.Dim())
+	st, fake := testworld.Open(t)
 	h := api.New(nil, st, "Boverket Klimatdatabas")
 	h.Runner = &ingest.Runner{Store: st, Embedder: fake}
 	mux := http.NewServeMux()

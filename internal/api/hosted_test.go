@@ -5,30 +5,16 @@ package api_test
 import (
 	"net/http"
 	"net/http/httptest"
-	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/mong-x/klimatsearch/internal/api"
-	"github.com/mong-x/klimatsearch/internal/embedder"
 	"github.com/mong-x/klimatsearch/internal/guard"
-	"github.com/mong-x/klimatsearch/internal/reranker"
-	"github.com/mong-x/klimatsearch/internal/search"
-	"github.com/mong-x/klimatsearch/internal/store"
+	"github.com/mong-x/klimatsearch/internal/testworld"
 )
 
 func TestFailClosedGuard(t *testing.T) {
-	if os.Getenv("CGO_ENABLED") == "0" {
-		t.Skip("CGO is disabled; sqlite store tests require CGO_ENABLED=1")
-	}
-	st, err := store.Open(filepath.Join(t.TempDir(), "guard.db"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _ = st.Close() })
-	var fake embedder.Fake
-	st.ConfigureVector(fake.Dim())
-	eng := search.New(st, st, fake, reranker.None{})
+	st, fake := testworld.Open(t)
+	eng := testworld.Engine(st, fake)
 	mux := http.NewServeMux()
 	api.New(eng, st, "Boverket Klimatdatabas").Register(mux)
 	g := &guard.Guard{}

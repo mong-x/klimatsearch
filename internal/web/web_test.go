@@ -17,59 +17,16 @@ import (
 	"github.com/mong-x/klimatsearch/internal/embedder"
 	"github.com/mong-x/klimatsearch/internal/guard"
 	"github.com/mong-x/klimatsearch/internal/ingest"
-	"github.com/mong-x/klimatsearch/internal/model"
 	"github.com/mong-x/klimatsearch/internal/reranker"
 	"github.com/mong-x/klimatsearch/internal/search"
 	"github.com/mong-x/klimatsearch/internal/store"
+	"github.com/mong-x/klimatsearch/internal/testworld"
 	"github.com/mong-x/klimatsearch/internal/web"
 )
 
 func TestOperatorUI(t *testing.T) {
-	if os.Getenv("CGO_ENABLED") == "0" {
-		t.Skip("CGO is disabled; sqlite store tests require CGO_ENABLED=1")
-	}
-	st, err := store.Open(filepath.Join(t.TempDir(), "ui.db"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _ = st.Close() })
-	var fake embedder.Fake
-	st.ConfigureVector(fake.Dim())
-	a := model.Resource{
-		CatalogID:     model.CatalogBoverket,
-		ResourceID:    "6000000991",
-		NameSV:        "Betong",
-		NameEN:        "Concrete",
-		DescriptionSV: "Generisk betong",
-		A1A3:          0.12,
-		Unit:          "kg",
-		Category:      "Betong",
-		CategoryCode:  "6",
-		Version:       "t",
-		Details: model.Details{
-			A1A3Conservative: 1.25,
-			A4:               ptr(0.04),
-			A51:              ptr(0.02),
-		},
-	}
-	b := model.Resource{
-		CatalogID:  model.CatalogBoverket,
-		ResourceID: "6000000992",
-		NameSV:     "Konstruktionsstål",
-		NameEN:     "Structural steel",
-		A1A3:       1.55,
-		Unit:       "kg",
-		Version:    "t",
-	}
-	for _, r := range []model.Resource{a, b} {
-		hsh, _ := r.ContentHash()
-		r.Hash = hsh
-		vec, _ := fake.Embed(r.EmbeddingText())
-		if err := st.Upsert(t.Context(), r, vec); err != nil {
-			t.Fatal(err)
-		}
-	}
-	eng := search.New(st, st, fake, reranker.None{})
+	st, eng, _ := testworld.Seed(t)
+
 	mux := http.NewServeMux()
 	web.New(eng, st, "Boverket Klimatdatabas", web.Status{
 		Tools:    []string{"search_climate_data", "get_resource_details", "compare_resources"},
@@ -357,14 +314,7 @@ func get(t *testing.T, url string) (string, int, string) {
 func ptr(v float64) *float64 { return &v }
 
 func TestWebhookTestDeliversToTarget(t *testing.T) {
-	if os.Getenv("CGO_ENABLED") == "0" {
-		t.Skip("CGO is disabled; sqlite store tests require CGO_ENABLED=1")
-	}
-	st, err := store.Open(filepath.Join(t.TempDir(), "wh-test.db"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _ = st.Close() })
+	st, _ := testworld.Open(t)
 
 	var sig, event string
 	var body []byte
@@ -432,16 +382,7 @@ func TestWebhookTestDeliversToTarget(t *testing.T) {
 // for a session cookie (so links, redirects, and form POSTs survive), the
 // console form still needs its own admin token, and the open default holds.
 func TestConsoleBehindGuardWithKeys(t *testing.T) {
-	if os.Getenv("CGO_ENABLED") == "0" {
-		t.Skip("CGO is disabled; sqlite store tests require CGO_ENABLED=1")
-	}
-	st, err := store.Open(filepath.Join(t.TempDir(), "guard-console.db"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _ = st.Close() })
-	var fake embedder.Fake
-	st.ConfigureVector(fake.Dim())
+	st, _ := testworld.Open(t)
 
 	mux := http.NewServeMux()
 	h := web.New(nil, st, "Boverket Klimatdatabas", web.Status{})
@@ -465,7 +406,7 @@ func TestConsoleBehindGuardWithKeys(t *testing.T) {
 	}
 
 	// One query-key hit mints the session cookie...
-	jar := &cookieJar{cookies: map[string]string{}}
+	jar := testworld.NewJar()
 	client := &http.Client{Jar: jar}
 	resp, err = client.Get(srv.URL + "/ingest?api_key=key-one")
 	if err != nil {
@@ -475,8 +416,8 @@ func TestConsoleBehindGuardWithKeys(t *testing.T) {
 	if resp.StatusCode != 200 {
 		t.Fatalf("GET /ingest?api_key: got %d", resp.StatusCode)
 	}
-	if jar.cookies["klimat_api_key"] != "key-one" {
-		t.Fatalf("cookie jar=%v", jar.cookies)
+	if jar.Values["klimat_api_key"] != "key-one" {
+		t.Fatalf("cookie jar=%v", jar.Values)
 	}
 
 	// ...and navigation then runs on the cookie alone.
@@ -509,7 +450,7 @@ func TestConsoleBehindGuardWithKeys(t *testing.T) {
 	if got := postWebhooks(url.Values{"action": []string{"add"}, "url": []string{"https://example.com/h2"}, "token": []string{"wrong"}}); got != 401 {
 		t.Fatalf("add with wrong token: got %d, want 401", got)
 	}
-	jar.cookies = map[string]string{} // drop the key: the Guard must 401
+	jar.Values = map[string]string{} // drop the key: the Guard must 401
 	if got := postWebhooks(url.Values{"action": []string{"add"}, "url": []string{"https://example.com/h3"}, "token": []string{"t0k"}}); got != 401 {
 		t.Fatalf("add without cookie: got %d, want 401", got)
 	}
@@ -518,14 +459,7 @@ func TestConsoleBehindGuardWithKeys(t *testing.T) {
 // TestConsoleOpenWithoutKeys pins the friction-free default: no keys, no
 // gating, no cookie.
 func TestConsoleOpenWithoutKeys(t *testing.T) {
-	if os.Getenv("CGO_ENABLED") == "0" {
-		t.Skip("CGO is disabled; sqlite store tests require CGO_ENABLED=1")
-	}
-	st, err := store.Open(filepath.Join(t.TempDir(), "open-console.db"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _ = st.Close() })
+	st, _ := testworld.Open(t)
 	mux := http.NewServeMux()
 	web.New(nil, st, "Boverket Klimatdatabas", web.Status{}).Register(mux)
 	g, err := guard.New(config.Config{})
@@ -547,19 +481,4 @@ func TestConsoleOpenWithoutKeys(t *testing.T) {
 			t.Fatalf("open default must not set cookies: %q", sc)
 		}
 	}
-}
-
-type cookieJar struct{ cookies map[string]string }
-
-func (j *cookieJar) SetCookies(u *url.URL, cookies []*http.Cookie) {
-	for _, c := range cookies {
-		j.cookies[c.Name] = c.Value
-	}
-}
-func (j *cookieJar) Cookies(u *url.URL) []*http.Cookie {
-	var out []*http.Cookie
-	for k, v := range j.cookies {
-		out = append(out, &http.Cookie{Name: k, Value: v})
-	}
-	return out
 }

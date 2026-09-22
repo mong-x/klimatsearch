@@ -2,46 +2,20 @@ package mcp_test
 
 import (
 	"encoding/json"
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
 	mcpsdk "github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"github.com/mong-x/klimatsearch/internal/embedder"
 	"github.com/mong-x/klimatsearch/internal/mcp"
-	"github.com/mong-x/klimatsearch/internal/model"
-	"github.com/mong-x/klimatsearch/internal/reranker"
-	"github.com/mong-x/klimatsearch/internal/search"
-	"github.com/mong-x/klimatsearch/internal/store"
+	"github.com/mong-x/klimatsearch/internal/testworld"
 )
 
-// newTestServer opens a store with two resources, starts the MCP server on an
-// in-memory transport, and returns a connected client session.
+// newTestServer seeds the canonical pair (testworld) and returns a client
+// session connected to the MCP server over an in-memory transport.
 func newTestServer(t *testing.T) *mcpsdk.ClientSession {
 	t.Helper()
-	if os.Getenv("CGO_ENABLED") == "0" {
-		t.Skip("CGO is disabled; sqlite store tests require CGO_ENABLED=1")
-	}
-	st, err := store.Open(filepath.Join(t.TempDir(), "mcp.db"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _ = st.Close() })
-	var fake embedder.Fake
-	st.ConfigureVector(fake.Dim())
-	a := model.Resource{ResourceID: "a", NameSV: "Betong", NameEN: "Concrete", A1A3: 0.12, Unit: "kg", Conversions: map[string]float64{"kg/m³": 2400}}
-	b := model.Resource{ResourceID: "b", NameSV: "Stål", NameEN: "Steel", A1A3: 1.5, Unit: "kg", Conversions: map[string]float64{"kg/m³": 7800}}
-	for _, r := range []model.Resource{a, b} {
-		h, _ := r.ContentHash()
-		r.Hash = h
-		vec, _ := fake.Embed(r.EmbeddingText())
-		if err := st.Upsert(t.Context(), r, vec); err != nil {
-			t.Fatal(err)
-		}
-	}
-	eng := search.New(st, st, fake, reranker.None{})
+	st, eng, _ := testworld.Seed(t)
 	s := mcp.New(eng, st, "Boverket Klimatdatabas", true, false)
 
 	ctx := t.Context()
@@ -164,8 +138,8 @@ func TestSearchClimateDataTool(t *testing.T) {
 	if len(out.Results) == 0 {
 		t.Fatal("search_climate_data returned no results for betong")
 	}
-	if out.Results[0]["id"] != "a" {
-		t.Fatalf("top hit id=%v, want a", out.Results[0]["id"])
+	if out.Results[0]["id"] != testworld.Betong.ResourceID {
+		t.Fatalf("top hit id=%v, want %s", out.Results[0]["id"], testworld.Betong.ResourceID)
 	}
 	if out.Source != "Boverket Klimatdatabas" {
 		t.Fatalf("source=%s", out.Source)
@@ -178,9 +152,9 @@ func TestGetResourceDetailsTool(t *testing.T) {
 		Source   string         `json:"source"`
 		Resource map[string]any `json:"resource"`
 	}
-	callTool(t, cs, "get_resource_details", map[string]any{"id": "a"}, &out)
-	if out.Resource["id"] != "a" {
-		t.Fatalf("resource id=%v, want a", out.Resource["id"])
+	callTool(t, cs, "get_resource_details", map[string]any{"id": testworld.Betong.ResourceID}, &out)
+	if out.Resource["id"] != testworld.Betong.ResourceID {
+		t.Fatalf("resource id=%v, want %s", out.Resource["id"], testworld.Betong.ResourceID)
 	}
 	if out.Resource["name_sv"] != "Betong" {
 		t.Fatalf("name_sv=%v", out.Resource["name_sv"])
@@ -190,9 +164,9 @@ func TestGetResourceDetailsTool(t *testing.T) {
 func TestCompareResourcesTool(t *testing.T) {
 	cs := newTestServer(t)
 	var out map[string]any
-	callTool(t, cs, "compare_resources", map[string]any{"id_a": "a", "id_b": "b"}, &out)
-	if out["lower_impact_id"] != "a" {
-		t.Fatalf("lower_impact_id=%v, want a", out["lower_impact_id"])
+	callTool(t, cs, "compare_resources", map[string]any{"id_a": testworld.Betong.ResourceID, "id_b": testworld.Stal.ResourceID}, &out)
+	if out["lower_impact_id"] != testworld.Betong.ResourceID {
+		t.Fatalf("lower_impact_id=%v, want %s", out["lower_impact_id"], testworld.Betong.ResourceID)
 	}
 }
 
@@ -203,7 +177,7 @@ func TestCompareResourcesToolErrorPrefix(t *testing.T) {
 	cs := newTestServer(t)
 	res, err := cs.CallTool(t.Context(), &mcpsdk.CallToolParams{
 		Name:      "compare_resources",
-		Arguments: map[string]any{"id_a": "a", "id_b": "missing"},
+		Arguments: map[string]any{"id_a": testworld.Betong.ResourceID, "id_b": "missing"},
 	})
 	if err != nil {
 		t.Fatal(err)
