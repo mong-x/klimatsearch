@@ -1,0 +1,23 @@
+internal/ingest/units.go
+  s_6f48a10c2aef0d::t_8aa86dd70b3381 1-39
+internal/ingest/json.go
+  s_6f48a10c2aef0d::t_ebdfd8e7f1089b 180
+internal/ingest/excel.go
+  s_6f48a10c2aef0d::t_55577a6c5b1f85 212
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "d63e0044ab9927cc38cf3ee5445f58910d5b4f1c",
+  "prompts": {},
+  "sessions": {
+    "s_6f48a10c2aef0d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f3994dd3-999a-44aa-a293-937976628439",
+        "model": "claude-fable-5-1"
+      },
+      "human_author": "mjnong <marcusnagy@icloud.com>"
+    }
+  }
+}
