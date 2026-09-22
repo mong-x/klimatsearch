@@ -177,7 +177,7 @@ func climateFromV2(m map[string]any) (model.Details, float64) {
 			continue
 		}
 		if u := firstString(dim, "PropertyUnitCode"); u != "" {
-			d.GWPUnit = u
+			d.GWPUnit = gwpUnit(u)
 		}
 		dvis, ok := dim["DataValueItems"].([]any)
 		if !ok {

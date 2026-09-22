@@ -163,6 +163,8 @@ The same events are stored in SQLite (`ingest_events`, last 200) and listed on `
 
 Signing is per destination: a console-managed secret signs that destination's deliveries; a destination without one inherits `KLIMAT_WEBHOOK_SECRET`. Before 2026-09, a per-destination secret was ignored and the process secret signed every delivery — receivers that validated a destination's signature with the process secret must re-verify with the destination's own secret.
 
+**Upgrading past 2026-09-22 rotates every ContentHash once:** `Details.GWPUnit` is now canonicalized (`kg CO2e/<declared unit>`) identically on the JSON and Excel paths, so the first ingest after upgrading re-upserts and re-embeds the whole Catalog and fires one full `catalog.changed` (all IDs). After that, a JSON↔Excel fallback flip no longer rotates hashes. DatasetVersion stays in the ContentHash by definition — expect the same one-time rotation on every Boverket version bump.
+
 Optional: `KLIMAT_ADMIN_TOKEN` as header `X-Admin-Token` on `POST /admin/ingest/file` (and the console's ingest/webhooks forms). It composes with `KLIMAT_API_KEYS`: the API key gates every non-public path, the admin token additionally gates mutations.
 
 ---

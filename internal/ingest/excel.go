@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-	"unicode"
 
 	"github.com/xuri/excelize/v2"
 
@@ -210,7 +209,7 @@ type colIdx struct {
 }
 
 func detailsFromExcel(row []string, idx colIdx) model.Details {
-	d := model.Details{GWPUnit: cell(row, idx.unit)}
+	d := model.Details{GWPUnit: gwpUnit(cell(row, idx.unit))}
 	if f := parseFloat(cell(row, idx.a1a3Cons)); f != 0 {
 		d.A1A3Conservative = f
 	}
@@ -371,24 +370,4 @@ func parseFloat(s string) float64 {
 		return 0
 	}
 	return f
-}
-
-// declaredUnit extracts "kg" from "kg CO₂e/kg".
-func declaredUnit(s string) string {
-	s = strings.TrimSpace(s)
-	if s == "" {
-		return ""
-	}
-	if i := strings.LastIndex(s, "/"); i >= 0 && i+1 < len(s) {
-		return strings.TrimSpace(s[i+1:])
-	}
-	var b strings.Builder
-	for _, r := range s {
-		if unicode.IsLetter(r) || r == '²' || r == '³' || r == '2' || r == '3' {
-			b.WriteRune(r)
-		} else if b.Len() > 0 {
-			break
-		}
-	}
-	return b.String()
 }

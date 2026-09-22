@@ -583,13 +583,18 @@ func TestCrossPathUnitConsistency(t *testing.T) {
 		t.Fatalf("fixture id=%s", jr.ResourceID)
 	}
 
+	// The same logical Resource as the JSON fixture (Spånskiva 6000000000)
+	// expressed through the Excel fallback's columns.
 	xb := writeXLSX(t, []string{
 		"Resurs-ID", "Produktnamn", "Kategori", "Version",
 		"Enhet för klimatpåverkan",
 		"A1-A3 byggproduktens klimatpåverkan GWP-GHG, typiskt värde",
+		"A1-A3 byggproduktens klimatpåverkan GWP-GHG, konservativt värde",
+		"A4",
 		"Omräkningsfaktor", "Enhet för omräkningsfaktor", "Teknisk beskrivning",
 	}, [][]string{
-		{"6000000000", "Betong", "Betong", "02.07.000", "kg CO₂e/kg", "0.12", "700", "kg/m³", ""},
+		{"6000000000", "Spånskiva", "Byggskivor", "02.07.000", "kg CO₂e/kg",
+			"0.39", "0.488", "0.0629", "700", "kg/m³", ""},
 	})
 	eb, err := ParseExcel(xb, "sv")
 	if err != nil {
@@ -604,13 +609,59 @@ func TestCrossPathUnitConsistency(t *testing.T) {
 
 	// The batch path is caller-responsible (same philosophy as the Column
 	// map): the caller sends the clean Declared unit.
-	br := ResourceJSON{ID: "6000000000", Name: "Betong", Unit: "kg", A1A3: 0.12, Conversions: map[string]float64{"kg/m³": 700}}.Resource("boverket", "02.07.000")
+	br := ResourceJSON{ID: "6000000000", Name: "Spånskiva", Unit: "kg", A1A3: 0.39, Conversions: map[string]float64{"kg/m³": 700}}.Resource("boverket", "02.07.000")
 
 	if jr.Unit != "kg" || er.Unit != "kg" || br.Unit != "kg" {
 		t.Fatalf("paths disagree on the Declared unit: json=%q excel=%q batch=%q", jr.Unit, er.Unit, br.Unit)
 	}
 	if er.Conversions["kg/m³"] != 700 || br.Conversions["kg/m³"] != 700 {
 		t.Fatalf("conversion lost: excel=%v batch=%v", er.Conversions, br.Conversions)
+	}
+
+	// Per-field agreement between the JSON path and the Excel fallback for
+	// everything both sources express. These fields all sit inside
+	// ContentHash, so disagreement used to rotate every hash on a fallback
+	// flip (a full catalog.changed webhook plus re-embeds).
+	if jr.Details.GWPUnit != er.Details.GWPUnit {
+		t.Fatalf("GWPUnit drifted: json=%q excel=%q (both must be the canonical kg CO2e/<unit>)",
+			jr.Details.GWPUnit, er.Details.GWPUnit)
+	}
+	if jr.Details.GWPUnit != "kg CO2e/kg" {
+		t.Fatalf("canonical GWPUnit=%q", jr.Details.GWPUnit)
+	}
+	if jr.A1A3 != er.A1A3 {
+		t.Fatalf("a1a3 drifted: json=%v excel=%v", jr.A1A3, er.A1A3)
+	}
+	if jr.Details.A1A3Conservative != er.Details.A1A3Conservative {
+		t.Fatalf("conservative drifted: json=%v excel=%v", jr.Details.A1A3Conservative, er.Details.A1A3Conservative)
+	}
+	if jr.Details.A4 == nil || er.Details.A4 == nil || *jr.Details.A4 != *er.Details.A4 {
+		t.Fatalf("a4 drifted: json=%v excel=%v", jr.Details.A4, er.Details.A4)
+	}
+
+	// Enumerated asymmetries - deliberate, not drift: the workbook carries
+	// no Category Code, and the JSON API enriches text the sheet lacks.
+	if jr.CategoryCode == "" {
+		t.Fatal("JSON path must keep its CategoryCode")
+	}
+	if er.CategoryCode != "" {
+		t.Fatalf("Excel path cannot invent a CategoryCode, got %q", er.CategoryCode)
+	}
+	// DatasetVersion stays in the ContentHash by definition (CONTEXT.md);
+	// the cost - a full re-embed per version bump - is accepted knowingly.
+}
+
+func TestGWPUnitTable(t *testing.T) {
+	for _, tc := range []struct{ in, want string }{
+		{"kg CO₂e/kg", "kg CO2e/kg"},
+		{"kg CO2 eq./kg", "kg CO2e/kg"},
+		{"kg CO2 eq./kWh", "kg CO2e/kWh"},
+		{"kg", "kg CO2e/kg"},
+		{"", ""},
+	} {
+		if got := gwpUnit(tc.in); got != tc.want {
+			t.Errorf("gwpUnit(%q)=%q, want %q", tc.in, got, tc.want)
+		}
 	}
 }
 
