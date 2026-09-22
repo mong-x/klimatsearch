@@ -1,0 +1,19 @@
+internal/web/templates/resource.html
+  s_6f48a10c2aef0d::t_f224c1d8e95478 27
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "bc57ea777d69df333fc977f8eb76f6420d9d9c6a",
+  "prompts": {},
+  "sessions": {
+    "s_6f48a10c2aef0d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f3994dd3-999a-44aa-a293-937976628439",
+        "model": "claude-fable-5-1"
+      },
+      "human_author": "mjnong <marcusnagy@icloud.com>"
+    }
+  }
+}
