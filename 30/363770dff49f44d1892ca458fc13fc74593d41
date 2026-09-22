@@ -1,0 +1,26 @@
+cmd/klimatsearch/main.go
+  h_af7161f060dc1e 109-112
+docs/AGENT-SELFHOST.md
+  h_af7161f060dc1e 104-105
+internal/api/openapi.yaml
+  h_af7161f060dc1e 579
+internal/store/store.go
+  h_af7161f060dc1e 272-275
+internal/web/templates.go
+  h_af7161f060dc1e 4-5,31
+internal/web/templates/webhooks.html
+  h_af7161f060dc1e 47-49
+internal/web/web_test.go
+  h_af7161f060dc1e 10,174-175,469-502
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "30363770dff49f44d1892ca458fc13fc74593d41",
+  "prompts": {},
+  "humans": {
+    "h_af7161f060dc1e": {
+      "author": "mjnong <marcusnagy@icloud.com>"
+    }
+  }
+}
