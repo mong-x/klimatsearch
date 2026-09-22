@@ -1,0 +1,18 @@
+CONTEXT.md
+  h_af7161f060dc1e 87
+internal/api/openapi.yaml
+  h_af7161f060dc1e 571-579
+internal/search/engine_test.go
+  h_af7161f060dc1e 158-230
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "b648f0a902ad9e4c409c9a3022f374cb3a325257",
+  "prompts": {},
+  "humans": {
+    "h_af7161f060dc1e": {
+      "author": "mjnong <marcusnagy@icloud.com>"
+    }
+  }
+}
