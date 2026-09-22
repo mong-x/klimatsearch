@@ -101,6 +101,8 @@ Split pools if MCP load is high:
 1. **Hot** — `KLIMAT_RERANKER=none`, 1–2 Gi, FTS + hybrid, many replicas.
 2. **Precise** — `KLIMAT_RERANKER=onnx`, 4 Gi, fewer replicas, only sibling queries.
 
+**Re-embedding:** `./klimatsearch --backfill-vectors` embeds every Resource whose vector row is missing (embedder-less ingest, a torn write from before the Upsert transaction) and exits; ContentHash is untouched, so no `catalog.changed` fires. Swapping to an embedder with a different hidden size is bigger: update `meta.embedding_dim`, drop and recreate `resource_vec` with the new `float[N]` (the table's dim is fixed by the migration), then run the backfill. Until then the store refuses vector search (`VectorSkipReason`) rather than mixing dims.
+
 `preview_id` from the console file-ingest flow is replica-local memory: behind HPA without sticky sessions, the apply POST can land on another replica and report `preview expired; upload the file again`. Keep `replicas: 1` for console file ingest or re-upload — the JSON Resource batch (`POST /admin/resources`) has no such limit.
 
 Completion: `kubectl get hpa klimatsearch` shows a target; two pods do not open the same sqlite file.

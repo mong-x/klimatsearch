@@ -106,6 +106,10 @@ func main() {
 	defer stop()
 
 	if cfg.BackfillVectors {
+		if !st.VectorEnabled() {
+			log.Error("vector backfill refused", "reason", st.VectorSkipReason())
+			os.Exit(1)
+		}
 		n, err := runner.BackfillVectors(ctx)
 		if err != nil {
 			log.Error("backfill vectors", "err", err)

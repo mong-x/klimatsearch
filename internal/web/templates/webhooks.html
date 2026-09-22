@@ -44,9 +44,9 @@
         </label>
         <fieldset>
           <legend>Events</legend>
-          <label class="check"><input type="checkbox" name="events" value="catalog.changed" {{if .EditHook.HasEvent "catalog.changed"}}checked{{end}} /> catalog.changed</label>
-          <label class="check"><input type="checkbox" name="events" value="catalog.unreachable" {{if .EditHook.HasEvent "catalog.unreachable"}}checked{{end}} /> catalog.unreachable</label>
-          <label class="check"><input type="checkbox" name="events" value="ingest.failed" {{if .EditHook.HasEvent "ingest.failed"}}checked{{end}} /> ingest.failed</label>
+          <label class="check"><input type="checkbox" name="events" value="catalog.changed" {{if wantsEvent .EditHook.Events "catalog.changed"}}checked{{end}} /> catalog.changed</label>
+          <label class="check"><input type="checkbox" name="events" value="catalog.unreachable" {{if wantsEvent .EditHook.Events "catalog.unreachable"}}checked{{end}} /> catalog.unreachable</label>
+          <label class="check"><input type="checkbox" name="events" value="ingest.failed" {{if wantsEvent .EditHook.Events "ingest.failed"}}checked{{end}} /> ingest.failed</label>
         </fieldset>
         <p class="hint">All checked (or none) means every event.</p>
         <label>HMAC secret

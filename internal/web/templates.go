@@ -1,6 +1,8 @@
 package web
 
 import (
+	"github.com/mong-x/klimatsearch/internal/ingest"
+
 	"bytes"
 	"embed"
 	"html/template"
@@ -26,6 +28,7 @@ func mustParse() map[string]*pageTmpl {
 				}
 				return ""
 			},
+			"wantsEvent": ingest.WantsEvent,
 		}).ParseFS(assets, "templates/layout.html", "templates/"+name+".html")
 		if err != nil {
 			panic(err)

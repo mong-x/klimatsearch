@@ -576,7 +576,7 @@ components:
             rerank_score:
               type: number
               format: double
-              description: The score the Reranker assigned (pre-retrieval score moves here).
+              description: The score the Reranker assigned; the retrieval score it replaced remains in score.
             details:
               type: string
               example: /api/resources/boverket:6000000000

@@ -7,19 +7,14 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"os"
-	"path/filepath"
+	"strconv"
 	"strings"
 	"sync/atomic"
 	"testing"
 
 	"github.com/mong-x/klimatsearch/internal/config"
-	"github.com/mong-x/klimatsearch/internal/embedder"
 	"github.com/mong-x/klimatsearch/internal/guard"
 	"github.com/mong-x/klimatsearch/internal/ingest"
-	"github.com/mong-x/klimatsearch/internal/reranker"
-	"github.com/mong-x/klimatsearch/internal/search"
-	"github.com/mong-x/klimatsearch/internal/store"
 	"github.com/mong-x/klimatsearch/internal/testworld"
 	"github.com/mong-x/klimatsearch/internal/web"
 )
@@ -176,17 +171,8 @@ func TestOperatorUI(t *testing.T) {
 }
 
 func TestOperatorIngestBR25(t *testing.T) {
-	if os.Getenv("CGO_ENABLED") == "0" {
-		t.Skip("CGO is disabled; sqlite store tests require CGO_ENABLED=1")
-	}
-	st, err := store.Open(filepath.Join(t.TempDir(), "ingest-ui.db"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _ = st.Close() })
-	var fake embedder.Fake
-	st.ConfigureVector(fake.Dim())
-	eng := search.New(st, st, fake, reranker.None{})
+	st, fake := testworld.Open(t)
+	eng := testworld.Engine(st, fake)
 	mux := http.NewServeMux()
 	ui := web.New(eng, st, "Boverket Klimatdatabas", web.Status{Embedder: "fake"})
 	ui.Runner = &ingest.Runner{Store: st, Embedder: fake}
@@ -310,8 +296,6 @@ func get(t *testing.T, url string) (string, int, string) {
 	}
 	return string(b), resp.StatusCode, resp.Header.Get("Content-Type")
 }
-
-func ptr(v float64) *float64 { return &v }
 
 func TestWebhookTestDeliversToTarget(t *testing.T) {
 	st, _ := testworld.Open(t)
@@ -479,6 +463,40 @@ func TestConsoleOpenWithoutKeys(t *testing.T) {
 		}
 		if sc := resp.Header.Get("Set-Cookie"); sc != "" {
 			t.Fatalf("open default must not set cookies: %q", sc)
+		}
+	}
+}
+
+// TestWebhookEditPageRenders closes the ?edit=N gap: the edit panel is the
+// only page evaluating per-event checkbox state, so it must render (a
+// deleted helper here 500s at execute time while every other test stays
+// green).
+func TestWebhookEditPageRenders(t *testing.T) {
+	st, _ := testworld.Open(t)
+	w, err := st.AddWebhook(t.Context(), "https://example.com/hook", "sekret", "ingest.failed")
+	if err != nil {
+		t.Fatal(err)
+	}
+	mux := http.NewServeMux()
+	web.New(nil, st, "Boverket Klimatdatabas", web.Status{}).Register(mux)
+	srv := httptest.NewServer(mux)
+	t.Cleanup(srv.Close)
+
+	body, code, _ := get(t, srv.URL+"/webhooks?edit="+strconv.FormatInt(w.ID, 10))
+	if code != 200 {
+		t.Fatalf("edit page: %d %s", code, body)
+	}
+	if !strings.Contains(body, "value=\"https://example.com/hook\"") {
+		t.Fatal("edit form missing the hook URL")
+	}
+	// "ingest.failed" is the configured event; the others must be unchecked.
+	for _, line := range strings.Split(body, "\n") {
+		if !strings.Contains(line, `name="events"`) {
+			continue
+		}
+		wantChecked := strings.Contains(line, `value="ingest.failed"`)
+		if got := strings.Contains(line, "checked"); got != wantChecked {
+			t.Fatalf("event checkbox state wrong: %s", strings.TrimSpace(line))
 		}
 	}
 }

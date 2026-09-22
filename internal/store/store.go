@@ -269,9 +269,10 @@ func (s *Store) PutVector(ctx context.Context, catalogID, id string, embedding [
 }
 
 // MissingVectors lists Resources whose vector row is absent: embedder-less
-// ingest, a torn write from before the Upsert transaction, or rows left
-// behind by an embedder-dim change. Keys are drained before the per-row
-// Get because the pool holds one connection.
+// ingest, or a torn write from before the Upsert transaction. (A dim change
+// additionally needs resource_vec recreated at the new float[N] before a
+// backfill can run.) Keys are drained before the per-row Get because the
+// pool holds one connection.
 func (s *Store) MissingVectors(ctx context.Context) ([]model.Resource, error) {
 	rows, err := s.db.QueryContext(ctx, `SELECT catalog_id, id FROM resources
 WHERE NOT EXISTS (SELECT 1 FROM resource_vec WHERE doc_id = catalog_id || ':' || id)`)
