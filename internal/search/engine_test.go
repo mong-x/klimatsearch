@@ -155,3 +155,76 @@ func TestEngineRRF(t *testing.T) {
 		}
 	}
 }
+
+// TestEngineRerankStampsHits crosses the rerank branch of the SearchEngine
+// interface - the branch that rewrites the response contract - with
+// reranker.Fake (non-passthrough). Every other suite constructs None{}.
+func TestEngineRerankStampsHits(t *testing.T) {
+	if os.Getenv("CGO_ENABLED") == "0" {
+		t.Skip("CGO is disabled; sqlite store tests require CGO_ENABLED=1")
+	}
+	st, err := store.Open(filepath.Join(t.TempDir(), "rerank.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = st.Close() })
+	var fake embedder.Fake
+	st.ConfigureVector(fake.Dim())
+	for _, r := range []model.Resource{
+		{ResourceID: "r1", NameSV: "Spånskiva", NameEN: "Particle board", DescriptionSV: "Träbaserad skiva", A1A3: 0.39, Unit: "kg"},
+		{ResourceID: "r2", NameSV: "Kopparrör", NameEN: "Copper pipe", A1A3: 2.1, Unit: "kg"},
+	} {
+		h, _ := r.ContentHash()
+		r.Hash = h
+		vec, _ := fake.Embed(r.EmbeddingText())
+		if err := st.Upsert(t.Context(), r, vec); err != nil {
+			t.Fatal(err)
+		}
+	}
+	eng := search.New(st, st, fake, reranker.Fake{})
+	hits, err := eng.Search(t.Context(), search.Query{Text: "spånskiva", Lang: "sv", Rerank: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(hits) == 0 {
+		t.Fatal("no hits")
+	}
+	stamped := 0
+	for _, h := range hits {
+		if !h.Reranked {
+			continue
+		}
+		stamped++
+		if h.RerankScore == 0 {
+			t.Fatalf("reranked hit %s has no RerankScore", h.ResourceID)
+		}
+		if h.Lang != "sv" {
+			t.Fatalf("reranked hit %s lang=%s", h.ResourceID, h.Lang)
+		}
+		// Source stays retrieval-only: fts/vector/both, never "rerank".
+		switch h.Source {
+		case "fts", "vector", "both":
+		default:
+			t.Fatalf("hit %s match_source=%q", h.ResourceID, h.Source)
+		}
+	}
+	if stamped == 0 {
+		t.Fatal("reranker.Fake must stamp hits; the branch never ran")
+	}
+	env := search.Envelope("Boverket Klimatdatabas", search.Query{Text: "spånskiva", Lang: "sv"}, hits)
+	sawRerankKeys := false
+	for _, m := range env["results"].([]map[string]any) {
+		if _, ok := m["reranked"]; ok {
+			sawRerankKeys = true
+			if _, ok := m["rerank_score"]; !ok {
+				t.Fatal("reranked hit missing rerank_score in Envelope")
+			}
+		}
+	}
+	if !sawRerankKeys {
+		t.Fatal("Envelope must expose reranked/rerank_score for reranked hits")
+	}
+	if hits[0].ResourceID != "r1" {
+		t.Fatalf("Fake should lift the query-relevant hit first, got %s", hits[0].ResourceID)
+	}
+}

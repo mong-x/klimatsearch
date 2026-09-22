@@ -84,7 +84,7 @@ A request for Hits: text, Language, optional Catalogs, and whether vector retrie
 _Avoid_: search string, prompt, q
 
 **Hit**:
-A Resource returned for a Query, with a score and how it was matched (`fts`, `vector`, `both`, or `rerank`).
+A Resource returned for a Query, with a score and how it was matched (`fts`, `vector`, or `both`). A Reranker reorders Hits and is flagged by `reranked` + `rerank_score`; it never rewrites the match source.
 _Avoid_: SearchResult, document, match
 
 **Language**:

@@ -568,7 +568,15 @@ components:
               format: double
             match_source:
               type: string
-              enum: [fts, vector, both, rerank]
+              enum: [fts, vector, both]
+              description: How retrieval matched. Reranking never rewrites this.
+            reranked:
+              type: boolean
+              description: Present and true when a Reranker reordered the results.
+            rerank_score:
+              type: number
+              format: double
+              description: The score the Reranker assigned (pre-retrieval score moves here).
             details:
               type: string
               example: /api/resources/boverket:6000000000
