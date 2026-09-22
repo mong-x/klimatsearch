@@ -24,7 +24,7 @@
     <h2>Climate modules</h2>
     <table class="hits">
       <tbody>
-        <tr><th>Typical A1–A3</th><td class="num">{{.Resource.A1A3}}</td><td>{{if .Resource.GWPUnit}}{{.Resource.GWPUnit}}{{else}}kg CO₂e / {{.Resource.Unit}}{{end}}</td></tr>
+        <tr><th>Typical A1–A3</th><td class="num">{{.Resource.A1A3}}</td><td>{{if .Resource.GWPUnit}}{{.Resource.GWPUnit}}{{else}}kg CO2e/{{.Resource.Unit}}{{end}}</td></tr>
         <tr><th>Conservative A1–A3</th><td class="num">{{.Resource.A1A3Cons}}</td><td>{{if .Resource.ConsFactor}}factor {{.Resource.ConsFactor}}{{end}}</td></tr>
         <tr><th>A4</th><td class="num">{{.Resource.A4}}</td><td>transport to site</td></tr>
         <tr><th>A5.1</th><td class="num">{{.Resource.A51}}</td><td>waste on site{{if ne .Resource.Waste "—"}} · waste {{.Resource.Waste}}{{end}}</td></tr>
